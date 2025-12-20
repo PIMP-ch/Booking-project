@@ -1,0 +1,7 @@
+ในส่วนของadminแก้ไขไฟล์ 
+Authlogin,
+staff/page,
+server,
+tsconfig,
+staff,
+ไฟล์UploadAvatarให้เอาใส่components/dasborad

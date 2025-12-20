@@ -1,0 +1,48 @@
+{
+  "name": "restuarant-backend",
+  "version": "1.0.0",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js",
+    "seed:users": "node seeds/seedUsers.js",
+    "seed:stadiums": "node seeds/seedStadiums.js",
+    "seed:equipments": "node seeds/seedEquipments.js",
+    "seed:bookings": "node seeds/seedBookings.js",
+    "seed:all": "npm run seed:users && npm run seed:stadiums && npm run seed:equipments && npm run seed:bookings"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.701.0",
+    "axios": "^1.7.7",
+    "bcryptjs": "^2.4.3",
+    "cloudinary": "^2.8.0",
+    "compression": "^1.7.5",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
+    "dayjs": "^1.11.13",
+    "dotenv": "^16.6.1",
+    "express": "^4.21.2",
+    "firebase-admin": "^13.0.0",
+    "hawk": "^9.0.2",
+    "helmet": "^8.0.0",
+    "jsonwebtoken": "^9.0.2",
+    "moment": "^2.30.1",
+    "moment-timezone": "^0.5.46",
+    "mongoose": "^8.18.1",
+    "multer": "^1.4.5-lts.1",
+    "multer-storage-cloudinary": "^2.2.1",
+    "nodemailer": "^7.0.11",
+    "qrcode": "^1.5.4",
+    "user-agent": "^1.0.4",
+    "uuid": "^11.1.0",
+    "web-push": "^3.6.7"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.10"
+  }
+}

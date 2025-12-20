@@ -1,0 +1,9 @@
+*.rar
+*.rar
+"Admin-Tailwind-Nextjs - Copy/" 
+"booking-stadium-backend/" 
+*.rar 
+*.rar
+node_modules/
+.env
+.DS_Store
