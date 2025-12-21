@@ -14,12 +14,12 @@ interface Booking {
         phoneNumber: string;
         fieldOfStudy: string;
         year: number;
-    };
+    } | null; // แก้ไขให้รองรับค่า null จาก Database
     stadiumId: {
         _id: string;
         nameStadium: string;
         descriptionStadium: string;
-    };
+    } | null;
     equipment: {
         equipmentId: {
             _id: string;
@@ -51,7 +51,6 @@ const BookingPage = () => {
         id: null,
     });
 
-    // Fetch all bookings
     const fetchBookings = async () => {
         try {
             const data = await getAllBookings();
@@ -61,7 +60,6 @@ const BookingPage = () => {
         }
     };
 
-    // Confirm booking
     const handleConfirmBooking = async (id: string) => {
         try {
             await confirmBooking(id);
@@ -72,7 +70,6 @@ const BookingPage = () => {
         }
     };
 
-    // Cancel booking
     const handleCancelBooking = async (id: string) => {
         try {
             await cancelBooking(id);
@@ -83,7 +80,6 @@ const BookingPage = () => {
         }
     };
 
-    // Reset Booking Status (Return Stadium)
     const handleResetBooking = async (id: string) => {
         try {
             await resetBookingStatus(id);
@@ -94,35 +90,12 @@ const BookingPage = () => {
         }
     };
 
-    // Open Confirm Modal
-    const openConfirmModal = (id: string) => {
-        setConfirmModal({ isOpen: true, id });
-    };
-
-    // Close Confirm Modal
-    const closeConfirmModal = () => {
-        setConfirmModal({ isOpen: false, id: null });
-    };
-
-    // Open Cancel Modal
-    const openCancelModal = (id: string) => {
-        setCancelModal({ isOpen: true, id });
-    };
-
-    // Close Cancel Modal
-    const closeCancelModal = () => {
-        setCancelModal({ isOpen: false, id: null });
-    };
-
-    // Open Return Modal
-    const openReturnModal = (id: string) => {
-        setReturnModal({ isOpen: true, id });
-    };
-
-    // Close Return Modal
-    const closeReturnModal = () => {
-        setReturnModal({ isOpen: false, id: null });
-    };
+    const openConfirmModal = (id: string) => setConfirmModal({ isOpen: true, id });
+    const closeConfirmModal = () => setConfirmModal({ isOpen: false, id: null });
+    const openCancelModal = (id: string) => setCancelModal({ isOpen: true, id });
+    const closeCancelModal = () => setCancelModal({ isOpen: false, id: null });
+    const openReturnModal = (id: string) => setReturnModal({ isOpen: true, id });
+    const closeReturnModal = () => setReturnModal({ isOpen: false, id: null });
 
     useEffect(() => {
         fetchBookings();
@@ -139,218 +112,113 @@ const BookingPage = () => {
     return (
         <div className="p-6 bg-white rounded-lg shadow-md font-kanit">
             {/* Tabs */}
-            <div className="flex space-x-4 mb-4">
-                <button
-                    className={`p-2 rounded-lg ${activeTab === "pending" ? "bg-blue-500 text-white" : "bg-gray-200 text-gray-600"
+            <div className="flex space-x-4 mb-6">
+                {["pending", "confirmed", "canceled"].map((tab) => (
+                    <button
+                        key={tab}
+                        className={`px-4 py-2 rounded-lg transition-colors ${
+                            activeTab === tab ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
                         }`}
-                    onClick={() => setActiveTab("pending")}
-                >
-                    รอการยืนยัน
-                </button>
-                <button
-                    className={`p-2 rounded-lg ${activeTab === "confirmed" ? "bg-blue-500 text-white" : "bg-gray-200 text-gray-600"
-                        }`}
-                    onClick={() => setActiveTab("confirmed")}
-                >
-                    ยืนยันแล้ว
-                </button>
-                <button
-                    className={`p-2 rounded-lg ${activeTab === "canceled" ? "bg-blue-500 text-white" : "bg-gray-200 text-gray-600"
-                        }`}
-                    onClick={() => setActiveTab("canceled")}
-                >
-                    ยกเลิกแล้ว
-                </button>
+                        onClick={() => setActiveTab(tab)}
+                    >
+                        {tab === "pending" ? "รอการยืนยัน" : tab === "confirmed" ? "ยืนยันแล้ว" : "ยกเลิกแล้ว"}
+                    </button>
+                ))}
             </div>
 
             {/* Booking Tables */}
-            {activeTab === "pending" ? (
-                <BookingTable
-                    bookings={filteredBookings}
-                    onConfirm={(id) => openConfirmModal(id)} // เปิด Confirm Modal
-                    onCancel={(id) => openCancelModal(id)} // เปิด Cancel Modal
-                />
-            ) : activeTab === "confirmed" ? (
-                <BookingTableConfirmed
-                    bookings={filteredBookings}
-                    onReset={(id) => openReturnModal(id)} // เปิด Return Modal
-                />
-            ) : (
-                <BookingTableCanceled bookings={filteredBookings} />
-            )}
+            <div className="overflow-x-auto">
+                {activeTab === "pending" ? (
+                    <BookingTable bookings={filteredBookings} onConfirm={openConfirmModal} onCancel={openCancelModal} />
+                ) : activeTab === "confirmed" ? (
+                    <BookingTableConfirmed bookings={filteredBookings} onReset={openReturnModal} />
+                ) : (
+                    <BookingTableCanceled bookings={filteredBookings} />
+                )}
+            </div>
 
-
-            {/* Confirm Modal */}
-            <Modal className="font-kanit" show={confirmModal.isOpen} onClose={closeConfirmModal}>
+            {/* Modals (รวมไว้ที่เดียวเพื่อความสะอาด) */}
+            <Modal show={confirmModal.isOpen} onClose={closeConfirmModal} className="font-kanit">
                 <Modal.Header>ยืนยันการจอง</Modal.Header>
                 <Modal.Body>คุณต้องการยืนยันการจองนี้หรือไม่?</Modal.Body>
                 <Modal.Footer>
-                    <Button
-                        color="success"
-                        onClick={() => confirmModal.id && handleConfirmBooking(confirmModal.id)}
-                        className="bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 rounded-lg"
-                    >
-                        ยืนยัน
-                    </Button>
-                    <Button
-                        color="failure"
-                        onClick={closeConfirmModal}
-                        className="bg-gray-200 hover:bg-gray-300 text-black px-2 py-1 rounded-lg"
-                    >
-                        ยกเลิก
-                    </Button>
+                    <Button color="success" onClick={() => confirmModal.id && handleConfirmBooking(confirmModal.id)}>ยืนยัน</Button>
+                    <Button color="gray" onClick={closeConfirmModal}>ยกเลิก</Button>
                 </Modal.Footer>
             </Modal>
 
-            {/* Cancel Modal */}
-            <Modal className="font-kanit" show={cancelModal.isOpen} onClose={closeCancelModal}>
-                <Modal.Header>ยกเลิกการจอง</Modal.Header>
-                <Modal.Body>คุณต้องการยกเลิกการจองนี้หรือไม่? การยกเลิกจะคืนค่าสนามและอุปกรณ์</Modal.Body>
+            <Modal show={cancelModal.isOpen} onClose={closeCancelModal} className="font-kanit">
+                <Modal.Header className="text-red-600">ยกเลิกการจอง</Modal.Header>
+                <Modal.Body>คุณต้องการยกเลิกการจองนี้หรือไม่? ระบบจะคืนทรัพยากรสนามและอุปกรณ์</Modal.Body>
                 <Modal.Footer>
-                    <Button
-                        color="success"
-                        onClick={() => cancelModal.id && handleCancelBooking(cancelModal.id)}
-                        className="bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded-lg"
-                    >
-                        ยืนยันการยกเลิก
-                    </Button>
-                    <Button
-                        color="failure"
-                        onClick={closeCancelModal}
-                        className="bg-gray-200 hover:bg-gray-300 text-black px-2 py-1 rounded-lg"
-                    >
-                        ยกเลิก
-                    </Button>
+                    <Button color="failure" onClick={() => cancelModal.id && handleCancelBooking(cancelModal.id)}>ยืนยันการยกเลิก</Button>
+                    <Button color="gray" onClick={closeCancelModal}>ปิด</Button>
                 </Modal.Footer>
             </Modal>
 
-            {/* Return Modal */}
-            <Modal className="font-kanit" show={returnModal.isOpen} onClose={closeReturnModal}>
+            <Modal show={returnModal.isOpen} onClose={closeReturnModal} className="font-kanit">
                 <Modal.Header>ยืนยันการส่งคืนสนาม</Modal.Header>
-                <Modal.Body>คุณต้องการส่งคืนสนามและรีเซ็ตสถานะการจองนี้หรือไม่?</Modal.Body>
+                <Modal.Body>คุณต้องการส่งคืนสนามและรีเซ็ตสถานะการจองนี้ใช่หรือไม่?</Modal.Body>
                 <Modal.Footer>
-                    <Button
-                        color="success"
-                        onClick={() => returnModal.id && handleResetBooking(returnModal.id)}
-                        className="bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 rounded-lg"
-                    >
-                        ยืนยัน
-                    </Button>
-                    <Button
-                        color="failure"
-                        onClick={closeReturnModal}
-                        className="bg-gray-200 hover:bg-gray-300 text-black px-2 py-1 rounded-lg"
-                    >
-                        ยกเลิก
-                    </Button>
+                    <Button color="success" onClick={() => returnModal.id && handleResetBooking(returnModal.id)}>ยืนยันส่งคืน</Button>
+                    <Button color="gray" onClick={closeReturnModal}>ยกเลิก</Button>
                 </Modal.Footer>
             </Modal>
         </div>
     );
 };
 
-interface BookingTableProps {
-    bookings: Booking[];
-    onConfirm: (id: string) => void;
-    onCancel: (id: string) => void;
-}
+// --- Sub Components ---
 
-const BookingTable: React.FC<BookingTableProps> = ({ bookings, onConfirm, onCancel }) => (
+const BookingTable: React.FC<{ bookings: Booking[]; onConfirm: (id: string) => void; onCancel: (id: string) => void }> = ({ bookings, onConfirm, onCancel }) => (
     <Table hoverable>
         <Table.Head>
             <Table.HeadCell>ลำดับ</Table.HeadCell>
             <Table.HeadCell>ผู้จอง</Table.HeadCell>
             <Table.HeadCell>สนามกีฬา</Table.HeadCell>
-            <Table.HeadCell>อุปกรณ์ที่จอง</Table.HeadCell>
+            <Table.HeadCell>อุปกรณ์</Table.HeadCell>
             <Table.HeadCell>วันที่ & เวลา</Table.HeadCell>
-            <Table.HeadCell>สถานะ</Table.HeadCell>
-            <Table.HeadCell>การจัดการ</Table.HeadCell>
+            <Table.HeadCell className="text-center">การจัดการ</Table.HeadCell>
         </Table.Head>
-        <Table.Body>
+        <Table.Body className="divide-y">
             {bookings.length === 0 ? (
-                <Table.Row>
-                    <Table.Cell colSpan={7} className="text-center">
-                        ไม่มีข้อมูลการจอง
-                    </Table.Cell>
-                </Table.Row>
+                <Table.Row><Table.Cell colSpan={6} className="text-center py-10 text-gray-500">ไม่มีข้อมูลรอการยืนยัน</Table.Cell></Table.Row>
             ) : (
                 bookings.map((booking, index) => (
-                    <Table.Row key={booking._id}>
-                        {/* ลำดับ */}
+                    <Table.Row key={booking._id} className="bg-white">
                         <Table.Cell>{index + 1}</Table.Cell>
-
-                        {/* รายละเอียดผู้จอง */}
                         <Table.Cell>
-                            <p>ชื่อ : <strong>{booking.userId.fullname}</strong></p>
-                            <p>Email : {booking.userId.email}</p>
-                            <p>เบอร์โทร : {booking.userId.phoneNumber}</p>
-                            <p>สาขา: {booking.userId.fieldOfStudy}</p>
-                            <p>ปี: {booking.userId.year}</p>
+                            <p className="font-bold text-gray-900">{booking.userId?.fullname || "ไม่พบชื่อผู้ใช้"}</p>
+                            <p className="text-xs text-gray-500">{booking.userId?.email || "-"}</p>
                         </Table.Cell>
-
-                        {/* ข้อมูลสนาม */}
-                        <Table.Cell>{booking.stadiumId.nameStadium}</Table.Cell>
-
-                        {/* อุปกรณ์ที่จอง */}
+                        <Table.Cell>{booking.stadiumId?.nameStadium || "ไม่ระบุสนาม"}</Table.Cell>
                         <Table.Cell>
-                            <ol className="list-decimal pl-4">
-                                {booking.equipment.map((item) => (
-                                    <li key={item.equipmentId._id}>
-                                        {item.equipmentId.name} - {item.quantity} ชิ้น
-                                    </li>
+                            <ul className="text-xs list-disc pl-4 text-gray-600">
+                                {booking.equipment.map((item, idx) => (
+                                    <li key={idx}>{item.equipmentId?.name} ({item.quantity})</li>
                                 ))}
-                            </ol>
+                            </ul>
                         </Table.Cell>
-
-                        {/* วันที่ & เวลา */}
-                        <Table.Cell>
+                        <Table.Cell className="text-xs">
                             <div className="flex flex-col">
-                                <span className="font-semibold">เริ่มวันที่:</span>
-                                <span>
-                                    {new Date(booking.startDate).toLocaleDateString("th-TH", {
-                                        year: "numeric",
-                                        month: "2-digit",
-                                        day: "2-digit",
-                                    })}
-                                </span>
-                                <span className="font-semibold mt-1">เวลาเริ่ม:</span>
-                                <span>{booking.startTime}</span>
-
-                                <span className="font-semibold mt-2">สิ้นสุดวันที่:</span>
-                                <span>
-                                    {new Date(booking.endDate).toLocaleDateString("th-TH", {
-                                        year: "numeric",
-                                        month: "2-digit",
-                                        day: "2-digit",
-                                    })}
-                                </span>
-                                <span className="font-semibold mt-1">เวลาสิ้นสุด:</span>
-                                <span>{booking.endTime}</span>
+                                <span className="font-medium text-blue-600">{new Date(booking.startDate).toLocaleDateString("th-TH")}</span>
+                                <span className="text-gray-500">{booking.startTime} - {booking.endTime}</span>
                             </div>
                         </Table.Cell>
-
-                        {/* สถานะ */}
-                        <Table.Cell>
-                            <span className="px-2 py-1 rounded-lg text-white bg-yellow-500">
-                                รอการยืนยัน
-                            </span>
-                        </Table.Cell>
-
-                        {/* การจัดการ */}
-                        <Table.Cell>
+                        <Table.Cell className="text-center">
                             <Dropdown
-                                label="..."
+                                inline
+                                label={null}
                                 renderTrigger={() => (
-                                    <span className="h-9 w-9 flex justify-center items-center rounded-full hover:bg-gray-100 cursor-pointer">
-                                        <Icon icon="lucide:more-vertical" />
-                                    </span>
+                                    <button className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+                                        <Icon icon="bi:three-dots-vertical" className="w-5 h-5 text-gray-500" />
+                                    </button>
                                 )}
-                                dismissOnClick={false}
                             >
-                                <Dropdown.Item onClick={() => onConfirm(booking._id)}>
+                                <Dropdown.Item onClick={() => onConfirm(booking._id)} className="text-green-600 gap-2">
                                     <Icon icon="solar:check-circle-bold" /> ยืนยัน
                                 </Dropdown.Item>
-                                <Dropdown.Item onClick={() => onCancel(booking._id)}>
+                                <Dropdown.Item onClick={() => onCancel(booking._id)} className="text-red-600 gap-2">
                                     <Icon icon="solar:trash-bin-minimalistic-outline" /> ยกเลิก
                                 </Dropdown.Item>
                             </Dropdown>
@@ -362,79 +230,44 @@ const BookingTable: React.FC<BookingTableProps> = ({ bookings, onConfirm, onCanc
     </Table>
 );
 
-
-
-interface BookingTableConfirmedProps {
-    bookings: Booking[];
-    onReset: (id: string) => void;
-}
-
-const BookingTableConfirmed: React.FC<BookingTableConfirmedProps> = ({ bookings, onReset }) => (
+const BookingTableConfirmed: React.FC<{ bookings: Booking[]; onReset: (id: string) => void }> = ({ bookings, onReset }) => (
     <Table hoverable>
         <Table.Head>
             <Table.HeadCell>ลำดับ</Table.HeadCell>
             <Table.HeadCell>ผู้จอง</Table.HeadCell>
             <Table.HeadCell>สนามกีฬา</Table.HeadCell>
-            <Table.HeadCell>วันที่</Table.HeadCell>
-            <Table.HeadCell>การจัดการ</Table.HeadCell>
+            <Table.HeadCell>วัน/เวลาที่จอง</Table.HeadCell>
+            <Table.HeadCell className="text-center">การจัดการ</Table.HeadCell>
         </Table.Head>
-        <Table.Body>
+        <Table.Body className="divide-y">
             {bookings.length === 0 ? (
-                <Table.Row>
-                    <Table.Cell colSpan={5} className="text-center">
-                        ไม่มีข้อมูลการจองที่ยืนยันแล้ว
-                    </Table.Cell>
-                </Table.Row>
+                <Table.Row><Table.Cell colSpan={5} className="text-center py-10 text-gray-500">ไม่มีข้อมูลยืนยันแล้ว</Table.Cell></Table.Row>
             ) : (
                 bookings.map((booking, index) => (
                     <Table.Row key={booking._id}>
                         <Table.Cell>{index + 1}</Table.Cell>
                         <Table.Cell>
-                            {booking.userId.fullname} <br />
-                            <small>{booking.userId.email}</small>
+                            <p className="font-medium">{booking.userId?.fullname || "N/A"}</p>
+                            <small className="text-gray-400">{booking.userId?.email || "-"}</small>
                         </Table.Cell>
-                        <Table.Cell>{booking.stadiumId.nameStadium}</Table.Cell>
-                        {/* วันที่และเวลา */}
-                        <Table.Cell>
-                            <div className="flex flex-col space-y-2">
-                                {/* วันที่เริ่ม */}
-                                <div className="flex items-center gap-2">
-                                    <span className="font-semibold text-gray-500">วันที่เริ่ม:</span>
-                                    <span className="text-black">
-                                        {new Date(booking.startDate).toLocaleDateString("th-TH", {
-                                            year: "numeric",
-                                            month: "2-digit",
-                                            day: "2-digit",
-                                        })}
-                                    </span>
-                                    <span className="font-semibold text-gray-500">เวลาเริ่ม:</span>
-                                    <span className="text-black">{booking.startTime}</span>
-                                </div>
-
-                                {/* วันที่สิ้นสุด */}
-                                <div className="flex items-center gap-2">
-                                    <span className="font-semibold text-gray-500">วันที่สิ้นสุด:</span>
-                                    <span className="text-black">
-                                        {new Date(booking.endDate).toLocaleDateString("th-TH", {
-                                            year: "numeric",
-                                            month: "2-digit",
-                                            day: "2-digit",
-                                        })}
-                                    </span>
-                                    <span className="font-semibold text-gray-500">เวลาสิ้นสุด:</span>
-                                    <span className="text-black">{booking.endTime}</span>
-                                </div>
-                            </div>
+                        <Table.Cell>{booking.stadiumId?.nameStadium}</Table.Cell>
+                        <Table.Cell className="text-xs">
+                            {new Date(booking.startDate).toLocaleDateString("th-TH")} | {booking.startTime} - {booking.endTime}
                         </Table.Cell>
-
-
-                        <Table.Cell>
-                            <Button
-                                onClick={() => onReset(booking._id)}
-                                className="bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 rounded-lg"
+                        <Table.Cell className="text-center">
+                            <Dropdown
+                                inline
+                                label={null}
+                                renderTrigger={() => (
+                                    <button className="p-2 hover:bg-gray-100 rounded-full">
+                                        <Icon icon="bi:three-dots-vertical" className="w-5 h-5 text-gray-500" />
+                                    </button>
+                                )}
                             >
-                                ส่งคืนสนาม
-                            </Button>
+                                <Dropdown.Item onClick={() => onReset(booking._id)} className="text-blue-600 gap-2">
+                                    <Icon icon="solar:refresh-outline" /> ส่งคืนสนาม
+                                </Dropdown.Item>
+                            </Dropdown>
                         </Table.Cell>
                     </Table.Row>
                 ))
@@ -452,43 +285,16 @@ const BookingTableCanceled: React.FC<{ bookings: Booking[] }> = ({ bookings }) =
             <Table.HeadCell>วันที่</Table.HeadCell>
             <Table.HeadCell>สถานะ</Table.HeadCell>
         </Table.Head>
-        <Table.Body>
-            {bookings.length === 0 ? (
-                <Table.Row>
-                    <Table.Cell colSpan={5} className="text-center">
-                        ไม่มีข้อมูลการจองที่ยกเลิกแล้ว
-                    </Table.Cell>
+        <Table.Body className="divide-y">
+            {bookings.map((booking, index) => (
+                <Table.Row key={booking._id} className="opacity-70 bg-gray-50">
+                    <Table.Cell>{index + 1}</Table.Cell>
+                    <Table.Cell>{booking.userId?.fullname || "N/A"}</Table.Cell>
+                    <Table.Cell>{booking.stadiumId?.nameStadium}</Table.Cell>
+                    <Table.Cell className="text-xs">{new Date(booking.startDate).toLocaleDateString("th-TH")}</Table.Cell>
+                    <Table.Cell><span className="text-red-500 font-bold uppercase text-[10px]">Canceled</span></Table.Cell>
                 </Table.Row>
-            ) : (
-                bookings.map((booking, index) => (
-                    <Table.Row key={booking._id}>
-                        <Table.Cell>{index + 1}</Table.Cell>
-                        <Table.Cell>
-                            {booking.userId.fullname} <br />
-                            <small>{booking.userId.email}</small>
-                        </Table.Cell>
-                        <Table.Cell>{booking.stadiumId.nameStadium}</Table.Cell>
-                        <Table.Cell>
-                            {new Date(booking.startDate).toLocaleDateString("th-TH", {
-                                year: "numeric",
-                                month: "2-digit",
-                                day: "2-digit",
-                                calendar: "gregory",
-                            })}{" "}
-                            -{" "}
-                            {new Date(booking.endDate).toLocaleDateString("th-TH", {
-                                year: "numeric",
-                                month: "2-digit",
-                                day: "2-digit",
-                                calendar: "gregory",
-                            })}
-                        </Table.Cell>
-                        <Table.Cell>
-                            <span className="px-2 py-1 rounded-lg text-white bg-red-500">ยกเลิกแล้ว</span>
-                        </Table.Cell>
-                    </Table.Row>
-                ))
-            )}
+            ))}
         </Table.Body>
     </Table>
 );

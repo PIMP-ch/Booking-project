@@ -165,11 +165,6 @@ const SalesProfit = () => {
         ></Chart>
       </div>
 
-      {selectedMonth !== "ทั้งปี" && series.data.length > 0 && (
-        <p className="text-xs text-gray-500 mt-2 font-kanit">
-          แสดงผลเป็นรายวันของเดือนที่เลือก - ต้องการสรุปค่าเฉลี่ย/ผลรวมของเดือนนี้ใต้กราฟหรือไม่?
-        </p>
-      )}
     </div>
   );
 };

@@ -70,7 +70,7 @@ const Thumb = ({ imageUrl, name }: { imageUrl?: string; name: string }) => {
 
 const SelectEquipmentPage = () => {
   return (
-    <Suspense fallback={<p className="text-center text-gray-500">กำลังโหลด...</p>}>
+    <Suspense fallback={<p className="text-center text-gray-500 py-10 font-kanit">กำลังโหลด...</p>}>
       <SelectEquipment />
     </Suspense>
   );
@@ -80,8 +80,10 @@ const SelectEquipment = () => {
   const searchParams = useSearchParams();
   const router = useRouter();
 
+  // ✅ ดึง Parameter รวมถึง building เพิ่มเติม
   const stadiumId = searchParams?.get("stadiumId") ?? "";
   const stadiumName = searchParams?.get("stadiumName") ?? "ไม่พบชื่อสนาม";
+  const building = searchParams?.get("building") ?? ""; // เพิ่มการรับค่าอาคาร
   const userId = searchParams?.get("userId") ?? "";
   const startDate = searchParams?.get("startDate") ?? "";
   const endDate = searchParams?.get("endDate") ?? "";
@@ -90,7 +92,6 @@ const SelectEquipment = () => {
   const stadiumImage = searchParams?.get("stadiumImage") ?? "";
   const equipmentParam = searchParams?.get("equipment");
 
-  // 🔁 อ่านรายการที่เลือกจาก query (ถ้ามี)
   const initialSelectedEquipment = useMemo<SelectedItem[]>(() => {
     if (!equipmentParam) return [];
     try {
@@ -115,11 +116,11 @@ const SelectEquipment = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (initialSelectedEquipment.length === 0) return;
-    setSelectedEquipment(initialSelectedEquipment);
+    if (initialSelectedEquipment.length > 0) {
+      setSelectedEquipment(initialSelectedEquipment);
+    }
   }, [initialSelectedEquipment]);
 
-  // 📥 โหลดรายการอุปกรณ์ทั้งหมด
   useEffect(() => {
     const fetchEquipment = async () => {
       try {
@@ -134,7 +135,6 @@ const SelectEquipment = () => {
     fetchEquipment();
   }, []);
 
-  // ➕ เพิ่มจำนวน
   const handleIncrease = (
     equipmentId: string,
     name: string,
@@ -156,7 +156,6 @@ const SelectEquipment = () => {
     });
   };
 
-  // ➖ ลดจำนวน
   const handleDecrease = (equipmentId: string) => {
     setSelectedEquipment((prev) => {
       const existing = prev.find((item) => item.equipmentId === equipmentId);
@@ -171,15 +170,9 @@ const SelectEquipment = () => {
     });
   };
 
-  // ❌ เอาออกจากรายการ
   const handleRemove = (equipmentId: string) => {
     setSelectedEquipment((prev) => prev.filter((i) => i.equipmentId !== equipmentId));
   };
-
-  const equipmentQuery =
-    selectedEquipment.length > 0
-      ? `&equipment=${encodeURIComponent(JSON.stringify(selectedEquipment))}`
-      : "";
 
   const handleBack = () => {
     if (typeof window !== "undefined" && window.history.length > 1) {
@@ -188,6 +181,7 @@ const SelectEquipment = () => {
       const params = new URLSearchParams({
         stadiumId,
         stadiumName,
+        building, // ✅ ส่ง building กลับไปด้วย
         userId,
         startDate,
         endDate,
@@ -200,14 +194,25 @@ const SelectEquipment = () => {
   };
 
   const handleNext = () => {
-    const stadiumImageParam = stadiumImage
-      ? `&stadiumImage=${encodeURIComponent(stadiumImage)}`
-      : "";
-    router.push(
-      `/booking/book-detail?stadiumId=${stadiumId}&stadiumName=${encodeURIComponent(
-        stadiumName
-      )}&userId=${userId}&startDate=${startDate}&endDate=${endDate}&startTime=${startTime}&endTime=${endTime}${equipmentQuery}${stadiumImageParam}`
-    );
+    const equipmentQuery =
+      selectedEquipment.length > 0
+        ? `&equipment=${encodeURIComponent(JSON.stringify(selectedEquipment))}`
+        : "";
+    
+    // ✅ ส่งข้อมูลทั้งหมดไปยังหน้า book-detail รวมถึง building
+    const baseParams = new URLSearchParams({
+      stadiumId,
+      stadiumName,
+      building, 
+      userId,
+      startDate,
+      endDate,
+      startTime,
+      endTime,
+      ...(stadiumImage ? { stadiumImage } : {}),
+    });
+
+    router.push(`/booking/book-detail?${baseParams.toString()}${equipmentQuery}`);
   };
 
   return (
@@ -218,17 +223,17 @@ const SelectEquipment = () => {
           src={stadiumImage || "/images/stadium-placeholder.jpg"}
           alt={stadiumName}
           fill
+          priority
           className="object-cover"
           sizes="100vw"
         />
         <div className="absolute inset-0 bg-black/55" />
       </div>
 
-      {/* 🔹 เนื้อหา */}
       <div className="relative z-10 p-5 max-w-[960px] mx-auto">
         <button
           onClick={handleBack}
-          className="flex items-center gap-2 text-orange-400 font-semibold mb-4"
+          className="flex items-center gap-2 text-orange-400 font-semibold mb-4 hover:text-orange-300 transition"
         >
           <ArrowLeft size={20} />
           ย้อนกลับ
@@ -237,36 +242,36 @@ const SelectEquipment = () => {
         <h1 className="text-2xl font-bold text-center mb-2 flex items-center justify-center gap-2 text-white">
           <Package size={24} className="text-orange-300" /> เลือกอุปกรณ์
         </h1>
-        <p className="text-center text-gray-200 mb-4">เลือกจำนวนอุปกรณ์ที่ต้องการใช้</p>
+        <p className="text-center text-gray-200 mb-4">เลือกจำนวนอุปกรณ์ที่ต้องการใช้สำหรับ {stadiumName}</p>
 
         {/* 🧺 อุปกรณ์ที่เลือก (live) */}
         <div className="mb-5">
-          <div className="bg-white/90 backdrop-blur border border-orange-200 rounded-xl p-4">
-            <h2 className="text-lg font-bold text-gray-900 mb-3">
+          <div className="bg-white/90 backdrop-blur border border-orange-200 rounded-xl p-4 shadow-lg">
+            <h2 className="text-lg font-bold text-gray-900 mb-3 border-b pb-2">
               อุปกรณ์ที่เลือก ({selectedEquipment.length} รายการ)
             </h2>
 
             {selectedEquipment.length === 0 ? (
-              <p className="text-gray-600">ยังไม่ได้เลือกอุปกรณ์</p>
+              <p className="text-gray-500 italic py-2">ยังไม่ได้เลือกอุปกรณ์เสริม...</p>
             ) : (
               <div className="grid md:grid-cols-2 gap-3">
                 {selectedEquipment.map((item) => (
                   <div
                     key={item.equipmentId}
-                    className="flex items-center justify-between gap-3 p-2 border rounded-lg bg-white"
+                    className="flex items-center justify-between gap-3 p-2 border rounded-lg bg-white shadow-sm"
                   >
                     <div className="flex items-center gap-3">
                       <Thumb imageUrl={item.imageUrl} name={item.name} />
                       <div>
-                        <p className="font-semibold text-gray-800">{item.name}</p>
-                        <p className="text-sm text-gray-600">จำนวน: {item.quantity}</p>
+                        <p className="font-semibold text-gray-800 text-sm leading-tight">{item.name}</p>
+                        <p className="text-xs text-orange-600 font-bold">จำนวน: {item.quantity}</p>
                       </div>
                     </div>
 
                     <div className="flex items-center gap-2">
                       <button
                         onClick={() => handleDecrease(item.equipmentId)}
-                        className="text-gray-700 hover:text-red-600"
+                        className="text-gray-500 hover:text-red-600 transition"
                         title="ลดจำนวน"
                       >
                         <MinusCircle size={22} />
@@ -276,18 +281,18 @@ const SelectEquipment = () => {
                           handleIncrease(
                             item.equipmentId,
                             item.name,
-                            Number.MAX_SAFE_INTEGER, // สามารถเพิ่มได้ แล้วค่อยถูกจำกัดตอนต่อจาก grid หลัก
+                            Number.MAX_SAFE_INTEGER, 
                             item.imageUrl
                           )
                         }
-                        className="text-gray-700 hover:text-orange-600"
+                        className="text-gray-500 hover:text-orange-600 transition"
                         title="เพิ่มจำนวน"
                       >
                         <PlusCircle size={22} />
                       </button>
                       <button
                         onClick={() => handleRemove(item.equipmentId)}
-                        className="ml-1 text-gray-500 hover:text-red-600"
+                        className="ml-1 text-gray-400 hover:text-red-600 transition"
                         title="เอาออกจากรายการ"
                       >
                         <XCircle size={22} />
@@ -300,13 +305,16 @@ const SelectEquipment = () => {
           </div>
         </div>
 
-        {/* 📋 รายการอุปกรณ์ทั้งหมดให้เลือก */}
+        {/* 📋 รายการอุปกรณ์ทั้งหมด */}
         {loading ? (
-          <p className="text-center text-gray-200">กำลังโหลดข้อมูลอุปกรณ์...</p>
+          <div className="flex flex-col items-center py-10">
+            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-orange-500 mb-3"></div>
+            <p className="text-center text-gray-200">กำลังโหลดข้อมูลอุปกรณ์...</p>
+          </div>
         ) : equipmentList.length === 0 ? (
-          <p className="text-center text-gray-200">ไม่มีอุปกรณ์ให้เลือก</p>
+          <p className="text-center text-gray-200 py-10">ไม่มีอุปกรณ์ให้เลือกในขณะนี้</p>
         ) : (
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4 pb-32">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 pb-32">
             {equipmentList.map((item) => {
               const selectedItem = selectedEquipment.find((eq) => eq.equipmentId === item._id);
               const selectedCount = selectedItem ? selectedItem.quantity : 0;
@@ -314,24 +322,24 @@ const SelectEquipment = () => {
               const isMin = selectedCount <= 0;
 
               return (
-                <div key={item._id} className="p-3 border rounded-sm shadow-md bg-white/90 backdrop-blur">
+                <div key={item._id} className="p-3 border rounded-lg shadow-md bg-white/95 backdrop-blur transition hover:shadow-lg">
                   <EquipmentImage imageUrl={item.imageUrl} name={item.name} />
-                  <h2 className="text-sm font-bold text-center min-h-[40px] flex items-center justify-center text-gray-800">
+                  <h2 className="text-sm font-bold text-center min-h-[40px] flex items-center justify-center text-gray-800 px-1 leading-snug">
                     {item.name}
                   </h2>
-                  <p className="text-xs text-gray-500 text-center">เหลือ {item.quantity} ชิ้น</p>
-                  <div className="flex items-center justify-center gap-2 mt-3">
+                  <p className="text-[11px] text-gray-500 text-center mb-2">คงเหลือ {item.quantity} ชิ้น</p>
+                  <div className="flex items-center justify-center gap-3 mt-1 bg-gray-50 py-2 rounded-md">
                     <button
                       onClick={() => handleDecrease(item._id)}
-                      className={`text-gray-700 ${isMin ? "opacity-50 cursor-not-allowed" : "hover:text-red-600"}`}
+                      className={`transition ${isMin ? "text-gray-300 cursor-not-allowed" : "text-gray-700 hover:text-red-600"}`}
                       disabled={isMin}
                     >
                       <MinusCircle size={24} />
                     </button>
-                    <span className="text-lg font-bold text-gray-900">{selectedCount}</span>
+                    <span className="text-lg font-bold text-orange-600 w-6 text-center">{selectedCount}</span>
                     <button
                       onClick={() => handleIncrease(item._id, item.name, item.quantity, item.imageUrl)}
-                      className={`text-gray-700 ${isMax ? "opacity-50 cursor-not-allowed" : "hover:text-orange-600"}`}
+                      className={`transition ${isMax ? "text-gray-300 cursor-not-allowed" : "text-gray-700 hover:text-orange-600"}`}
                       disabled={isMax}
                     >
                       <PlusCircle size={24} />
@@ -343,20 +351,22 @@ const SelectEquipment = () => {
           </div>
         )}
 
-        {/* 🧾 สรุปด้านล่าง */}
-        <div className="max-w-[960px] mx-auto fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur shadow-xl p-4 flex justify-between items-center rounded-t-xl">
-          <div className="text-lg font-bold text-black">
-            อุปกรณ์ที่เลือก <br />
-            <span className="text-orange-600 text-xl font-extrabold">
-              {selectedEquipment.length} รายการ
-            </span>
+        {/* 🧾 แถบสรุปด้านล่าง */}
+        <div className="fixed bottom-0 left-0 right-0 bg-white shadow-[0_-4px_10px_rgba(0,0,0,0.1)] p-4 z-20">
+          <div className="max-w-[960px] mx-auto flex justify-between items-center px-2">
+            <div>
+              <p className="text-xs text-gray-500 uppercase font-bold tracking-wider">รายการที่เลือก</p>
+              <p className="text-orange-600 text-2xl font-extrabold">
+                {selectedEquipment.length} <span className="text-sm font-medium text-gray-600">รายการ</span>
+              </p>
+            </div>
+            <button
+              onClick={handleNext}
+              className="px-8 py-3.5 rounded-xl text-lg font-bold shadow-lg shadow-orange-200 transition bg-orange-500 text-white hover:bg-orange-600 active:scale-95"
+            >
+              ต่อไป
+            </button>
           </div>
-          <button
-            onClick={handleNext}
-            className="px-6 py-3 rounded-sm text-lg font-semibold transition bg-orange-500 text-white hover:bg-orange-600"
-          >
-            ต่อไป
-          </button>
         </div>
       </div>
     </div>

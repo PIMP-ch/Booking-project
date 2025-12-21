@@ -116,7 +116,7 @@ const StaffPage = () => {
               <Table.HeadCell className="p-6">รูป</Table.HeadCell>   {/* ✅ คอลัมน์รูป */}
               <Table.HeadCell>ชื่อเต็ม</Table.HeadCell>
               <Table.HeadCell>อีเมล</Table.HeadCell>
-              <Table.HeadCell>บทบาท</Table.HeadCell>
+              <Table.HeadCell>ประเภท</Table.HeadCell>
               <Table.HeadCell></Table.HeadCell>
             </Table.Head>
             <Table.Body>

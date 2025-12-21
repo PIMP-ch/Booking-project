@@ -4,11 +4,11 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import { createBooking, API_BASE } from "@/utils/api";
-import { Package, MapPin, CheckCircle, User, Clock, ArrowLeft } from "lucide-react";
+import { Package, MapPin, CheckCircle, User, Clock, ArrowLeft, Building2 } from "lucide-react"; // ✅ เพิ่ม Building2
 import { toast } from "react-toastify";
 import dayjs from "dayjs";
 
-// ✅ กำหนด Type ให้ชัดเจน
+// ✅ กำหนด Type ให้ชัดเจน (คงเดิม)
 interface UserType {
     _id: string;
     fullname: string;
@@ -79,6 +79,7 @@ const BookingDetail = () => {
     const router = useRouter();
 
     const stadiumName = searchParams?.get("stadiumName") ?? "ไม่พบชื่อสนาม";
+    const building = searchParams?.get("building") ?? "ไม่ระบุอาคาร"; // ✅ ดึงข้อมูลอาคาร
     const stadiumId = searchParams?.get("stadiumId") ?? "";
     const startDate = searchParams?.get("startDate") ?? "";
     const endDate = searchParams?.get("endDate") ?? "";
@@ -87,7 +88,6 @@ const BookingDetail = () => {
     const endTime = searchParams?.get("endTime") ?? "";
     const stadiumImage = searchParams?.get("stadiumImage") ?? "";
 
-    // ✅ กำหนด Type ให้ `selectedEquipment`
     const selectedEquipment = useMemo<Equipment[]>(() => {
         if (!equipmentQuery) return [];
         try {
@@ -107,12 +107,12 @@ const BookingDetail = () => {
             return [];
         }
     }, [equipmentQuery]);
+
     const totalEquipmentQuantity = useMemo(
         () => selectedEquipment.reduce((sum, item) => sum + (item.quantity ?? 0), 0),
         [selectedEquipment]
     );
 
-    // ✅ กำหนด type `User | null` ให้ชัดเจน
     const [user, setUser] = useState<UserType | null>(null);
     const [loadingUser, setLoadingUser] = useState(true);
     const [stadiumImgSrc, setStadiumImgSrc] = useState<string>(resolveStadiumImage(stadiumImage));
@@ -136,7 +136,6 @@ const BookingDetail = () => {
             }
             setLoadingUser(false);
         }
-
     }, []);
 
     const handleBack = () => {
@@ -159,19 +158,15 @@ const BookingDetail = () => {
                 stadiumId,
                 startDate,
                 endDate,
-                startTime, // ✅ เพิ่มเวลาเริ่มต้น
-                endTime,   // ✅ เพิ่มเวลาสิ้นสุด
+                startTime,
+                endTime,
                 equipment: selectedEquipment.map(({ equipmentId, quantity }) => ({
                     equipmentId,
                     quantity,
                 })),
             };
 
-            // console.log("📦 Booking Payload:", bookingData);
-
             const response = await createBooking(bookingData);
-            // console.log("📩 API Response:", response);
-
             if (response?.success) {
                 toast.success("✅ จองสำเร็จ");
                 router.push("/booking/history");
@@ -225,16 +220,25 @@ const BookingDetail = () => {
                                             src={stadiumImgSrc}
                                             alt={stadiumName}
                                             fill
-                                            className="object-contain"
+                                            className="object-cover" // ✅ เปลี่ยนเป็น cover เพื่อให้เต็มกรอบสวยงามเหมือนเดิม
                                             sizes="(max-width: 768px) 100vw, 360px"
                                             onError={() => setStadiumImgSrc(DEFAULT_STADIUM_IMAGE)}
                                         />
                                     </div>
 
                                     <div className="col-span-2 rounded-lg border border-orange-100 bg-orange-50/70 p-4 space-y-3">
-                                        <p className="text-sm text-orange-600 uppercase tracking-wide">สนามที่เลือก</p>
-                                        <p className="text-2xl font-semibold text-gray-900 pr-4">{stadiumName}</p>
-                                        <div className="grid gap-3 sm:grid-cols-3">
+                                        <div>
+                                            <p className="text-sm text-orange-600 uppercase tracking-wide">สนามที่เลือก</p>
+                                            <p className="text-2xl font-bold text-gray-900 pr-4 leading-tight">{stadiumName}</p>
+                                        </div>
+
+                                        {/* ✅ เพิ่มส่วนแสดงอาคารตามที่คุณต้องการ */}
+                                        <div className="flex items-center gap-1.5 text-gray-700">
+                                            <Building2 size={16} className="text-orange-500" />
+                                            <p className="text-sm font-medium">{building}</p>
+                                        </div>
+
+                                        <div className="grid gap-3 sm:grid-cols-3 pt-1">
                                             <div>
                                                 <p className="text-xs text-orange-600 uppercase tracking-wide">วันที่เริ่ม</p>
                                                 <p className="text-base font-semibold text-gray-900">{dayjs(startDate).format("DD/MM/YYYY")}</p>
@@ -251,7 +255,6 @@ const BookingDetail = () => {
                                     </div>
                                 </div>
                             </div>
-                            
                         </section>
 
                         <section className="bg-white/95 p-4 rounded-xl shadow border border-orange-200">
