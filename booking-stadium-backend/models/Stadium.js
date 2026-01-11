@@ -9,9 +9,15 @@ const StadiumSchema = new mongoose.Schema({
         enum: ["active", "inactive", "IsBooking"], // เพิ่มสถานะ IsBooking
         default: "active",
     },
-    imageUrl: { type: String, default: ""},
+    imageUrl: { type: [String], default: [] },
+
+    buildingIds: [
+        {type: mongoose.Schema.Types.ObjectId, ref: "Building", default: []}
+    ],
 },
-    { timestamps: true });
+    { timestamps: true,
+        collection: "stadia",
+     });
 
 const Stadium = mongoose.model("Stadium", StadiumSchema);
 export default Stadium;

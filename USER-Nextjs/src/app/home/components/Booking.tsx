@@ -121,11 +121,17 @@ const Booking = () => {
           <div className="grid grid-cols-2 gap-4">
             {stadiums.map((stadium) => {
               // ✅ เลือก URL รูป (absolute หรือ relative)
+              const rawUrl =
+                Array.isArray(stadium.imageUrls) && stadium.imageUrls.length > 0
+                  ? stadium.imageUrls[0]
+                  : stadium.imageUrl;
+
+              // ✅ แปลงเป็น URL ที่ใช้งานได้จริง + fallback
               const imgSrc =
-                stadium.imageUrl && stadium.imageUrl.trim() !== ""
-                  ? stadium.imageUrl.startsWith("http")
-                    ? stadium.imageUrl
-                    : `${API_BASE}${stadium.imageUrl}`
+                typeof rawUrl === "string" && rawUrl.trim() !== ""
+                  ? rawUrl.startsWith("http")
+                    ? rawUrl
+                    : `${API_BASE}${rawUrl}`
                   : "/images/stadium-placeholder.jpg";
 
               return (

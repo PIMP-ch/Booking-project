@@ -280,6 +280,17 @@ export const getDailyBookingStats = async (month, year = new Date().getFullYear(
     }
 };
 
+// ✅ Buildings
+export const getBuildings = async () => {
+  try {
+    const response = await axios.get(`${API_URL}/buildings`);
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { message: "Failed to fetch buildings" };
+  }
+};
+
+
 // ✅ ดึงจำนวนผู้ใช้ทั้งหมด
 export const getTotalUsers = async () => {
     try {

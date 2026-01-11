@@ -227,6 +227,18 @@ export const deleteStadium = async (id) => {
   }
 };
 
+// ✅ ดึงสนามตาม id (พร้อม buildingIds)
+export const getStadiumById = async (stadiumId) => {
+  try {
+    if (!stadiumId) return null;
+    const res = await axios.get(`${API_URL}/stadiums/${stadiumId}`);
+    return res.data;
+  } catch (error) {
+    throw error.response?.data || { message: "Failed to fetch stadium by id" };
+  }
+};
+
+
 /* ===================== Bookings / Stats ===================== */
 
 export const getAllBookings = async () => {

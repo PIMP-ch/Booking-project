@@ -70,11 +70,11 @@ const HistoryBookingPage = () => {
 
                                 {/* รายละเอียดผู้จอง */}
                                 <Table.Cell>
-                                    <p><strong>{booking.userId.fullname}</strong></p>
-                                    <p className="text-sm text-gray-600">{booking.userId.email}</p>
-                                    <p>เบอร์โทร : {booking.userId.phoneNumber}</p>
-                                    <p className="text-sm">สาขา: {booking.userId.fieldOfStudy}</p>
-                                    <p className="text-sm">ปีที่ศึกษา: {booking.userId.year}</p>
+                                    <p><strong>{booking.userId?.fullname ?? "-"}</strong></p>
+                                    <p className="text-sm text-gray-600">{booking.userId?.email ?? "-"}</p>
+                                    <p>เบอร์โทร : {booking.userId?.phoneNumber ?? "-"}</p>
+                                    <p className="text-sm">สาขา: {booking.userId?.fieldOfStudy ?? "-"}</p>
+                                    <p className="text-sm">ปีที่ศึกษา: {booking.userId?.year ?? "-"}</p>
                                 </Table.Cell>
 
                                 {/* ข้อมูลสนามกีฬา */}

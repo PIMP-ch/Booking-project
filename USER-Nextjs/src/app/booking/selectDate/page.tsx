@@ -4,7 +4,13 @@ import { useState, useEffect, Suspense, useMemo } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { getAvailableDates, getStadiumBookings } from "@/utils/api";
 import { toast } from "react-toastify";
-import { CircleChevronLeft, CircleChevronRight, ArrowLeft, Building2, Calendar } from "lucide-react";
+import {
+  CircleChevronLeft,
+  CircleChevronRight,
+  ArrowLeft,
+  Building2,
+  Calendar,
+} from "lucide-react";
 import Image from "next/image";
 import dayjs from "dayjs";
 import isBetween from "dayjs/plugin/isBetween";
@@ -14,7 +20,10 @@ dayjs.locale("th");
 dayjs.extend(isBetween);
 
 // ✅ ตัวเลือกอาคาร
-const BUILDINGS = ["โรงยิม", "โดมแดง", "อาคารใหม่", "สนามกลางแจ้ง"];
+type Building = {
+  _id: string;
+  name: string;
+};
 
 type StadiumBooking = {
   _id: string;
@@ -54,9 +63,11 @@ const SelectDate = () => {
   const userId = searchParams?.get("userId") ?? "";
   const stadiumImage = searchParams?.get("stadiumImage") ?? "";
 
-  // ✅ แก้ไข State เริ่มต้นเป็นค่าว่าง เพื่อให้แสดง Placeholder
+  // ✅ state
   const [building, setBuilding] = useState<string>("");
-  
+  const [availableBuildings, setAvailbleBuildings] = useState<Building[]>([]);
+  const [activityName, setActivityName] = useState<string>(""); // ✅ เพิ่มชื่อกิจกรรม
+
   const [dateStatusList, setDateStatusList] = useState<{ date: string; status: string }[]>([]);
   const [selectedStartDate, setSelectedStartDate] = useState<string | null>(null);
   const [selectedEndDate, setSelectedEndDate] = useState<string | null>(null);
@@ -75,10 +86,10 @@ const SelectDate = () => {
       try {
         const data = await getAvailableDates(stadiumId, currentYear, currentMonth);
         const normalized =
-          Array.isArray(data?.dates)
-            ? data.dates
-            : Array.isArray(data?.availableDates)
-            ? data.availableDates
+          Array.isArray((data as any)?.dates)
+            ? (data as any).dates
+            : Array.isArray((data as any)?.availableDates)
+            ? (data as any).availableDates
             : [];
         setDateStatusList(
           normalized
@@ -114,6 +125,37 @@ const SelectDate = () => {
       }
     })();
   }, [stadiumId]);
+
+  // ✅ โหลดอาคารที่เปิดใช้งานตามสนามที่เลือก
+  useEffect(() => {
+  if (!stadiumId?.trim()) return;
+
+  const fetchBuildingsByStadium = async () => {
+    try {
+      const baseUrl = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:5008";
+
+      console.log("stadiumId from url:", stadiumId);
+      const url = `${baseUrl}/api/stadiums/${stadiumId}`;
+      console.log("fetch url:", url);
+
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`Fetch failed: ${res.status}`);
+      const data = await res.json();
+
+      console.log("stadium detail:", data);
+      console.log("buildingIds:", data?.buildingIds);
+
+      setAvailbleBuildings(Array.isArray(data?.buildingIds) ? data.buildingIds : []);
+    } catch (err) {
+      console.error("❌ โหลดอาคารไม่สำเร็จ", err);
+      setAvailbleBuildings([]);
+    }
+  };
+
+  setBuilding("");
+  fetchBuildingsByStadium();
+}, [stadiumId]);
+
 
   const statusMap = useMemo(() => {
     const m = new Map<string, "ว่าง" | "ไม่ว่าง">();
@@ -235,9 +277,13 @@ const SelectDate = () => {
   };
 
   const handleGoToEquipment = () => {
-    // ✅ ตรวจสอบว่าเลือกอาคารหรือยัง
     if (!building) {
       toast.error("⛔ กรุณาเลือกอาคารที่ต้องการเข้าใช้งาน");
+      return;
+    }
+
+    if (!activityName.trim()) {
+      toast.error("⛔ กรุณากรอกชื่อกิจกรรมที่ใช้งาน");
       return;
     }
 
@@ -267,13 +313,15 @@ const SelectDate = () => {
     const params = new URLSearchParams({
       stadiumId,
       stadiumName,
-      building, 
+      building,
+      activityName: activityName.trim(),
       userId,
       startDate: selectedStartDate,
       endDate: end,
       startTime: firstTimes.startTime,
       endTime: firstTimes.endTime,
-      dayTimes: encodeURIComponent(JSON.stringify(dayTimes)),
+      // ✅ ไม่ต้อง encodeURIComponent ซ้ำ (URLSearchParams จะ encode ให้เอง)
+      dayTimes: JSON.stringify(dayTimes),
       ...(stadiumImage ? { stadiumImage } : {}),
     });
 
@@ -324,8 +372,20 @@ const SelectDate = () => {
           📅 รายละเอียดการจอง
         </h1>
 
-        {/* ✅ ส่วนการเลือกอาคาร (แก้ไขแล้ว) */}
-        <div className="bg-white/10 backdrop-blur-md p-5 rounded-2xl mb-6 border border-white/20 shadow-2xl">
+        {/* ✅ แสดงชื่อสนามที่เลือก (แก้ปัญหา: ไม่ขึ้นชื่อสนามที่เลือกไว้) */}
+        <div className="bg-white/10 backdrop-blur-md p-5 rounded-2xl mb-4 border border-white/20 shadow-2xl">
+          <label className="block text-white font-medium mb-3">
+            ชื่อสนามที่เลือก
+          </label>
+          <input
+            value={stadiumName}
+            readOnly
+            className="w-full p-3.5 rounded-xl bg-white text-gray-800 font-semibold"
+          />
+        </div>
+
+        {/* ✅ ส่วนการเลือกอาคาร */}
+        <div className="bg-white/10 backdrop-blur-md p-5 rounded-2xl mb-4 border border-white/20 shadow-2xl">
           <label className="flex items-center gap-2 text-white font-medium mb-3">
             <Building2 size={20} className="text-orange-400" />
             สถานที่ / อาคาร
@@ -333,31 +393,48 @@ const SelectDate = () => {
           <select
             value={building}
             onChange={(e) => setBuilding(e.target.value)}
-            className="w-full p-3.5 rounded-xl bg-white text-gray-800 font-semibold focus:ring-4 focus:ring-orange-500/50 outline-none transition-all appearance-none cursor-pointer shadow-inner"
+            className="w-full p-3.5 rounded-xl bg-white text-gray-800 font-semibold"
           >
-            {/* แสดงข้อความ Placeholder เป็นลำดับแรก */}
             <option value="" disabled>
               กรุณาเลือกอาคารที่ต้องการเข้าใช้งาน...
             </option>
-            {BUILDINGS.map((item) => (
-              <option key={item} value={item}>
-                {item}
+
+            {availableBuildings.map((b) => (
+              <option key={b._id} value={b._id}>
+                {b.name}
               </option>
             ))}
           </select>
         </div>
 
+        {/* ✅ เพิ่มช่องชื่อกิจกรรม (อยู่ระหว่างชื่ออาคารกับปฏิทิน) */}
+        <div className="bg-white/10 backdrop-blur-md p-5 rounded-2xl mb-6 border border-white/20 shadow-2xl">
+          <label className="block text-white font-medium mb-3">ชื่อกิจกรรมที่ใช้งาน</label>
+          <input
+            value={activityName}
+            onChange={(e) => setActivityName(e.target.value)}
+            placeholder="เช่น แข่งขันแบดมินตัน"
+            className="w-full p-3.5 rounded-xl bg-white text-gray-800 font-semibold focus:ring-4 focus:ring-orange-500/50 outline-none transition-all shadow-inner"
+          />
+        </div>
+
         {/* แถบปฏิทิน */}
         <div className="bg-white/90 rounded-3xl p-5 shadow-2xl">
           <div className="flex justify-between items-center mb-6">
-            <button onClick={() => handleMonthChange("prev")} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+            <button
+              onClick={() => handleMonthChange("prev")}
+              className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+            >
               <CircleChevronLeft size={28} className="text-orange-600" />
             </button>
             <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
               <Calendar size={20} className="text-orange-600" />
               {monthStart.format("MMMM YYYY")}
             </h2>
-            <button onClick={() => handleMonthChange("next")} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+            <button
+              onClick={() => handleMonthChange("next")}
+              className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+            >
               <CircleChevronRight size={28} className="text-orange-600" />
             </button>
           </div>
@@ -385,11 +462,12 @@ const SelectDate = () => {
                   onClick={() => handleDateSelect(d, status)}
                   disabled={disabled}
                   className={`relative h-14 flex flex-col items-center justify-center rounded-xl text-sm font-bold transition-all
-                  ${active 
-                    ? "bg-orange-600 text-white shadow-lg scale-105 z-10" 
-                    : disabled 
-                    ? "bg-gray-100 text-gray-400 cursor-not-allowed opacity-50" 
-                    : "bg-orange-50 text-orange-700 hover:bg-orange-100 hover:scale-105"
+                  ${
+                    active
+                      ? "bg-orange-600 text-white shadow-lg scale-105 z-10"
+                      : disabled
+                      ? "bg-gray-100 text-gray-400 cursor-not-allowed opacity-50"
+                      : "bg-orange-50 text-orange-700 hover:bg-orange-100 hover:scale-105"
                   }`}
                 >
                   <span>{dayjs(d).date()}</span>
@@ -409,40 +487,46 @@ const SelectDate = () => {
               🕒 ช่วงเวลาเข้าใช้งาน {isMultiDay && "(แยกตามวัน)"}
             </h2>
 
-            {selectedDates.slice().sort().map((d) => {
-              const t = dayTimes[d] || { startTime: DEFAULT_START, endTime: DEFAULT_END };
-              return (
-                <div key={d} className="bg-white/15 backdrop-blur-sm rounded-2xl p-4 border border-white/10 animate-in fade-in slide-in-from-bottom-2">
-                  <div className="text-orange-300 font-bold mb-3 border-b border-white/10 pb-2">
-                    {dayjs(d).format("DD MMMM YYYY")}
-                  </div>
+            {selectedDates
+              .slice()
+              .sort()
+              .map((d) => {
+                const t = dayTimes[d] || { startTime: DEFAULT_START, endTime: DEFAULT_END };
+                return (
+                  <div
+                    key={d}
+                    className="bg-white/15 backdrop-blur-sm rounded-2xl p-4 border border-white/10 animate-in fade-in slide-in-from-bottom-2"
+                  >
+                    <div className="text-orange-300 font-bold mb-3 border-b border-white/10 pb-2">
+                      {dayjs(d).format("DD MMMM YYYY")}
+                    </div>
 
-                  <div className="flex gap-4 items-center">
-                    <div className="flex-1">
-                      <label className="block text-xs text-gray-300 mb-1">เวลาเริ่ม</label>
-                      <input
-                        type="time"
-                        value={t.startTime}
-                        onChange={(e) => setStartTimeForDay(d, e.target.value)}
-                        className="w-full p-2.5 rounded-lg bg-white border-none text-gray-800 font-semibold"
-                        disabled={!isTimeActive}
-                      />
-                    </div>
-                    <div className="text-white pt-5">ถึง</div>
-                    <div className="flex-1">
-                      <label className="block text-xs text-gray-300 mb-1">เวลาสิ้นสุด</label>
-                      <input
-                        type="time"
-                        value={t.endTime}
-                        onChange={(e) => setEndTimeForDay(d, e.target.value)}
-                        className="w-full p-2.5 rounded-lg bg-white border-none text-gray-800 font-semibold"
-                        disabled={!isTimeActive}
-                      />
+                    <div className="flex gap-4 items-center">
+                      <div className="flex-1">
+                        <label className="block text-xs text-gray-300 mb-1">เวลาเริ่ม</label>
+                        <input
+                          type="time"
+                          value={t.startTime}
+                          onChange={(e) => setStartTimeForDay(d, e.target.value)}
+                          className="w-full p-2.5 rounded-lg bg-white border-none text-gray-800 font-semibold"
+                          disabled={!isTimeActive}
+                        />
+                      </div>
+                      <div className="text-white pt-5">ถึง</div>
+                      <div className="flex-1">
+                        <label className="block text-xs text-gray-300 mb-1">เวลาสิ้นสุด</label>
+                        <input
+                          type="time"
+                          value={t.endTime}
+                          onChange={(e) => setEndTimeForDay(d, e.target.value)}
+                          className="w-full p-2.5 rounded-lg bg-white border-none text-gray-800 font-semibold"
+                          disabled={!isTimeActive}
+                        />
+                      </div>
                     </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })}
           </div>
         )}
 
@@ -454,7 +538,7 @@ const SelectDate = () => {
               กรุณาเลือกวันที่บนปฏิทินเพื่อดูข้อมูลการจอง
             </div>
           )}
-          
+
           {selectedDates.length > 0 && bookingInfoLoading && (
             <div className="text-center p-10 text-orange-300 animate-pulse">กำลังโหลดข้อมูล...</div>
           )}
@@ -473,15 +557,27 @@ const SelectDate = () => {
                   ) : (
                     <div className="grid gap-3">
                       {bookings.map((booking) => (
-                        <div key={booking._id} className="bg-white rounded-xl p-3 shadow-sm flex justify-between items-center">
+                        <div
+                          key={booking._id}
+                          className="bg-white rounded-xl p-3 shadow-sm flex justify-between items-center"
+                        >
                           <div>
-                            <p className="font-bold text-gray-800">🕒 {booking.startTime} - {booking.endTime}</p>
-                            <p className="text-xs text-gray-500">ผู้จอง: {booking.userId?.fullname || "ไม่ระบุ"}</p>
+                            <p className="font-bold text-gray-800">
+                              🕒 {booking.startTime} - {booking.endTime}
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              ผู้จอง: {booking.userId?.fullname || "ไม่ระบุ"}
+                            </p>
                           </div>
-                          <span className={`px-3 py-1 rounded-full text-[10px] font-bold ${
-                            booking.status === "confirmed" ? "bg-green-100 text-green-700" :
-                            booking.status === "pending" ? "bg-yellow-100 text-yellow-700" : "bg-red-100 text-red-700"
-                          }`}>
+                          <span
+                            className={`px-3 py-1 rounded-full text-[10px] font-bold ${
+                              booking.status === "confirmed"
+                                ? "bg-green-100 text-green-700"
+                                : booking.status === "pending"
+                                ? "bg-yellow-100 text-yellow-700"
+                                : "bg-red-100 text-red-700"
+                            }`}
+                          >
                             {bookingStatusLabel[booking.status] || booking.status}
                           </span>
                         </div>

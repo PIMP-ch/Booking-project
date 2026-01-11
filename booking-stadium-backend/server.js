@@ -13,6 +13,7 @@ import bookingRoutes from "./routes/bookingRoutes.js";
 import equipmentRoutes from "./routes/equipmentRoutes.js";
 import statsRoutes from "./routes/statsRoutes.js";
 import staffRoutes from "./routes/staffRoutes.js";
+import buildingRoutes from "./routes/buildingRoutes.js";
 
 dotenv.config();
 
@@ -43,10 +44,12 @@ connectDB();
 // ✅ ใช้งาน routes
 app.use("/api/auth", authRoutes);
 app.use("/api/stadiums", stadiumRoutes);
+app.use("/api/buildings", buildingRoutes);
 app.use("/api/bookings", bookingRoutes);
 app.use("/api/equipments", equipmentRoutes);
 app.use("/api/stats", statsRoutes);
 app.use("/api/staff", staffRoutes);
+app.use("/stadiums", stadiumRoutes);
 
 // ✅ Start server
 const PORT = process.env.PORT || 5008;

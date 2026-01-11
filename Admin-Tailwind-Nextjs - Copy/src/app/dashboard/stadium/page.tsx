@@ -10,8 +10,10 @@ import {
   deleteStadium,
   uploadStadiumImage,
   deleteStadiumImage,
+  getBuildings,
 } from "@/utils/api";
 import UploadStadiumImage from "src/app/components/dashboard/UploadStadiumImage";
+import build from "next/dist/build";
 
 interface Stadium {
   _id: string;
@@ -20,6 +22,7 @@ interface Stadium {
   contactStadium: string;
   statusStadium: string;
   imageUrl?: string; // ✅ เพิ่มฟิลด์รูป
+  buildingIds?: string[]; //เพิ่มฟิลด์เลือกอาคาร
 }
 
 const StadiumPage = () => {
@@ -35,6 +38,7 @@ const StadiumPage = () => {
     descriptionStadium: "",
     contactStadium: "",
     statusStadium: "active",
+    buildingIds: [] as string[], //เพิ่มฟิลด์สำหรับเลือกอาคาร
   });
   const [imagePreview, setImagePreview] = useState<string>("");
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -44,8 +48,8 @@ const StadiumPage = () => {
 
   const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:5008";
 
-  const resolveImageUrl = (url?: string) => {
-    if (!url) return "";
+  const resolveImageUrl = (url?: unknown) => {
+    if (typeof url !== "string" || url.trim() === "") return "";
     return url.startsWith("http") ? url : `${API_BASE}${url}`;
   };
 
@@ -56,9 +60,19 @@ const StadiumPage = () => {
     }
   };
 
-  const setServerPreview = (relativePath?: string) => {
+  const setServerPreview = (relativePath?: unknown) => {
     cleanupObjectUrl();
-    setImagePreview(resolveImageUrl(relativePath));
+
+    if (Array.isArray(relativePath)) {
+      setImagePreview(resolveImageUrl(relativePath[0]));
+      return;
+    }
+
+    if (typeof relativePath === "string") {
+      setImagePreview(resolveImageUrl(relativePath));
+      return;
+    }
+    setImagePreview("");
   };
 
   const handleImageSelection = (file: File | null) => {
@@ -141,6 +155,10 @@ const StadiumPage = () => {
       console.error("Failed to delete stadium:", err);
     }
   };
+  //เลือกอาคาร
+  const [buildings, setBuildings] = useState<
+    {_id: string; name: string}[]
+  >([]);
 
   // เปิด/ปิดโมดัล
   const openModal = (stadium: Stadium | null = null) => {
@@ -152,12 +170,14 @@ const StadiumPage = () => {
             descriptionStadium: stadium.descriptionStadium,
             contactStadium: stadium.contactStadium,
             statusStadium: stadium.statusStadium,
+            buildingIds: stadium.buildingIds || [],
           }
         : {
             nameStadium: "",
             descriptionStadium: "",
             contactStadium: "",
             statusStadium: "active",
+            buildingIds: [],
           }
     );
     setImageFile(null);
@@ -173,6 +193,7 @@ const StadiumPage = () => {
       descriptionStadium: "",
       contactStadium: "",
       statusStadium: "active",
+      buildingIds: [],
     });
     cleanupObjectUrl();
     setImagePreview("");
@@ -185,6 +206,21 @@ const StadiumPage = () => {
   useEffect(() => {
     fetchStadiums();
   }, []);
+
+  useEffect(() => {
+    const fetchBuildings = async () => {
+      try {
+        const data = await getBuildings();
+        setBuildings(data);
+      } catch (error) {
+        console.error("โหลดอาคารไม่สำเร็จ", error);
+      }
+    };
+
+    fetchBuildings();
+  }, []);
+
+  const isBooked = currentStadium?.statusStadium === "IsBooking";
 
   return (
     <div className="p-6 bg-white rounded-lg shadow-md font-kanit">
@@ -241,34 +277,37 @@ const StadiumPage = () => {
               </Table.Cell>
 
               <Table.Cell>
-                {stadium.statusStadium !== "IsBooking" ? (
-                  <Dropdown
-                    label="..."
-                    renderTrigger={() => (
-                      <span className="h-9 w-9 flex justify-center items-center rounded-full hover:bg-gray-100 cursor-pointer">
-                        <Icon icon="lucide:more-vertical" />
-                      </span>
-                    )}
-                    dismissOnClick={false}
+                <Dropdown
+                  label="..."
+                  renderTrigger={() => (
+                    <span className="h-9 w-9 flex justify-center items-center rounded-full hover:bg-gray-100 cursor-pointer">
+                      <Icon icon="lucide:more-vertical" />
+                    </span>
+                  )}
+                  dismissOnClick={false}
+                >
+                  <Dropdown.Item
+                    className="flex gap-2 items-center"
+                    onClick={() => openModal(stadium)}
                   >
-                    <Dropdown.Item
-                      className="flex gap-2 items-center"
-                      onClick={() => openModal(stadium)}
-                    >
-                      <Icon icon="solar:pen-new-square-broken" height={18} />
-                      <span>แก้ไข</span>
-                    </Dropdown.Item>
-                    <Dropdown.Item
-                      className="flex gap-2 items-center"
-                      onClick={() => openConfirmModal(stadium._id)}
-                    >
-                      <Icon icon="solar:trash-bin-minimalistic-outline" height={18} />
-                      <span>ลบ</span>
-                    </Dropdown.Item>
-                  </Dropdown>
-                ) : (
-                  <span className="text-gray-500 text-sm">ไม่สามารถแก้ไขได้</span>
-                )}
+                    <Icon icon="solar:pen-new-square-broken" height={18} />
+                    <span>แก้ไข</span>
+                  </Dropdown.Item>
+
+                  <Dropdown.Item
+                    className={`flex gap-2 items-center ${stadium.statusStadium === "IsBooking" ? "opacity-50 cursor-not-allowed" : ""}`}
+                    onClick={() => {
+                      if (stadium.statusStadium === "IsBooking") return; // ✅ กันกดลบตอนกำลังจอง
+                      openConfirmModal(stadium._id);
+                    }}
+                  >
+                    <Icon icon="solar:trash-bin-minimalistic-outline" height={18} />
+                    <span>ลบ</span>
+                    {stadium.statusStadium === "IsBooking" && (
+                      <span className="ml-2 text-xs text-gray-500">(กำลังใช้งาน)</span>
+                    )}
+                  </Dropdown.Item>
+                </Dropdown>
               </Table.Cell>
             </Table.Row>
           ))}
@@ -295,6 +334,41 @@ const StadiumPage = () => {
               value={form.contactStadium}
               onChange={(e) => setForm({ ...form, contactStadium: e.target.value })}
             />
+            {/* ✅ อาคารที่สามารถใช้สนามนี้ได้ (เลือกแบบคลิกติ๊ก) */}
+            <div>
+              <label className="block text-sm font-medium mb-2">อาคารที่สามารถใช้สนามนี้ได้</label>
+
+              <div className="max-h-40 overflow-auto rounded-lg border border-gray-300 p-3 space-y-2">
+                {buildings.map((b) => {
+                  const checked = (form.buildingIds ?? []).includes(b._id);
+
+                  return (
+                    <label key={b._id} className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        disabled={isBooked}   // ✅ ใส่ตรงนี้
+                        onChange={(e) => {
+                          if (isBooked) return; // ✅ กัน backend/logic ซ้ำ
+                          const current = form.buildingIds ?? [];
+                          const next = e.target.checked
+                            ? [...current, b._id]
+                            : current.filter((id) => id !== b._id);
+                          setForm({ ...form, buildingIds: next });
+                        }}
+                        className="h-4 w-4"
+                      />
+                      <span className="text-sm">{b.name}</span>
+                    </label>
+                  );
+                })}
+
+                {buildings.length === 0 && (
+                  <p className="text-sm text-gray-500">ยังไม่มีข้อมูลอาคาร</p>
+                )}
+              </div>
+            </div>
+
             <div>
               <label className="block text-sm font-medium mb-1">รูปสนามกีฬา</label>
               <div className="flex items-center gap-3">

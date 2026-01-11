@@ -10,14 +10,14 @@ import Image from "next/image";
 type EquipmentItem = {
   _id: string;
   name: string;
-  quantity: number;   // จำนวนคงเหลือในสต็อก
+  quantity: number; // จำนวนคงเหลือในสต็อก
   imageUrl?: string;
 };
 
 type SelectedItem = {
   equipmentId: string;
   name: string;
-  quantity: number;   // จำนวนที่ผู้ใช้เลือก
+  quantity: number; // จำนวนที่ผู้ใช้เลือก
   imageUrl?: string;
 };
 
@@ -80,10 +80,11 @@ const SelectEquipment = () => {
   const searchParams = useSearchParams();
   const router = useRouter();
 
-  // ✅ ดึง Parameter รวมถึง building เพิ่มเติม
+  // ✅ ดึง Parameter รวมถึง building + activityName เพิ่มเติม
   const stadiumId = searchParams?.get("stadiumId") ?? "";
   const stadiumName = searchParams?.get("stadiumName") ?? "ไม่พบชื่อสนาม";
-  const building = searchParams?.get("building") ?? ""; // เพิ่มการรับค่าอาคาร
+  const building = searchParams?.get("building") ?? "";
+  const activityNameParam = searchParams?.get("activityName") ?? ""; // ✅ เพิ่มชื่อกิจกรรม
   const userId = searchParams?.get("userId") ?? "";
   const startDate = searchParams?.get("startDate") ?? "";
   const endDate = searchParams?.get("endDate") ?? "";
@@ -91,6 +92,14 @@ const SelectEquipment = () => {
   const endTime = searchParams?.get("endTime") ?? "";
   const stadiumImage = searchParams?.get("stadiumImage") ?? "";
   const equipmentParam = searchParams?.get("equipment");
+
+  // ✅ state สำหรับชื่อกิจกรรม (ให้ผู้ใช้กรอก/แก้ไขได้)
+  const [activityName, setActivityName] = useState(activityNameParam);
+
+  useEffect(() => {
+    // เผื่อเข้าหน้านี้แบบมี query มาทีหลัง/รีเฟรช
+    setActivityName(activityNameParam);
+  }, [activityNameParam]);
 
   const initialSelectedEquipment = useMemo<SelectedItem[]>(() => {
     if (!equipmentParam) return [];
@@ -135,12 +144,7 @@ const SelectEquipment = () => {
     fetchEquipment();
   }, []);
 
-  const handleIncrease = (
-    equipmentId: string,
-    name: string,
-    maxQuantity: number,
-    imageUrl?: string
-  ) => {
+  const handleIncrease = (equipmentId: string, name: string, maxQuantity: number, imageUrl?: string) => {
     setSelectedEquipment((prev) => {
       const existing = prev.find((item) => item.equipmentId === equipmentId);
       if (existing) {
@@ -164,9 +168,7 @@ const SelectEquipment = () => {
       const newQuantity = existing.quantity - 1;
       if (newQuantity <= 0) return prev.filter((item) => item.equipmentId !== equipmentId);
 
-      return prev.map((item) =>
-        item.equipmentId === equipmentId ? { ...item, quantity: newQuantity } : item
-      );
+      return prev.map((item) => (item.equipmentId === equipmentId ? { ...item, quantity: newQuantity } : item));
     });
   };
 
@@ -175,35 +177,41 @@ const SelectEquipment = () => {
   };
 
   const handleBack = () => {
+    const params = new URLSearchParams({
+      stadiumId,
+      stadiumName,
+      building,
+      activityName: activityName.trim(), // ✅ ส่งกลับด้วย
+      userId,
+      startDate,
+      endDate,
+      startTime,
+      endTime,
+      ...(stadiumImage ? { stadiumImage } : {}),
+    });
+
     if (typeof window !== "undefined" && window.history.length > 1) {
       router.back();
     } else {
-      const params = new URLSearchParams({
-        stadiumId,
-        stadiumName,
-        building, // ✅ ส่ง building กลับไปด้วย
-        userId,
-        startDate,
-        endDate,
-        startTime,
-        endTime,
-        ...(stadiumImage ? { stadiumImage } : {}),
-      });
       router.push(`/booking/selectDate?${params.toString()}`);
     }
   };
 
   const handleNext = () => {
+    // ✅ บังคับกรอกชื่อกิจกรรมก่อน
+    if (!activityName.trim()) {
+      toast.error("กรุณากรอกชื่อกิจกรรมก่อนกดถัดไป");
+      return;
+    }
+
     const equipmentQuery =
-      selectedEquipment.length > 0
-        ? `&equipment=${encodeURIComponent(JSON.stringify(selectedEquipment))}`
-        : "";
-    
-    // ✅ ส่งข้อมูลทั้งหมดไปยังหน้า book-detail รวมถึง building
+      selectedEquipment.length > 0 ? `&equipment=${encodeURIComponent(JSON.stringify(selectedEquipment))}` : "";
+
     const baseParams = new URLSearchParams({
       stadiumId,
       stadiumName,
-      building, 
+      building,
+      activityName: activityName.trim(), // ✅ ส่งชื่อกิจกรรมไปหน้า book-detail
       userId,
       startDate,
       endDate,
@@ -242,6 +250,7 @@ const SelectEquipment = () => {
         <h1 className="text-2xl font-bold text-center mb-2 flex items-center justify-center gap-2 text-white">
           <Package size={24} className="text-orange-300" /> เลือกอุปกรณ์
         </h1>
+
         <p className="text-center text-gray-200 mb-4">เลือกจำนวนอุปกรณ์ที่ต้องการใช้สำหรับ {stadiumName}</p>
 
         {/* 🧺 อุปกรณ์ที่เลือก (live) */}
@@ -277,14 +286,7 @@ const SelectEquipment = () => {
                         <MinusCircle size={22} />
                       </button>
                       <button
-                        onClick={() =>
-                          handleIncrease(
-                            item.equipmentId,
-                            item.name,
-                            Number.MAX_SAFE_INTEGER, 
-                            item.imageUrl
-                          )
-                        }
+                        onClick={() => handleIncrease(item.equipmentId, item.name, Number.MAX_SAFE_INTEGER, item.imageUrl)}
                         className="text-gray-500 hover:text-orange-600 transition"
                         title="เพิ่มจำนวน"
                       >
@@ -322,7 +324,10 @@ const SelectEquipment = () => {
               const isMin = selectedCount <= 0;
 
               return (
-                <div key={item._id} className="p-3 border rounded-lg shadow-md bg-white/95 backdrop-blur transition hover:shadow-lg">
+                <div
+                  key={item._id}
+                  className="p-3 border rounded-lg shadow-md bg-white/95 backdrop-blur transition hover:shadow-lg"
+                >
                   <EquipmentImage imageUrl={item.imageUrl} name={item.name} />
                   <h2 className="text-sm font-bold text-center min-h-[40px] flex items-center justify-center text-gray-800 px-1 leading-snug">
                     {item.name}
