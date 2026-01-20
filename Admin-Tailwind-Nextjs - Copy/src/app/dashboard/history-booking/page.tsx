@@ -83,13 +83,18 @@ const HistoryBookingPage = () => {
                                 {/* ข้อมูลอุปกรณ์ที่จอง */}
                                 <Table.Cell>
                                     <ol className="list-decimal pl-4">
-                                        {booking.equipment.map((item, index) => (
-                                            <li key={item.equipmentId._id}>
-                                                {item.equipmentId.name} - {item.quantity} ชิ้น
+                                        {booking.equipment.map((item, index) => {
+                                        const equipment = item?.equipmentId;
+
+                                        return (
+                                            <li key={equipment?._id ?? `${booking._id}-eq-${index}`}>
+                                            {equipment?.name ?? "อุปกรณ์ถูกลบ/ไม่พบข้อมูล"} - {item?.quantity ?? 0} ชิ้น
                                             </li>
-                                        ))}
+                                        );
+                                        })}
                                     </ol>
                                 </Table.Cell>
+
 
                                 {/* วันที่จอง */}
                                 <Table.Cell>

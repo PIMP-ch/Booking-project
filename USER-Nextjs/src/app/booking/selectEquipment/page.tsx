@@ -84,6 +84,7 @@ const SelectEquipment = () => {
   const stadiumId = searchParams?.get("stadiumId") ?? "";
   const stadiumName = searchParams?.get("stadiumName") ?? "ไม่พบชื่อสนาม";
   const building = searchParams?.get("building") ?? "";
+  const buildingName = searchParams?.get("buildingName") ?? "";
   const activityNameParam = searchParams?.get("activityName") ?? ""; // ✅ เพิ่มชื่อกิจกรรม
   const userId = searchParams?.get("userId") ?? "";
   const startDate = searchParams?.get("startDate") ?? "";
@@ -211,6 +212,7 @@ const SelectEquipment = () => {
       stadiumId,
       stadiumName,
       building,
+      buildingName,
       activityName: activityName.trim(), // ✅ ส่งชื่อกิจกรรมไปหน้า book-detail
       userId,
       startDate,

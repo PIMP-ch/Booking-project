@@ -4,6 +4,10 @@ import mongoose from "mongoose";
 const BookingSchema = new mongoose.Schema({
     userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
     stadiumId: { type: mongoose.Schema.Types.ObjectId, ref: "Stadium", required: true },
+    buildingIds : [{ type: mongoose.Schema.Types.ObjectId, ref: "Building"}],
+    name: {type: String, required: true},
+    activityName: { type: String, default: ""},
+    cancelReason: { type: String, default: "" },
     equipment: [{
         equipmentId: { type: mongoose.Schema.Types.ObjectId, ref: "Equipment", required: true },
         quantity: { type: Number, required: true, min: 1 }

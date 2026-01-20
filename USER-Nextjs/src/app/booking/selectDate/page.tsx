@@ -19,7 +19,7 @@ import "dayjs/locale/th";
 dayjs.locale("th");
 dayjs.extend(isBetween);
 
-// ✅ ตัวเลือกอาคาร
+// ตัวเลือกอาคาร
 type Building = {
   _id: string;
   name: string;
@@ -63,10 +63,11 @@ const SelectDate = () => {
   const userId = searchParams?.get("userId") ?? "";
   const stadiumImage = searchParams?.get("stadiumImage") ?? "";
 
-  // ✅ state
+  // state
   const [building, setBuilding] = useState<string>("");
+  const [buildingName, setBuildingName] = useState<string>(""); // ✅ เพิ่มแค่ตัวนี้ (ไม่กระทบ UI)
   const [availableBuildings, setAvailbleBuildings] = useState<Building[]>([]);
-  const [activityName, setActivityName] = useState<string>(""); // ✅ เพิ่มชื่อกิจกรรม
+  const [activityName, setActivityName] = useState<string>("");
 
   const [dateStatusList, setDateStatusList] = useState<{ date: string; status: string }[]>([]);
   const [selectedStartDate, setSelectedStartDate] = useState<string | null>(null);
@@ -126,36 +127,30 @@ const SelectDate = () => {
     })();
   }, [stadiumId]);
 
-  // ✅ โหลดอาคารที่เปิดใช้งานตามสนามที่เลือก
+  // โหลดอาคารที่เปิดใช้งานตามสนามที่เลือก
   useEffect(() => {
-  if (!stadiumId?.trim()) return;
+    if (!stadiumId?.trim()) return;
 
-  const fetchBuildingsByStadium = async () => {
-    try {
-      const baseUrl = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:5008";
+    const fetchBuildingsByStadium = async () => {
+      try {
+        const baseUrl = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:5008";
 
-      console.log("stadiumId from url:", stadiumId);
-      const url = `${baseUrl}/api/stadiums/${stadiumId}`;
-      console.log("fetch url:", url);
+        const url = `${baseUrl}/api/stadiums/${stadiumId}`;
+        const res = await fetch(url);
+        if (!res.ok) throw new Error(`Fetch failed: ${res.status}`);
+        const data = await res.json();
 
-      const res = await fetch(url);
-      if (!res.ok) throw new Error(`Fetch failed: ${res.status}`);
-      const data = await res.json();
+        setAvailbleBuildings(Array.isArray(data?.buildingIds) ? data.buildingIds : []);
+      } catch (err) {
+        console.error("❌ โหลดอาคารไม่สำเร็จ", err);
+        setAvailbleBuildings([]);
+      }
+    };
 
-      console.log("stadium detail:", data);
-      console.log("buildingIds:", data?.buildingIds);
-
-      setAvailbleBuildings(Array.isArray(data?.buildingIds) ? data.buildingIds : []);
-    } catch (err) {
-      console.error("❌ โหลดอาคารไม่สำเร็จ", err);
-      setAvailbleBuildings([]);
-    }
-  };
-
-  setBuilding("");
-  fetchBuildingsByStadium();
-}, [stadiumId]);
-
+    setBuilding("");
+    setBuildingName(""); // ✅ รีเซ็ตชื่ออาคารให้สอดคล้องกับ id
+    fetchBuildingsByStadium();
+  }, [stadiumId]);
 
   const statusMap = useMemo(() => {
     const m = new Map<string, "ว่าง" | "ไม่ว่าง">();
@@ -313,16 +308,15 @@ const SelectDate = () => {
     const params = new URLSearchParams({
       stadiumId,
       stadiumName,
-      building,
+      building,       // id
+      buildingName,   // ✅ ส่งชื่ออาคารไปด้วย (ไม่กระทบ UI)
       activityName: activityName.trim(),
       userId,
       startDate: selectedStartDate,
       endDate: end,
       startTime: firstTimes.startTime,
       endTime: firstTimes.endTime,
-      // ✅ ไม่ต้อง encodeURIComponent ซ้ำ (URLSearchParams จะ encode ให้เอง)
       dayTimes: JSON.stringify(dayTimes),
-      ...(stadiumImage ? { stadiumImage } : {}),
     });
 
     router.push(`/booking/selectEquipment?${params.toString()}`);
@@ -372,7 +366,6 @@ const SelectDate = () => {
           📅 รายละเอียดการจอง
         </h1>
 
-        {/* ✅ แสดงชื่อสนามที่เลือก (แก้ปัญหา: ไม่ขึ้นชื่อสนามที่เลือกไว้) */}
         <div className="bg-white/10 backdrop-blur-md p-5 rounded-2xl mb-4 border border-white/20 shadow-2xl">
           <label className="block text-white font-medium mb-3">
             ชื่อสนามที่เลือก
@@ -384,30 +377,35 @@ const SelectDate = () => {
           />
         </div>
 
-        {/* ✅ ส่วนการเลือกอาคาร */}
         <div className="bg-white/10 backdrop-blur-md p-5 rounded-2xl mb-4 border border-white/20 shadow-2xl">
           <label className="flex items-center gap-2 text-white font-medium mb-3">
             <Building2 size={20} className="text-orange-400" />
             สถานที่ / อาคาร
           </label>
-          <select
-            value={building}
-            onChange={(e) => setBuilding(e.target.value)}
-            className="w-full p-3.5 rounded-xl bg-white text-gray-800 font-semibold"
-          >
-            <option value="" disabled>
-              กรุณาเลือกอาคารที่ต้องการเข้าใช้งาน...
-            </option>
 
-            {availableBuildings.map((b) => (
-              <option key={b._id} value={b._id}>
-                {b.name}
-              </option>
-            ))}
-          </select>
+        <select
+          value={building}
+          onChange={(e) => {
+            const selectedId = e.target.value;
+            setBuilding(selectedId);
+
+            const selectedBuilding = availableBuildings.find((b) => b._id === selectedId);
+            setBuildingName(selectedBuilding?.name || "");
+          }}
+          className="w-full p-3.5 rounded-xl bg-white text-gray-800 font-semibold focus:ring-4 focus:ring-orange-500/50 outline-none transition-all shadow-inner"
+        >
+          <option value="" disabled>
+            กรุณาเลือกอาคารที่ต้องการเข้าใช้งาน...
+          </option>
+
+          {availableBuildings.map((b) => (
+            <option key={b._id} value={b._id}>
+              {b.name}
+            </option>
+          ))}
+        </select>
         </div>
 
-        {/* ✅ เพิ่มช่องชื่อกิจกรรม (อยู่ระหว่างชื่ออาคารกับปฏิทิน) */}
         <div className="bg-white/10 backdrop-blur-md p-5 rounded-2xl mb-6 border border-white/20 shadow-2xl">
           <label className="block text-white font-medium mb-3">ชื่อกิจกรรมที่ใช้งาน</label>
           <input
@@ -418,7 +416,6 @@ const SelectDate = () => {
           />
         </div>
 
-        {/* แถบปฏิทิน */}
         <div className="bg-white/90 rounded-3xl p-5 shadow-2xl">
           <div className="flex justify-between items-center mb-6">
             <button
@@ -480,7 +477,6 @@ const SelectDate = () => {
           </div>
         </div>
 
-        {/* เลือกเวลา */}
         {selectedDates.length > 0 && (
           <div className="mt-8 space-y-4">
             <h2 className="text-xl font-bold text-white flex items-center gap-2">
@@ -530,7 +526,6 @@ const SelectDate = () => {
           </div>
         )}
 
-        {/* ข้อมูลการจองในระบบ */}
         <div className="mt-10">
           <h2 className="text-xl font-bold mb-4 text-white">📌 ตรวจสอบคิวจองในวันที่เลือก</h2>
           {!selectedDates.length && (

@@ -248,14 +248,18 @@ export const confirmBooking = async (id) => {
 };
 
 // ✅ ยกเลิกการจอง
-export const cancelBooking = async (id) => {
-    try {
-        const response = await axios.delete(`${API_URL}/bookings/${id}`);
-        return response.data;
-    } catch (error) {
-        throw error.response?.data || { message: "Failed to cancel booking" };
-    }
+export const cancelBooking = async (id, cancelReason = "") => {
+  try {
+    const response = await axios.put(
+      `${API_URL}/bookings/${id}/cancel`,
+      { cancelReason }
+    );
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { message: "Failed to cancel booking" };
+  }
 };
+
 
 
 // Fetch monthly booking stats

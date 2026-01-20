@@ -4,9 +4,12 @@ import React, { useState, useEffect } from "react";
 import { Table, Button, Modal, Dropdown } from "flowbite-react";
 import { getAllBookings, confirmBooking, cancelBooking, resetBookingStatus } from "@/utils/api";
 import { Icon } from "@iconify/react";
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 interface Booking {
     _id: string;
+    activityName?: string;
     userId: {
         _id: string;
         fullname: string;
@@ -20,6 +23,10 @@ interface Booking {
         nameStadium: string;
         descriptionStadium: string;
     } | null;
+    buildingIds?: {
+        _id: string;
+        name: string;
+    }[];
     equipment: {
         equipmentId: {
             _id: string;
@@ -42,6 +49,7 @@ const BookingPage = () => {
         isOpen: false,
         id: null,
     });
+    const [cancelReason, setCancelReason] = useState("");
     const [cancelModal, setCancelModal] = useState<{ isOpen: boolean; id: string | null }>({
         isOpen: false,
         id: null,
@@ -71,14 +79,23 @@ const BookingPage = () => {
     };
 
     const handleCancelBooking = async (id: string) => {
+        if (!cancelReason.trim()) {
+            toast.error("กรุณาระบุเหตุผลในการยกเลิก");
+            return;
+        }
+
         try {
-            await cancelBooking(id);
+            await cancelBooking(id, cancelReason);
+            toast.success("ยกเลิกการจองเรียบร้อยแล้ว");
             fetchBookings();
             closeCancelModal();
+            setCancelReason("");
         } catch (err) {
+            toast.error("ยกเลิกการจองไม่สำเร็จ");
             console.error("Failed to cancel booking:", err);
         }
     };
+
 
     const handleResetBooking = async (id: string) => {
         try {
@@ -92,8 +109,15 @@ const BookingPage = () => {
 
     const openConfirmModal = (id: string) => setConfirmModal({ isOpen: true, id });
     const closeConfirmModal = () => setConfirmModal({ isOpen: false, id: null });
-    const openCancelModal = (id: string) => setCancelModal({ isOpen: true, id });
-    const closeCancelModal = () => setCancelModal({ isOpen: false, id: null });
+    const openCancelModal = (id: string) => {
+    setCancelReason("");              // reset ทุกครั้ง
+    setCancelModal({ isOpen: true, id });
+    };
+
+    const closeCancelModal = () => {
+    setCancelModal({ isOpen: false, id: null });
+    setCancelReason("");
+    };
     const openReturnModal = (id: string) => setReturnModal({ isOpen: true, id });
     const closeReturnModal = () => setReturnModal({ isOpen: false, id: null });
 
@@ -111,6 +135,7 @@ const BookingPage = () => {
 
     return (
         <div className="p-6 bg-white rounded-lg shadow-md font-kanit">
+            <ToastContainer position="top-right" autoClose={2500} />
             {/* Tabs */}
             <div className="flex space-x-4 mb-6">
                 {["pending", "confirmed", "canceled"].map((tab) => (
@@ -139,31 +164,82 @@ const BookingPage = () => {
 
             {/* Modals (รวมไว้ที่เดียวเพื่อความสะอาด) */}
             <Modal show={confirmModal.isOpen} onClose={closeConfirmModal} className="font-kanit">
-                <Modal.Header>ยืนยันการจอง</Modal.Header>
-                <Modal.Body>คุณต้องการยืนยันการจองนี้หรือไม่?</Modal.Body>
-                <Modal.Footer>
-                    <Button color="success" onClick={() => confirmModal.id && handleConfirmBooking(confirmModal.id)}>ยืนยัน</Button>
-                    <Button color="gray" onClick={closeConfirmModal}>ยกเลิก</Button>
+            <Modal.Header>ยืนยันการจอง</Modal.Header>
+            <Modal.Body>คุณต้องการยืนยันการจองนี้หรือไม่?</Modal.Body>
+            <Modal.Footer>
+                <Button
+                color="success"
+                type="button"
+                onClick={() => confirmModal.id && handleConfirmBooking(confirmModal.id)}
+                >
+                    ยืนยัน
+                </Button>
+                <Button color="gray" type="button" onClick={closeConfirmModal}>
+                 ยกเลิก
+                </Button>
                 </Modal.Footer>
             </Modal>
 
-            <Modal show={cancelModal.isOpen} onClose={closeCancelModal} className="font-kanit">
-                <Modal.Header className="text-red-600">ยกเลิกการจอง</Modal.Header>
-                <Modal.Body>คุณต้องการยกเลิกการจองนี้หรือไม่? ระบบจะคืนทรัพยากรสนามและอุปกรณ์</Modal.Body>
-                <Modal.Footer>
-                    <Button color="failure" onClick={() => cancelModal.id && handleCancelBooking(cancelModal.id)}>ยืนยันการยกเลิก</Button>
-                    <Button color="gray" onClick={closeCancelModal}>ปิด</Button>
-                </Modal.Footer>
+
+            <Modal
+                show={cancelModal.isOpen}
+                onClose={closeCancelModal}
+                className="font-kanit"
+            >
+            <Modal.Header className="text-red-600">
+                ยกเลิกการจอง
+            </Modal.Header>
+
+            <Modal.Body>
+                <p className="text-gray-500 text-sm mb-4">
+                คุณต้องการยกเลิกการจองนี้หรือไม่? ระบบจะคืนทรัพยากรสนามและอุปกรณ์
+                </p>
+
+                <textarea
+                value={cancelReason}
+                onChange={(e) => setCancelReason(e.target.value)}
+                placeholder="กรุณาระบุเหตุผลที่ยกเลิกการจอง"
+                className="w-full border rounded-lg p-3 text-sm focus:ring-2 focus:ring-red-400 outline-none"
+                rows={4}
+                />
+            </Modal.Body>
+
+            <Modal.Footer>
+                <Button
+                color="failure"
+                type="button"
+                onClick={() =>
+                    cancelModal.id && handleCancelBooking(cancelModal.id)
+                }
+                >
+                ยืนยันการยกเลิก
+                </Button>
+
+                <Button color="gray" type="button" onClick={closeCancelModal}>
+                ปิด
+                </Button>
+            </Modal.Footer>
             </Modal>
+  
 
             <Modal show={returnModal.isOpen} onClose={closeReturnModal} className="font-kanit">
                 <Modal.Header>ยืนยันการส่งคืนสนาม</Modal.Header>
                 <Modal.Body>คุณต้องการส่งคืนสนามและรีเซ็ตสถานะการจองนี้ใช่หรือไม่?</Modal.Body>
                 <Modal.Footer>
-                    <Button color="success" onClick={() => returnModal.id && handleResetBooking(returnModal.id)}>ยืนยันส่งคืน</Button>
-                    <Button color="gray" onClick={closeReturnModal}>ยกเลิก</Button>
+                 <Button
+                    color="success"
+                    type="button"
+                    onClick={() => returnModal.id && handleResetBooking(returnModal.id)}
+                    >
+                    ยืนยันการคืนสนาม
+                 </Button>
+
+                    <Button color="gray" type="button" onClick={closeReturnModal}>
+                    ปิด
+                    </Button>
                 </Modal.Footer>
             </Modal>
+
         </div>
     );
 };
@@ -190,8 +266,22 @@ const BookingTable: React.FC<{ bookings: Booking[]; onConfirm: (id: string) => v
                         <Table.Cell>
                             <p className="font-bold text-gray-900">{booking.userId?.fullname || "ไม่พบชื่อผู้ใช้"}</p>
                             <p className="text-xs text-gray-500">{booking.userId?.email || "-"}</p>
+                            <p className="text-xs text-gray-500">{booking.userId?.phoneNumber || "-"}</p>
                         </Table.Cell>
-                        <Table.Cell>{booking.stadiumId?.nameStadium || "ไม่ระบุสนาม"}</Table.Cell>
+                        <Table.Cell>
+                            <div className="font-medium">
+                                {booking.stadiumId?.nameStadium || "ไม่ระบุสนาม"}
+                            </div>
+
+                            {booking.buildingIds && booking.buildingIds.length > 0 && (
+                                <div className="text-xs text-gray-500">
+                                    อาคาร: {booking.buildingIds.map((b) => b.name).join(", ") || "-"}
+                                </div>
+                            )}
+                            <div className="text-xs text-gray-500">
+                                กิจกรรม: {booking.activityName || "-"}
+                            </div>
+                            </Table.Cell>
                         <Table.Cell>
                             <ul className="text-xs list-disc pl-4 text-gray-600">
                                 {booking.equipment.map((item, idx) => (
@@ -249,8 +339,22 @@ const BookingTableConfirmed: React.FC<{ bookings: Booking[]; onReset: (id: strin
                         <Table.Cell>
                             <p className="font-medium">{booking.userId?.fullname || "N/A"}</p>
                             <small className="text-gray-400">{booking.userId?.email || "-"}</small>
+                            <div className="text-xs text-gray-400">{booking.userId?.phoneNumber || "-"}</div>
                         </Table.Cell>
-                        <Table.Cell>{booking.stadiumId?.nameStadium}</Table.Cell>
+                        <Table.Cell>
+                        <div className="font-medium">
+                            {booking.stadiumId?.nameStadium || "-"}
+                        </div>
+
+                        {booking.buildingIds && booking.buildingIds.length > 0 && (
+                            <div className="text-xs text-gray-500">
+                                อาคาร: {booking.buildingIds.map((b) => b.name).join(", ") || "-"}
+                            </div>
+                        )}
+                        <div className="text-xs text-gray-500">
+                            กิจกรรม: {booking.activityName || "-"}
+                        </div>
+                        </Table.Cell>
                         <Table.Cell className="text-xs">
                             {new Date(booking.startDate).toLocaleDateString("th-TH")} | {booking.startTime} - {booking.endTime}
                         </Table.Cell>
