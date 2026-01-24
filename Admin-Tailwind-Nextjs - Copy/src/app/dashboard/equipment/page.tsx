@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { Table, Modal, Button, Dropdown, TextInput } from "flowbite-react";
+import { Table, Modal, Button, Dropdown, TextInput, Label } from "flowbite-react";
 import {
     getAllEquipment,
     createEquipment,
@@ -11,7 +11,7 @@ import {
     deleteEquipmentImage,
 } from "@/utils/api";
 import { Icon } from "@iconify/react";
-import UploadEquipmentImage from "src/app/components/dashboard/UploadEquipmentImage";
+import { toast } from "react-toastify";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:5008";
 
@@ -34,109 +34,21 @@ const EquipmentPage = () => {
     const [form, setForm] = useState({ name: "", quantity: 0, status: "available" });
     const [imagePreview, setImagePreview] = useState<string>("");
     const [imageFile, setImageFile] = useState<File | null>(null);
-    const [removeImage, setRemoveImage] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
-    const objectUrlRef = useRef<string | null>(null);
 
-    const resolveImageUrl = (url?: string) => {
-        if (!url) return "";
-        return url.startsWith("http") ? url : `${API_BASE}${url}`;
-    };
-
-    const cleanupObjectUrl = () => {
-        if (objectUrlRef.current) {
-            URL.revokeObjectURL(objectUrlRef.current);
-            objectUrlRef.current = null;
-        }
-    };
-
-    const setServerPreview = (relativePath?: string) => {
-        cleanupObjectUrl();
-        setImagePreview(resolveImageUrl(relativePath));
-    };
-
-    const handleImageSelection = (file: File | null) => {
-        cleanupObjectUrl();
-        if (file) {
-            const url = URL.createObjectURL(file);
-            objectUrlRef.current = url;
-            setImagePreview(url);
-            setImageFile(file);
-            setRemoveImage(false);
-        } else {
-            setImagePreview("");
-            setImageFile(null);
-        }
-    };
-
-    const handleRemoveImage = () => {
-        cleanupObjectUrl();
-        setImagePreview("");
-        setImageFile(null);
-        setRemoveImage(Boolean(currentEquipment?.imageUrl));
-    };
-
-    // Fetch all equipment
-    const fetchEquipment = async () => {
+    const fetchData = async () => {
         try {
             const data = await getAllEquipment();
             setEquipmentList(data);
         } catch (err) {
-            console.error("Failed to fetch equipment:", err);
+            toast.error("โหลดข้อมูลไม่สำเร็จ");
         }
     };
 
     useEffect(() => {
-        return () => {
-            cleanupObjectUrl();
-        };
-        // eslint-disable-next-line react-hooks/exhaustive-deps
+        fetchData();
     }, []);
 
-    // Save equipment
-    const handleSave = async () => {
-        try {
-            setIsSaving(true);
-            let equipmentId: string | undefined;
-
-            if (currentEquipment) {
-                const result = await updateEquipment(currentEquipment._id, form);
-                equipmentId = result?.updatedEquipment?._id || currentEquipment._id;
-            } else {
-                const result = await createEquipment({ ...form, status: "available" });
-                equipmentId = result?.newEquipment?._id || result?._id;
-            }
-
-            if (equipmentId) {
-                if (imageFile) {
-                    await uploadEquipmentImage(equipmentId, imageFile);
-                } else if (removeImage) {
-                    await deleteEquipmentImage(equipmentId);
-                }
-            }
-
-            await fetchEquipment();
-            closeModal();
-        } catch (err) {
-            console.error("Failed to save equipment:", err);
-        } finally {
-            setIsSaving(false);
-        }
-    };
-
-    // Confirm delete
-    const handleDeleteConfirmed = async () => {
-        if (!confirmModal.id) return;
-        try {
-            await deleteEquipment(confirmModal.id);
-            fetchEquipment();
-            closeConfirmModal();
-        } catch (err) {
-            console.error("Failed to delete equipment:", err);
-        }
-    };
-
-    // Open modal for editing or adding
     const openModal = (equipment: Equipment | null = null) => {
         setCurrentEquipment(equipment);
         setForm(
@@ -144,208 +56,218 @@ const EquipmentPage = () => {
                 ? { name: equipment.name, quantity: equipment.quantity, status: equipment.status }
                 : { name: "", quantity: 0, status: "available" }
         );
+        setImagePreview(equipment?.imageUrl ? `${API_BASE}${equipment.imageUrl}` : "");
         setImageFile(null);
-        setRemoveImage(false);
-        setServerPreview(equipment?.imageUrl);
         setIsModalOpen(true);
     };
 
     const closeModal = () => {
         setIsModalOpen(false);
         setCurrentEquipment(null);
-        setForm({ name: "", quantity: 0, status: "available" });
-        cleanupObjectUrl();
         setImagePreview("");
         setImageFile(null);
-        setRemoveImage(false);
     };
 
-    const openConfirmModal = (id: string) => {
-        setConfirmModal({ isOpen: true, id });
+    const handleTableUpload = async (id: string, file: File) => {
+        try {
+            toast.info("กำลังอัปโหลด...");
+            await uploadEquipmentImage(id, file);
+            toast.success("เปลี่ยนรูปภาพสำเร็จ");
+            fetchData();
+        } catch (err) {
+            toast.error("อัปโหลดไม่สำเร็จ");
+        }
     };
 
-    const closeConfirmModal = () => {
-        setConfirmModal({ isOpen: false, id: null });
-    };
+    const handleSave = async () => {
+        try {
+            setIsSaving(true);
+            let eqId = currentEquipment?._id;
 
-    useEffect(() => {
-        fetchEquipment();
-    }, []);
+            if (currentEquipment) {
+                await updateEquipment(currentEquipment._id, form);
+            } else {
+                const res = await createEquipment(form);
+                eqId = res._id || res.newEquipment?._id;
+            }
+
+            if (eqId && imageFile) {
+                await uploadEquipmentImage(eqId, imageFile);
+            }
+
+            toast.success("บันทึกข้อมูลเรียบร้อย");
+            fetchData();
+            closeModal();
+        } catch (err) {
+            toast.error("เกิดข้อผิดพลาด");
+        } finally {
+            setIsSaving(false);
+        }
+    };
 
     return (
-        <div className="p-6 bg-white rounded-lg shadow-md font-kanit">
-            <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-bold">จัดการอุปกรณ์</h2>
-                <Button onClick={() => openModal()} className="bg-blue-500 text-white">
-                    เพิ่มอุปกรณ์
-                </Button>
+        <div className="p-6 font-kanit bg-gray-50 min-h-screen">
+            {/* Header Section */}
+            <div className="flex justify-between items-center mb-6">
+                <h2 className="text-2xl font-bold text-gray-800">จัดการอุปกรณ์</h2>
+        <Button onClick={() => openModal()} className="bg-blue-600 hover:bg-blue-700">
+          <Icon icon="solar:add-circle-bold" className="mr-2 h-5 w-5" />
+          เพิ่มอุปกรณ์
+        </Button>
             </div>
-            <Table hoverable>
-                <Table.Head>
-                    <Table.HeadCell>รูป</Table.HeadCell>
-                    <Table.HeadCell>ลำดับ</Table.HeadCell>
-                    <Table.HeadCell>ชื่ออุปกรณ์</Table.HeadCell>
-                    <Table.HeadCell>จำนวน</Table.HeadCell>
-                    <Table.HeadCell>สถานะ</Table.HeadCell>
-                    <Table.HeadCell></Table.HeadCell>
-                </Table.Head>
-                <Table.Body>
-                    {equipmentList.map((equipment, index) => (
-                        <Table.Row key={equipment._id}>
-                            <Table.Cell>
-                                <UploadEquipmentImage
-                                    equipmentId={equipment._id}
-                                    currentImage={equipment.imageUrl}
-                                    onChanged={fetchEquipment}
-                                />
-                            </Table.Cell>
-                            <Table.Cell>{index + 1}</Table.Cell>
-                            <Table.Cell>{equipment.name}</Table.Cell>
-                            <Table.Cell>{equipment.quantity}</Table.Cell>
-                            <Table.Cell>
-                                <span
-                                    className={`px-2 py-1 rounded-lg text-white ${equipment.status === "available" ? "bg-green-500" : "bg-red-500"
-                                        }`}
-                                >
-                                    {equipment.status === "available" ? "ใช้งานได้" : "ปิดใช้งาน"}
-                                </span>
-                            </Table.Cell>
 
-                            <Table.Cell>
-                                <Dropdown
-                                    label="..."
-                                    renderTrigger={() => (
-                                        <span className="h-9 w-9 flex justify-center items-center rounded-full hover:bg-gray-100 cursor-pointer">
-                                            <Icon icon="lucide:more-vertical" />
-                                        </span>
-                                    )}
-                                    dismissOnClick={false}
-                                >
-                                    <Dropdown.Item
-                                        className="flex gap-2 items-center"
-                                        onClick={() => openModal(equipment)}
-                                    >
-                                        <Icon icon="solar:pen-new-square-broken" height={18} />
-                                        <span>แก้ไข</span>
-                                    </Dropdown.Item>
-                                    <Dropdown.Item
-                                        className="flex gap-2 items-center"
-                                        onClick={() => openConfirmModal(equipment._id)}
-                                    >
-                                        <Icon icon="solar:trash-bin-minimalistic-outline" height={18} />
-                                        <span>ลบ</span>
-                                    </Dropdown.Item>
-                                </Dropdown>
-                            </Table.Cell>
-                        </Table.Row>
-                    ))}
-                </Table.Body>
-            </Table>
-
-            <Modal className="font-kanit" show={isModalOpen} onClose={closeModal}>
-                <Modal.Header>{currentEquipment ? "แก้ไขอุปกรณ์" : "เพิ่มอุปกรณ์"}</Modal.Header>
-                <Modal.Body>
-                    <div className="space-y-4">
-                        <TextInput
-                            placeholder="ชื่ออุปกรณ์"
-                            value={form.name}
-                            onChange={(e) => setForm({ ...form, name: e.target.value })}
-                        />
-                        <TextInput
-                            placeholder="จำนวน"
-                            type="number"
-                            value={form.quantity === 0 ? "" : form.quantity} // แสดงค่าว่างถ้า value เป็น 0
-                            onChange={(e) => setForm({ ...form, quantity: e.target.value === "" ? 0 : Number(e.target.value) })}
-                        />
-
-                        <div>
-                            <label className="block text-sm font-medium mb-1">รูปอุปกรณ์</label>
-                            <div className="flex items-center gap-3">
-                                <div className="w-20 h-20 rounded-md overflow-hidden border bg-gray-100">
-                                    {imagePreview ? (
-                                        <img src={imagePreview} alt="equipment preview" className="w-full h-full object-cover" />
-                                    ) : (
-                                        <div className="w-full h-full flex items-center justify-center text-xs text-gray-400">
-                                            ไม่มีรูป
+            {/* Table Section */}
+            <div className="bg-white rounded-2xl shadow-sm overflow-hidden border border-gray-100">
+                <Table hoverable>
+                    <Table.Head className="bg-gray-50 text-gray-600">
+                        <Table.HeadCell>รูป</Table.HeadCell>
+                        <Table.HeadCell>ลำดับ</Table.HeadCell>
+                        <Table.HeadCell>ชื่ออุปกรณ์</Table.HeadCell>
+                        <Table.HeadCell>จำนวน</Table.HeadCell>
+                        <Table.HeadCell>สถานะ</Table.HeadCell>
+                        <Table.HeadCell></Table.HeadCell>
+                    </Table.Head>
+                    <Table.Body className="divide-y">
+                        {equipmentList.map((eq, index) => (
+                            <Table.Row key={eq._id} className="bg-white">
+                                <Table.Cell className="w-[300px]">
+                                    <div className="flex items-center gap-4">
+                                        <div className="w-16 h-16 rounded-xl overflow-hidden bg-gray-100 border flex-shrink-0">
+                                            <img
+                                                src={eq.imageUrl ? `${API_BASE}${eq.imageUrl}` : "/no-image.png"}
+                                                className="w-full h-full object-cover"
+                                                alt="preview"
+                                            />
                                         </div>
-                                    )}
+                                        <div className="flex flex-col gap-1">
+                                            <label className="bg-[#1e293b] text-white text-[11px] px-3 py-1.5 rounded-md cursor-pointer hover:bg-slate-700 text-center font-medium">
+                                                Choose File
+                                                <input
+                                                    type="file"
+                                                    className="hidden"
+                                                    onChange={(e) => {
+                                                        const file = e.target.files?.[0];
+                                                        if (file) handleTableUpload(eq._id, file);
+                                                    }}
+                                                />
+                                            </label>
+                                            {eq.imageUrl && (
+                                                <button
+                                                    onClick={() => { if(confirm("ลบรูป?")) deleteEquipmentImage(eq._id).then(fetchData); }}
+                                                    className="text-red-500 text-[10px] text-left hover:underline pl-1"
+                                                >
+                                                    ลบรูป
+                                                </button>
+                                            )}
+                                        </div>
+                                    </div>
+                                </Table.Cell>
+                                <Table.Cell>{index + 1}</Table.Cell>
+                                <Table.Cell className="font-semibold text-gray-800">{eq.name}</Table.Cell>
+                                <Table.Cell>{eq.quantity}</Table.Cell>
+                                <Table.Cell>
+                                    <span className={`px-4 py-1 rounded-full text-[12px] text-white font-medium ${
+                                        eq.status === "available" ? "bg-[#10b981]" : "bg-[#d97706]"
+                                    }`}>
+                                        {eq.status === "available" ? "ใช้งานได้" : "กำลังใช้งาน"}
+                                    </span>
+                                </Table.Cell>
+                                <Table.Cell>
+                                    <Dropdown label="" renderTrigger={() => (
+                                        <div className="p-2 hover:bg-gray-100 rounded-full cursor-pointer transition-all">
+                                            <Icon icon="lucide:more-vertical" className="text-gray-400" />
+                                        </div>
+                                    )} inline>
+                                        <Dropdown.Item onClick={() => openModal(eq)}>แก้ไข</Dropdown.Item>
+                                        <Dropdown.Item onClick={() => setConfirmModal({isOpen: true, id: eq._id})} className="text-red-600">ลบ</Dropdown.Item>
+                                    </Dropdown>
+                                </Table.Cell>
+                            </Table.Row>
+                        ))}
+                    </Table.Body>
+                </Table>
+            </div>
+
+            {/* Modal Edit/Add - รูปแบบตามภาพที่ 1 */}
+            <Modal show={isModalOpen} onClose={closeModal} size="md" className="font-kanit">
+                <Modal.Header className="border-b-0 pb-0 pt-6 px-8 text-xl font-bold">
+                    {currentEquipment ? "แก้ไขอุปกรณ์" : "เพิ่มอุปกรณ์"}
+                </Modal.Header>
+                <Modal.Body className="px-8 pb-8">
+                    <div className="space-y-5">
+                        <TextInput 
+                            value={form.name} 
+                            onChange={(e) => setForm({...form, name: e.target.value})}
+                            placeholder="ชื่ออุปกรณ์"
+                            className="rounded-full"
+                        />
+                        <TextInput 
+                            type="number"
+                            value={form.quantity || ""}
+                            onChange={(e) => setForm({...form, quantity: Number(e.target.value)})}
+                            placeholder="จำนวน"
+                        />
+                        
+                        <div className="bg-gray-50 p-4 rounded-2xl border border-dashed border-gray-200">
+                            <Label className="text-gray-500 mb-2 block text-xs">รูปอุปกรณ์</Label>
+                            <div className="flex items-center gap-4">
+                                <div className="w-16 h-16 rounded-xl overflow-hidden border-2 border-white shadow-sm flex-shrink-0 bg-white">
+                                    <img src={imagePreview || "/no-image.png"} className="w-full h-full object-cover" />
                                 </div>
-                                <div className="flex flex-col gap-2 text-sm">
-                                    <input
-                                        type="file"
-                                        accept="image/*"
-                                        onChange={(e) => handleImageSelection(e.target.files?.[0] ?? null)}
-                                        disabled={isSaving}
-                                        className="text-xs"
-                                    />
-                                    {(imagePreview || (currentEquipment?.imageUrl && !removeImage)) && (
-                                        <button
-                                            type="button"
-                                            onClick={handleRemoveImage}
-                                            className="text-red-500 text-xs hover:underline"
-                                            disabled={isSaving}
-                                        >
-                                            ลบรูป
-                                        </button>
-                                    )}
-                                    {removeImage && !imageFile && (
-                                        <span className="text-xs text-yellow-600">จะลบรูปเดิมหลังจากบันทึก</span>
+                                <div className="flex flex-col gap-1">
+                                    <label className="bg-[#1e293b] text-white text-[11px] px-4 py-1.5 rounded-md cursor-pointer hover:bg-slate-700 font-medium">
+                                        Choose File
+                                        <input type="file" className="hidden" onChange={(e) => {
+                                            const file = e.target.files?.[0];
+                                            if(file) {
+                                                setImageFile(file);
+                                                setImagePreview(URL.createObjectURL(file));
+                                            }
+                                        }} />
+                                    </label>
+                                    {(imagePreview || currentEquipment?.imageUrl) && (
+                                        <button onClick={() => {setImagePreview(""); setImageFile(null);}} className="text-red-500 text-[10px] text-left hover:underline">ลบรูป</button>
                                     )}
                                 </div>
                             </div>
                         </div>
 
                         {currentEquipment && (
-                            <div>
-                                <label className="block text-sm font-medium mb-1">สถานะ</label>
-                                <select
-                                    value={form.status}
-                                    onChange={(e) => setForm({ ...form, status: e.target.value })}
-                                    className="w-full p-2 border border-gray-300 rounded-lg"
-                                >
-                                    <option value="available">ใช้งานได้</option>
-                                    <option value="unavailable">ปิดใช้งาน</option>
-                                </select>
-                            </div>
+                            <select 
+                                value={form.status}
+                                onChange={(e) => setForm({...form, status: e.target.value})}
+                                className="w-full rounded-xl border-gray-200 text-sm h-11 focus:ring-blue-500"
+                            >
+                                <option value="available">ใช้งานได้</option>
+                                <option value="unavailable">กำลังใช้งาน</option>
+                            </select>
                         )}
                     </div>
                 </Modal.Body>
-                <Modal.Footer>
-                    <Button
-                        onClick={handleSave}
-                        disabled={isSaving}
-                        className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg"
-                    >
-                        {isSaving ? "กำลังบันทึก..." : currentEquipment ? "บันทึกการแก้ไข" : "เพิ่มอุปกรณ์"}
+                <Modal.Footer className="border-t-0 flex gap-3 px-8 pb-8 pt-0">
+                    <Button onClick={handleSave} className="bg-[#2563eb] flex-1 rounded-2xl h-11" disabled={isSaving}>
+                        {isSaving ? "กำลังบันทึก..." : "บันทึกการแก้ไข"}
                     </Button>
-                    <Button
-                        onClick={closeModal}
-                        disabled={isSaving}
-                        className="bg-gray-200 hover:bg-gray-300 text-black px-4 py-2 rounded-lg"
-                    >
+                    <Button color="gray" onClick={closeModal} className="flex-1 rounded-2xl h-11 border-none bg-gray-100 hover:bg-gray-200">
                         ยกเลิก
                     </Button>
                 </Modal.Footer>
             </Modal>
 
-            <Modal className="font-kanit" show={confirmModal.isOpen} onClose={closeConfirmModal}>
-                <Modal.Header>ยืนยันการลบ</Modal.Header>
-                <Modal.Body>คุณต้องการลบอุปกรณ์นี้จริงหรือไม่?</Modal.Body>
-                <Modal.Footer>
-                    <Button
-                        color="failure"
-                        onClick={handleDeleteConfirmed}
-                        className="bg-red-600 hover:bg-red-700 text-white"
-                    >
-                        ลบ
-                    </Button>
-                    <Button
-                        onClick={closeConfirmModal}
-                        className="bg-gray-200 hover:bg-gray-300 text-black"
-                    >
-                        ยกเลิก
-                    </Button>
-                </Modal.Footer>
+            {/* Confirm Delete Modal */}
+            <Modal show={confirmModal.isOpen} onClose={() => setConfirmModal({isOpen: false, id: null})} size="sm">
+                <Modal.Body className="text-center p-6">
+                    <Icon icon="solar:danger-triangle-bold" className="mx-auto text-red-500 text-5xl mb-4" />
+                    <h3 className="text-lg font-bold mb-6">ยืนยันการลบอุปกรณ์?</h3>
+                    <div className="flex gap-3">
+                        <Button color="failure" onClick={async () => {
+                            if(confirmModal.id) await deleteEquipment(confirmModal.id);
+                            fetchData();
+                            setConfirmModal({isOpen: false, id: null});
+                        }} className="flex-1 rounded-xl">ลบ</Button>
+                        <Button color="gray" onClick={() => setConfirmModal({isOpen: false, id: null})} className="flex-1 rounded-xl">ยกเลิก</Button>
+                    </div>
+                </Modal.Body>
             </Modal>
         </div>
     );

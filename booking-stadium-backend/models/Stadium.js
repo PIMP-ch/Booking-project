@@ -6,18 +6,15 @@ const StadiumSchema = new mongoose.Schema({
     contactStadium: { type: String, required: true },
     statusStadium: {
         type: String,
-        enum: ["active", "inactive", "IsBooking"], // เพิ่มสถานะ IsBooking
+        enum: ["active", "inactive", "IsBooking"],
         default: "active",
     },
-    imageUrl: { type: [String], default: [] },
-
+    // ✅ ต้องเป็น Array ของ String เพื่อเก็บหลายรูป
+    imageUrl: { type: [String], default: [] }, 
     buildingIds: [
         {type: mongoose.Schema.Types.ObjectId, ref: "Building", default: []}
     ],
-},
-    { timestamps: true,
-        collection: "stadia",
-     });
+}, { timestamps: true, collection: "stadia" });
 
 const Stadium = mongoose.model("Stadium", StadiumSchema);
 export default Stadium;

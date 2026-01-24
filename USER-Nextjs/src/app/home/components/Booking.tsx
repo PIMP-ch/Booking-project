@@ -7,19 +7,15 @@ import { toast } from "react-toastify";
 import { Volleyball } from "lucide-react";
 import Image from "next/image";
 
-const menuItems = [
-  {
-    id: "stadiums",
-    label: "จองสนาม",
-    icon: <Volleyball size={24} className="text-orange-500" />,
-  },
-];
-
-// ✅ Component แสดงรูปพร้อม fallback
+// ✅ Component แสดงรูปพร้อม fallback กรณีรูปโหลดไม่ได้
 function SafeImage({ src, alt }: { src: string; alt: string }) {
-  const [img, setImg] = useState(
-    src && src.trim() !== "" ? src : "/images/stadium-placeholder.jpg"
-  );
+  const [img, setImg] = useState(src);
+
+  // อัปเดต src เมื่อ props เปลี่ยน
+  useEffect(() => {
+    setImg(src && src.trim() !== "" ? src : "/images/stadium-placeholder.jpg");
+  }, [src]);
+
   return (
     <Image
       src={img}
@@ -27,7 +23,8 @@ function SafeImage({ src, alt }: { src: string; alt: string }) {
       fill
       className="object-cover"
       sizes="(max-width: 768px) 100vw, 50vw"
-      onError={() => setImg("/images/stadium-placeholder.jpg")}
+      onError={() => setImg("/images/stadium-placeholder.jpg")} // เมื่อ Error ให้ใช้รูปสำรอง
+      unoptimized // เพิ่มไว้หากยังไม่ได้ตั้งค่า remotePatterns ใน next.config.js
     />
   );
 }
@@ -63,10 +60,8 @@ const Booking = () => {
     }
   }, []);
 
-  // ✅ ฟังก์ชันแจ้งเตือน
   const handleComingSoon = () => toast.info("🚀 ฟังก์ชันนี้กำลังอัปเดต");
 
-  // ✅ เมื่อกดปุ่ม "จองสนามนี้"
   const handleSelectStadium = (
     stadiumId: string,
     stadiumName: string,
@@ -84,6 +79,14 @@ const Booking = () => {
     );
   };
 
+  const menuItems = [
+    {
+      id: "stadiums",
+      label: "จองสนาม",
+      icon: <Volleyball size={24} className="text-orange-500" />,
+    },
+  ];
+
   return (
     <div className="p-1 pt-20 font-kanit mb-20 max-w-[670px] mx-auto">
       {/* เมนูตัวเลือก */}
@@ -92,22 +95,14 @@ const Booking = () => {
           <button
             key={item.id}
             onClick={() =>
-              item.id === "stadiums"
-                ? setActiveTab("stadiums")
-                : handleComingSoon()
+              item.id === "stadiums" ? setActiveTab("stadiums") : handleComingSoon()
             }
             className={`flex flex-col items-center justify-center p-3 rounded-sm shadow-md transition-all
-                        ${
-                          activeTab === item.id
-                            ? "border-2 border-orange-500 bg-white"
-                            : "bg-white"
-                        }
-                        `}
+              ${activeTab === item.id ? "border-2 border-orange-500 bg-white" : "bg-white"}
+            `}
           >
             {item.icon}
-            <span className="text-sm font-semibold text-gray-700">
-              {item.label}
-            </span>
+            <span className="text-sm font-semibold text-gray-700">{item.label}</span>
           </button>
         ))}
       </div>
@@ -115,54 +110,43 @@ const Booking = () => {
       {/* แสดงข้อมูลสนาม */}
       {activeTab === "stadiums" && (
         <div>
-          <h1 className="text-base mb-4 text-start text-gray-800">
-            รายการสนามทั้งหมด
-          </h1>
+          <h1 className="text-base mb-4 text-start text-gray-800">รายการสนามทั้งหมด</h1>
           <div className="grid grid-cols-2 gap-4">
             {stadiums.map((stadium) => {
-              // ✅ เลือก URL รูป (absolute หรือ relative)
-              const rawUrl =
-                Array.isArray(stadium.imageUrls) && stadium.imageUrls.length > 0
-                  ? stadium.imageUrls[0]
-                  : stadium.imageUrl;
+              // ✅ เลือก URL รูปภาพ (ดึงจาก Array imageUrl ตำแหน่งที่ 0)
+              let rawPath = "";
+              if (Array.isArray(stadium.imageUrl) && stadium.imageUrl.length > 0) {
+                rawPath = stadium.imageUrl[0];
+              } else if (typeof stadium.imageUrl === "string") {
+                rawPath = stadium.imageUrl;
+              }
 
-              // ✅ แปลงเป็น URL ที่ใช้งานได้จริง + fallback
-              const imgSrc =
-                typeof rawUrl === "string" && rawUrl.trim() !== ""
-                  ? rawUrl.startsWith("http")
-                    ? rawUrl
-                    : `${API_BASE}${rawUrl}`
-                  : "/images/stadium-placeholder.jpg";
+              // ✅ สร้าง Full URL สำหรับแสดงผล
+              const imgSrc = (rawPath && rawPath.trim() !== "")
+                ? (rawPath.startsWith("http") ? rawPath : `${API_BASE}${rawPath}`)
+                : "/images/stadium-placeholder.jpg";
 
               return (
-                <div
-                  key={stadium._id}
-                  className="border rounded-sm shadow-md bg-white overflow-hidden"
-                >
-                  {/* ✅ รูปสนาม */}
-                  <div className="relative w-full h-24">
+                <div key={stadium._id} className="border rounded-sm shadow-md bg-white overflow-hidden">
+                  {/* ส่วนแสดงรูปภาพ */}
+                  <div className="relative w-full h-32 bg-gray-100">
                     <SafeImage src={imgSrc} alt={stadium.nameStadium} />
                   </div>
 
-                  {/* ✅ ข้อมูลสนาม */}
+                  {/* ข้อมูลสนาม */}
                   <div className="p-3">
-                    <h2 className="text-base font-bold mb-2">
-                      {stadium.nameStadium}
-                    </h2>
-                    <p className="text-gray-600 text-sm mb-2">
+                    <h2 className="text-base font-bold mb-1 truncate">{stadium.nameStadium}</h2>
+                    <p className="text-gray-600 text-xs mb-2 line-clamp-2 min-h-[2rem]">
                       {stadium.descriptionStadium}
                     </p>
-                    <p className="text-gray-500 text-sm">
-                      📞 {stadium.contactStadium}
-                    </p>
+                    <div className="flex items-center gap-1 text-gray-500 text-xs mb-3">
+                      <span>📞 {stadium.contactStadium || "ไม่ระบุ"}</span>
+                    </div>
+
                     <button
-                      className="mt-3 w-full bg-orange-500 text-white py-2 rounded-md text-sm font-semibold hover:bg-orange-600 transition"
+                      className="w-full bg-orange-500 text-white py-2 rounded-md text-sm font-semibold hover:bg-orange-600 transition active:scale-95"
                       onClick={() =>
-                        handleSelectStadium(
-                          stadium._id,
-                          stadium.nameStadium,
-                          imgSrc
-                        )
+                        handleSelectStadium(stadium._id, stadium.nameStadium, imgSrc)
                       }
                     >
                       จองสนามนี้
@@ -172,6 +156,9 @@ const Booking = () => {
               );
             })}
           </div>
+          {stadiums.length === 0 && (
+            <div className="text-center py-10 text-gray-500">ไม่พบข้อมูลสนามในขณะนี้</div>
+          )}
         </div>
       )}
     </div>

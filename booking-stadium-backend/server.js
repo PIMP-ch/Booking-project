@@ -37,6 +37,7 @@ app.use(express.json());
 // ✅ เปิดให้เข้าถึงไฟล์ในโฟลเดอร์ uploads
 // เช่น http://localhost:5008/uploads/stadiums/รูป.png
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
 // ✅ เชื่อม DB
 connectDB();
