@@ -48,7 +48,9 @@ const StadiumPage = () => {
     
     const [form, setForm] = useState(INITIAL_FORM);
     const [imagePreview, setImagePreview] = useState<string>("");
-    const [imageFile, setImageFile] = useState<File | null>(null);
+    const [imageFiles, setImageFiles] = useState<File[]>([]);
+    const [externalImageUrls, setExternalImageUrls] = useState<string[]>([]);
+
 
     // --- Actions ---
     const fetchData = useCallback(async () => {
@@ -84,7 +86,7 @@ const StadiumPage = () => {
             setForm(INITIAL_FORM);
             setImagePreview("");
         }
-        setImageFile(null);
+        setImageFiles(null);
         setIsModalOpen(true);
     };
 
@@ -93,7 +95,7 @@ const StadiumPage = () => {
         setCurrentStadium(null);
         setForm(INITIAL_FORM);
         setImagePreview("");
-        setImageFile(null);
+        setImageFiles(null);
     };
 
     // ฟังก์ชันลบรูปภาพ (ปรับปรุงให้ใช้ได้ทั้งหน้าตารางและใน Modal แก้ไข)
@@ -141,8 +143,14 @@ const StadiumPage = () => {
             }
 
             // ถ้ามีการเลือกไฟล์ใหม่ ให้ทำการอัปโหลด
-            if (stadiumId && imageFile) {
-                await uploadStadiumImages(stadiumId, [imageFile]);
+            if (stadiumId && 
+                (imageFiles.length > 0 || externalImageUrls.length > 0)
+            ) {
+                await uploadStadiumImages(
+                    stadiumId, 
+                    imageFiles,
+                    externalImageUrls
+                );
             }
 
             toast.success("บันทึกข้อมูลเรียบร้อย");
@@ -297,7 +305,7 @@ const StadiumPage = () => {
                                         <input type="file" className="hidden" onChange={(e) => {
                                             const file = e.target.files?.[0];
                                             if (file) {
-                                                setImageFile(file);
+                                                setImageFiles(file);
                                                 setImagePreview(URL.createObjectURL(file));
                                             }
                                         }} />
@@ -314,7 +322,7 @@ const StadiumPage = () => {
                                                 } else {
                                                     // แค่ล้างรูปที่เพิ่งเลือกมา (ยังไม่บันทึก)
                                                     setImagePreview("");
-                                                    setImageFile(null);
+                                                    setImageFiles(null);
                                                 }
                                             }} 
                                             className="text-red-500 text-[10px] text-left hover:underline"

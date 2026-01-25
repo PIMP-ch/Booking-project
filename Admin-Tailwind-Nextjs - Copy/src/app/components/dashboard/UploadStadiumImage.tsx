@@ -1,140 +1,179 @@
 "use client";
-import React, { useEffect, useState } from "react";
 
-type Props = {
-  stadiumId: string;
-  currentImage?: string | string[]; // ✅ รองรับทั้ง String (เดิม) และ Array (ใหม่)
-  onChanged?: () => void;
-};
+import React, { useEffect, useRef, useState } from "react";
+import axios from "axios";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:5008";
 
-export default function UploadStadiumImage({
+interface UploadStadiumImageProps {
+  stadiumId: string;
+  currentImage?: string | string[];
+  onUploaded?: (images: string[]) => void;
+}
+
+function normalizeUrl(url: string) {
+  if (!url) return "";
+  if (url.startsWith("http")) return url;
+  return `${API_BASE}${url}`;
+}
+
+const UploadStadiumImage: React.FC<UploadStadiumImageProps> = ({
   stadiumId,
   currentImage,
-  onChanged,
-}: Props) {
+  onUploaded,
+}) => {
   const [previews, setPreviews] = useState<string[]>([]);
+  const [externalUrl, setExternalUrl] = useState("");
   const [loading, setLoading] = useState(false);
-  const [err, setErr] = useState<string>("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // ✅ ปรับ Effect ให้รองรับ Array จาก Model (imageUrl)
+  /* ---------------- set preview จากข้อมูลเดิม ---------------- */
   useEffect(() => {
     if (Array.isArray(currentImage)) {
-      setPreviews(currentImage.map((u) => `${API_BASE}${u}`));
+      setPreviews(currentImage.map(normalizeUrl));
     } else if (currentImage) {
-      setPreviews([`${API_BASE}${currentImage}`]);
+      setPreviews([normalizeUrl(currentImage)]);
     } else {
       setPreviews([]);
     }
   }, [currentImage]);
 
-  async function upload(files: FileList) {
+  /* ---------------- upload ไฟล์ ---------------- */
+  const uploadFiles = async (files: File[]) => {
+    if (!files.length) return;
+
+    const formData = new FormData();
+    files.forEach((f) => formData.append("images", f));
+
     try {
       setLoading(true);
-      setErr("");
-
-      const fd = new FormData();
-      Array.from(files).forEach((f) => fd.append("images", f));
-
-      const res = await fetch(`${API_BASE}/api/stadiums/${stadiumId}/images`, {
-        method: "POST",
-        body: fd,
-      });
-
-      if (!res.ok) throw new Error("อัปโหลดรูปไม่สำเร็จ");
-
-      const { stadium } = await res.json();
-
-      // ✅ เปลี่ยนจาก imageUrls เป็น imageUrl ตาม Model
-      if (Array.isArray(stadium?.imageUrl)) {
-        setPreviews(stadium.imageUrl.map((u: string) => `${API_BASE}${u}`));
-      }
-
-      onChanged?.();
-    } catch (e: any) {
-      setErr(e?.message || "เกิดข้อผิดพลาด");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function removeOne(index: number) {
-    if (!confirm("คุณต้องการลบรูปภาพนี้ใช่หรือไม่?")) return;
-    try {
-      setLoading(true);
-      setErr("");
-
-      const res = await fetch(
-        `${API_BASE}/api/stadiums/${stadiumId}/images/${index}`,
-        { method: "DELETE" }
+      const res = await axios.post(
+        `${API_BASE}/api/stadiums/${stadiumId}/images`,
+        formData
       );
-      if (!res.ok) throw new Error("ลบรูปไม่สำเร็จ");
 
-      const { stadium } = await res.json();
-
-      // ✅ เปลี่ยนจาก imageUrls เป็น imageUrl ตาม Model
-      if (Array.isArray(stadium?.imageUrl)) {
-        setPreviews(stadium.imageUrl.map((u: string) => `${API_BASE}${u}`));
-      }
-
-      onChanged?.();
-    } catch (e: any) {
-      setErr(e.message || "เกิดข้อผิดพลาด");
+      const images = res.data?.images || [];
+      setPreviews(images.map(normalizeUrl));
+      onUploaded?.(images);
+    } catch (err) {
+      console.error("อัปโหลดรูปไม่สำเร็จ", err);
+      alert("อัปโหลดรูปไม่สำเร็จ");
     } finally {
       setLoading(false);
     }
-  }
+  };
+
+  /* ---------------- เพิ่มรูปจาก URL ---------------- */
+  const addExternalUrl = async () => {
+    if (!externalUrl.trim()) return;
+
+    const formData = new FormData();
+    formData.append("externalUrls", externalUrl.trim());
+
+    try {
+      setLoading(true);
+      const res = await axios.post(
+        `${API_BASE}/api/stadiums/${stadiumId}/images`,
+        formData
+      );
+
+      const images = res.data?.images || [];
+      setPreviews(images.map(normalizeUrl));
+      onUploaded?.(images);
+      setExternalUrl("");
+    } catch (err) {
+      console.error("เพิ่มรูปจาก URL ไม่สำเร็จ", err);
+      alert("เพิ่มรูปจาก URL ไม่สำเร็จ");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /* ---------------- ลบรูป ---------------- */
+  const removeImage = async (index: number) => {
+    if (!confirm("ต้องการลบรูปนี้ใช่หรือไม่")) return;
+
+    try {
+      setLoading(true);
+      const res = await axios.delete(
+        `${API_BASE}/api/stadiums/${stadiumId}/images/${index}`
+      );
+
+      const images = res.data?.images || [];
+      setPreviews(images.map(normalizeUrl));
+      onUploaded?.(images);
+    } catch (err) {
+      console.error("ลบรูปไม่สำเร็จ", err);
+      alert("ลบรูปไม่สำเร็จ");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
-    <div className="flex flex-col gap-4 p-2 border rounded-md bg-white">
-      {/* ส่วนแสดงรูปภาพ (Previews) */}
-      <div className="flex flex-wrap gap-2">
-        {previews.length > 0 ? (
-          previews.map((src, idx) => (
-            <div
-              key={idx}
-              className="relative w-20 h-20 rounded-md overflow-hidden border bg-gray-100 shadow-sm"
-            >
-              <img
-                src={src}
-                className="w-full h-full object-cover"
-                alt={`stadium-${idx}`}
-              />
-              {/* ปุ่มลบ (กากบาท) */}
-              <button
-                type="button"
-                onClick={() => removeOne(idx)}
-                disabled={loading}
-                className="absolute top-1 right-1 w-5 h-5 rounded-full bg-red-600 text-white text-[10px] flex items-center justify-center hover:bg-red-700 shadow-md"
-              >
-                ✕
-              </button>
-            </div>
-          ))
-        ) : (
-          <div className="w-20 h-20 rounded-md border-2 border-dashed flex items-center justify-center text-[10px] text-gray-400">
-            ไม่มีรูปภาพ
-          </div>
-        )}
-      </div>
-
-      {/* ปุ่มเลือกไฟล์ */}
-      <div className="flex flex-col gap-1">
-        <label className="text-xs font-semibold text-gray-600">เพิ่มรูปภาพสนาม:</label>
+    <div className="space-y-4">
+      {/* -------- Upload File -------- */}
+      <div>
+        <label className="block font-medium mb-1">อัปโหลดรูปจากเครื่อง</label>
         <input
+          ref={fileInputRef}
           type="file"
-          accept="image/*"
           multiple
           onChange={(e) => {
-            if (e.target.files && e.target.files.length > 0) upload(e.target.files);
+            const files = Array.from(e.target.files || []);
+            if (files.length) {
+              uploadFiles(files);
+              e.target.value = ""; // reset input
+            }
           }}
-          disabled={loading}
-          className="text-xs file:mr-2 file:py-1 file:px-2 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100 cursor-pointer"
         />
-        {loading && <p className="text-orange-500 text-[10px] animate-pulse">กำลังดำเนินการ...</p>}
-        {err && <p className="text-red-500 text-[10px]">{err}</p>}
       </div>
+
+      {/* -------- External URL -------- */}
+      <div>
+        <label className="block font-medium mb-1">เพิ่มรูปจาก URL</label>
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={externalUrl}
+            onChange={(e) => setExternalUrl(e.target.value)}
+            placeholder="https://example.com/image.jpg"
+            className="flex-1 border rounded px-3 py-2"
+          />
+          <button
+            type="button"
+            onClick={addExternalUrl}
+            disabled={loading}
+            className="px-4 py-2 bg-blue-600 text-white rounded"
+          >
+            เพิ่ม
+          </button>
+        </div>
+      </div>
+
+      {/* -------- Preview -------- */}
+      <div className="grid grid-cols-3 gap-3">
+        {previews.map((src, idx) => (
+          <div key={idx} className="relative">
+            <img
+              src={src}
+              alt="stadium"
+              className="w-full h-32 object-cover rounded"
+            />
+            <button
+              type="button"
+              onClick={() => removeImage(idx)}
+              className="absolute top-1 right-1 bg-red-600 text-white text-xs px-2 py-1 rounded"
+            >
+              ลบ
+            </button>
+          </div>
+        ))}
+      </div>
+
+      {loading && <p className="text-sm text-gray-500">กำลังดำเนินการ...</p>}
     </div>
   );
-}
+};
+
+export default UploadStadiumImage;

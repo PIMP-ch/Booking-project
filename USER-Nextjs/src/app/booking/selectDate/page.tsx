@@ -2,7 +2,7 @@
 
 import { useState, useEffect, Suspense, useMemo } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { getAvailableDates, getStadiumBookings } from "@/utils/api";
+import { getAvailableDates, getStadiumBookings, getStadiumById } from "@/utils/api";
 import { toast } from "react-toastify";
 import {
   CircleChevronLeft,
@@ -133,14 +133,11 @@ const SelectDate = () => {
 
     const fetchBuildingsByStadium = async () => {
       try {
-        const baseUrl = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:5008";
+        const stadium = await getStadiumById(stadiumId);
 
-        const url = `${baseUrl}/api/stadiums/${stadiumId}`;
-        const res = await fetch(url);
-        if (!res.ok) throw new Error(`Fetch failed: ${res.status}`);
-        const data = await res.json();
-
-        setAvailbleBuildings(Array.isArray(data?.buildingIds) ? data.buildingIds : []);
+        setAvailbleBuildings(
+          Array.isArray(stadium?.buildingIds) ? stadium.buildingIds : []
+        );
       } catch (err) {
         console.error("❌ โหลดอาคารไม่สำเร็จ", err);
         setAvailbleBuildings([]);
@@ -148,7 +145,7 @@ const SelectDate = () => {
     };
 
     setBuilding("");
-    setBuildingName(""); // ✅ รีเซ็ตชื่ออาคารให้สอดคล้องกับ id
+    setBuildingName("");
     fetchBuildingsByStadium();
   }, [stadiumId]);
 

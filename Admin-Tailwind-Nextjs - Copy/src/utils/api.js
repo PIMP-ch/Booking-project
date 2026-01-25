@@ -128,17 +128,32 @@ export const deleteStadium = async (id) => {
   } catch (error) { handleError(error, "Failed to delete stadium"); }
 };
 
-export const uploadStadiumImages = async (id, files) => {
+export const uploadStadiumImages = async (id, files = [], externalUrls = []) => {
   try {
     const formData = new FormData();
-    Array.from(files).forEach((file) => {
-      formData.append("images", file);
-    });
+
+    // 1. จัดการไฟล์จากเครื่อง (ถ้ามี)
+    if (files && files.length > 0) {
+      Array.from(files).forEach((file) => {
+        formData.append("images", file);
+      });
+    }
+
+    // 2. จัดการ URL จากภายนอก (ถ้ามี)
+    // ส่งไปในรูปแบบ JSON string หรือส่งแยก field เพื่อให้ Backend รับได้
+    if (externalUrls && externalUrls.length > 0) {
+      externalUrls.forEach(url => {
+        formData.append("externalUrls", url);
+      });
+    }
+
     const response = await axios.post(`${API_URL}/stadiums/${id}/images`, formData, {
       headers: { "Content-Type": "multipart/form-data" },
     });
     return response.data;
-  } catch (error) { handleError(error, "Failed to upload stadium images"); }
+  } catch (error) { 
+    handleError(error, "Failed to upload stadium images"); 
+  }
 };
 
 // --- แก้ไข: ปรับให้รองรับการลบรูปตาม Index ของอาเรย์รูปภาพ ---

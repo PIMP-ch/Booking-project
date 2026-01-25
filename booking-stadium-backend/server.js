@@ -50,7 +50,6 @@ app.use("/api/bookings", bookingRoutes);
 app.use("/api/equipments", equipmentRoutes);
 app.use("/api/stats", statsRoutes);
 app.use("/api/staff", staffRoutes);
-app.use("/stadiums", stadiumRoutes);
 
 // ✅ Start server
 const PORT = process.env.PORT || 5008;

@@ -4,6 +4,7 @@ import {
   getStadiums,
   updateStadium,
   deleteStadium,
+  getStadiumById
 } from "../controllers/stadiumController.js";
 import Stadium from "../models/Stadium.js";
 import path from "path";
@@ -15,20 +16,19 @@ const router = express.Router();
 /** ---------- Multer Config ---------- */
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    const uploadPath = path.join(process.cwd(), "uploads/stadiums");
-    if (!fs.existsSync(uploadPath)) fs.mkdirSync(uploadPath, { recursive: true });
-    cb(null, uploadPath);
+    cb(null, 'uploads/'); // ระบุโฟลเดอร์ที่เก็บรูป
   },
   filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname || "").toLowerCase();
-    cb(null, `stadium_${Date.now()}_${Math.round(Math.random() * 1E9)}${ext}`);
-  },
+    // เปลี่ยนชื่อเป็น: stadium-เวลาปัจจุบัน.นามสกุลเดิม (ป้องกันชื่อซ้ำและรองรับทุกชื่อไฟล์)
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
+  }
 });
 
-const upload = multer({ storage, limits: { fileSize: 5 * 1024 * 1024 } });
-
+export const upload = multer({ storage: storage });
 /** ---------- Stadium CRUD ---------- */
 router.get("/", getStadiums);
+router.get("/:id", getStadiumById);
 router.post("/", createStadium);
 router.put("/:id", updateStadium);
 router.delete("/:id", deleteStadium);

@@ -26,28 +26,35 @@ export const createStadium = async (req, res) => {
   }
 };
 
-// ✅ 2. เพิ่มรูปภาพใหม่เข้าไปในรายการเดิม (สำหรับหน้าแก้ไขรูปภาพใน Admin)
 export const addStadiumImages = async (req, res) => {
   try {
     const { id } = req.params;
-    if (!req.files || req.files.length === 0) {
-      return res.status(400).json({ message: "No images provided" });
+    let newImagePaths = [];
+
+    // ส่วนที่ 1: ถ้าเลือกไฟล์จากเครื่อง (ไม่ว่าจะชื่ออะไร Multer จะเปลี่ยนชื่อให้ข้างต้น)
+    if (req.files && req.files.length > 0) {
+      newImagePaths = req.files.map(file => `/uploads/${file.filename}`);
     }
 
-    const newImagePaths = req.files.map(file => `/uploads/${file.filename}`);
+    // ส่วนที่ 2: ถ้าก๊อปปี้ลิงก์รูปจากเน็ตมาวาง (รองรับ "จากไหนก็ได้")
+    if (req.body.imageUrl) {
+      const externalUrls = Array.isArray(req.body.imageUrl) ? req.body.imageUrl : [req.body.imageUrl];
+      newImagePaths = [...newImagePaths, ...externalUrls];
+    }
 
-    // ใช้ $push เพื่อเพิ่มข้อมูลใหม่เข้าไปใน Array เดิมที่มีอยู่
+    if (newImagePaths.length === 0) {
+      return res.status(400).json({ message: "กรุณาเลือกไฟล์หรือระบุ URL รูปภาพ" });
+    }
+
     const stadium = await Stadium.findByIdAndUpdate(
       id,
-      { $push: { imageUrl: { $each: newImagePaths } } },
+      { $push: { imageUrl: { $each: newImagePaths } } }, // เพิ่มรูปเข้าไปในอาเรย์เดิม
       { new: true }
     );
 
-    if (!stadium) return res.status(404).json({ message: "Stadium not found" });
-
-    res.status(200).json({ message: "Images added successfully", stadium });
+    res.status(200).json({ message: "เพิ่มรูปภาพสำเร็จ", stadium });
   } catch (error) {
-    res.status(500).json({ message: "Upload failed", error });
+    res.status(500).json({ message: "Server error", error: error.message });
   }
 };
 
@@ -63,10 +70,11 @@ export const deleteStadiumImage = async (req, res) => {
 
     // ลบไฟล์จริงในเครื่อง (ใช้ path.join เพื่อหาที่อยู่ไฟล์)
     const fileName = stadium.imageUrl[index];
-    const filePath = path.join(process.cwd(), fileName);
 
-    if (fs.existsSync(filePath)) {
-      fs.unlinkSync(filePath);
+    // ลบไฟล์เฉพาะถ้า Path ขึ้นต้นด้วย /uploads (เป็นไฟล์ในเครื่อง)
+    if (fileName.startsWith('/uploads')) {
+        const filePath = path.join(process.cwd(), fileName);
+        if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
     }
 
     // ลบ Path ออกจาก Array ใน Database
