@@ -45,7 +45,7 @@ const StadiumPage = () => {
         isOpen: false,
         id: null,
     });
-    
+
     const [form, setForm] = useState(INITIAL_FORM);
     const [imagePreview, setImagePreview] = useState<string>("");
     const [imageFiles, setImageFiles] = useState<File[]>([]);
@@ -86,7 +86,7 @@ const StadiumPage = () => {
             setForm(INITIAL_FORM);
             setImagePreview("");
         }
-        setImageFiles(null);
+        setImageFiles([]);
         setIsModalOpen(true);
     };
 
@@ -95,7 +95,7 @@ const StadiumPage = () => {
         setCurrentStadium(null);
         setForm(INITIAL_FORM);
         setImagePreview("");
-        setImageFiles(null);
+        setImageFiles([]);
     };
 
     // ฟังก์ชันลบรูปภาพ (ปรับปรุงให้ใช้ได้ทั้งหน้าตารางและใน Modal แก้ไข)
@@ -104,7 +104,7 @@ const StadiumPage = () => {
         try {
             await deleteStadiumImage(id, 0); // ส่ง index 0 เพื่อลบรูปแรก
             toast.success("ลบรูปภาพสำเร็จ");
-            
+
             if (isFromModal) {
                 setImagePreview(""); // ลบ Preview ในหน้าแก้ไขทันที
             }
@@ -139,15 +139,15 @@ const StadiumPage = () => {
                 await updateStadium(currentStadium._id, form);
             } else {
                 const res = await createStadium(form);
-                stadiumId = res._id;
+                stadiumId = res.stadium._id;
             }
 
             // ถ้ามีการเลือกไฟล์ใหม่ ให้ทำการอัปโหลด
-            if (stadiumId && 
+            if (stadiumId &&
                 (imageFiles.length > 0 || externalImageUrls.length > 0)
             ) {
                 await uploadStadiumImages(
-                    stadiumId, 
+                    stadiumId,
                     imageFiles,
                     externalImageUrls
                 );
@@ -224,12 +224,11 @@ const StadiumPage = () => {
                                 <Table.Cell className="font-semibold text-gray-800">{stadium.nameStadium}</Table.Cell>
                                 <Table.Cell>{stadium.contactStadium}</Table.Cell>
                                 <Table.Cell>
-                                    <span className={`px-4 py-1 rounded-full text-[12px] text-white font-medium ${
-                                        stadium.statusStadium === "active" ? "bg-[#10b981]" : 
+                                    <span className={`px-4 py-1 rounded-full text-[12px] text-white font-medium ${stadium.statusStadium === "active" ? "bg-[#10b981]" :
                                         stadium.statusStadium === "IsBooking" ? "bg-[#d97706]" : "bg-red-500"
-                                    }`}>
-                                        {stadium.statusStadium === "active" ? "เปิดใช้งาน" : 
-                                         stadium.statusStadium === "IsBooking" ? "กำลังใช้งาน" : "ปิดใช้งาน"}
+                                        }`}>
+                                        {stadium.statusStadium === "active" ? "เปิดใช้งาน" :
+                                            stadium.statusStadium === "IsBooking" ? "กำลังใช้งาน" : "ปิดใช้งาน"}
                                     </span>
                                 </Table.Cell>
                                 <Table.Cell>
@@ -305,15 +304,15 @@ const StadiumPage = () => {
                                         <input type="file" className="hidden" onChange={(e) => {
                                             const file = e.target.files?.[0];
                                             if (file) {
-                                                setImageFiles(file);
+                                                setImageFiles([file]);
                                                 setImagePreview(URL.createObjectURL(file));
                                             }
                                         }} />
                                     </label>
-                                    
+
                                     {/* ปรับปรุง Logic ปุ่มลบรูปใน Modal */}
                                     {imagePreview && (
-                                        <button 
+                                        <button
                                             type="button"
                                             onClick={() => {
                                                 if (currentStadium && currentStadium.imageUrl?.length > 0 && imagePreview.includes(API_BASE)) {
@@ -322,9 +321,9 @@ const StadiumPage = () => {
                                                 } else {
                                                     // แค่ล้างรูปที่เพิ่งเลือกมา (ยังไม่บันทึก)
                                                     setImagePreview("");
-                                                    setImageFiles(null);
+                                                    setImageFiles([]);
                                                 }
-                                            }} 
+                                            }}
                                             className="text-red-500 text-[10px] text-left hover:underline"
                                         >
                                             {currentStadium && imagePreview.includes(API_BASE) ? "ลบรูป" : "ล้างรูปที่เลือก"}
