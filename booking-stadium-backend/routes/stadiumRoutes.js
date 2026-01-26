@@ -16,7 +16,7 @@ const router = express.Router();
 /** ---------- Multer Config ---------- */
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, 'uploads/'); // ระบุโฟลเดอร์ที่เก็บรูป
+    cb(null, 'uploads/stadiums/'); // ระบุโฟลเดอร์ที่เก็บรูป
   },
   filename: (req, file, cb) => {
     // เปลี่ยนชื่อเป็น: stadium-เวลาปัจจุบัน.นามสกุลเดิม (ป้องกันชื่อซ้ำและรองรับทุกชื่อไฟล์)
@@ -41,10 +41,10 @@ router.post("/:id/images", upload.array("images", 10), async (req, res) => {
     if (!stadium) return res.status(404).json({ message: "ไม่พบสนามกีฬา" });
 
     const newPaths = req.files.map(file => `/uploads/stadiums/${file.filename}`);
-    
+
     // ตรวจสอบว่า imageUrl เป็น array หรือไม่ ถ้าไม่ให้สร้างใหม่
     if (!Array.isArray(stadium.imageUrl)) stadium.imageUrl = [];
-    
+
     stadium.imageUrl.push(...newPaths);
     await stadium.save();
 
@@ -76,11 +76,11 @@ router.delete("/:id/images/:index", async (req, res) => {
       } else {
         return res.status(400).json({ message: "ไม่พบรูปภาพในตำแหน่งที่ระบุ" });
       }
-    } 
+    }
     // กรณีเป็น String (รูปเดียว - เผื่อไว้)
     else if (typeof stadium.imageUrl === "string" && stadium.imageUrl !== "") {
       imagePathToDelete = stadium.imageUrl;
-      stadium.imageUrl = ""; 
+      stadium.imageUrl = "";
     } else {
       return res.status(400).json({ message: "ไม่มีรูปภาพให้ลบ" });
     }
@@ -89,7 +89,7 @@ router.delete("/:id/images/:index", async (req, res) => {
     if (imagePathToDelete) {
       const relativePath = imagePathToDelete.replace(/^\//, "");
       const filePath = path.join(process.cwd(), relativePath);
-      
+
       console.log("กำลังลบไฟล์:", filePath); // ดูใน Terminal ว่า Path ถูกไหม
 
       if (fs.existsSync(filePath)) {
