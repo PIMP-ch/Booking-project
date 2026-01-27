@@ -70,13 +70,7 @@ router.delete("/:id/images/:index", async (req, res) => {
 
     // กรณีเป็น Array (หลายรูป)
     if (Array.isArray(stadium.imageUrl)) {
-      if (stadium.imageUrl[targetIndex]) {
-        imagePathToDelete = stadium.imageUrl[targetIndex];
-        stadium.imageUrl.splice(targetIndex, 1);
-        stadium.imageUrl = []
-      } else {
-        return res.status(400).json({ message: "ไม่พบรูปภาพในตำแหน่งที่ระบุ" });
-      }
+      stadium.imageUrl = []
     }
     // กรณีเป็น String (รูปเดียว - เผื่อไว้)
     else if (typeof stadium.imageUrl === "string" && stadium.imageUrl !== "") {
@@ -97,6 +91,8 @@ router.delete("/:id/images/:index", async (req, res) => {
         fs.unlinkSync(filePath);
       }
     }
+
+    console.log('here-----------------')
 
     await stadium.save();
     res.json({ message: "ลบรูปสำเร็จ", imageUrl: stadium.imageUrl });
