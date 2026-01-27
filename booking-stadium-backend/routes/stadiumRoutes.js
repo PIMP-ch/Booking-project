@@ -45,7 +45,7 @@ router.post("/:id/images", upload.array("images", 10), async (req, res) => {
     // ตรวจสอบว่า imageUrl เป็น array หรือไม่ ถ้าไม่ให้สร้างใหม่
     if (!Array.isArray(stadium.imageUrl)) stadium.imageUrl = [];
 
-    stadium.imageUrl.push(...newPaths);
+    stadium.imageUrl = newPaths
     await stadium.save();
 
     res.json({ message: "อัปโหลดรูปสำเร็จ", stadium });
@@ -73,6 +73,7 @@ router.delete("/:id/images/:index", async (req, res) => {
       if (stadium.imageUrl[targetIndex]) {
         imagePathToDelete = stadium.imageUrl[targetIndex];
         stadium.imageUrl.splice(targetIndex, 1);
+        stadium.imageUrl = []
       } else {
         return res.status(400).json({ message: "ไม่พบรูปภาพในตำแหน่งที่ระบุ" });
       }
