@@ -45,7 +45,7 @@ router.post("/:id/images", upload.array("images", 10), async (req, res) => {
     // ตรวจสอบว่า imageUrl เป็น array หรือไม่ ถ้าไม่ให้สร้างใหม่
     if (!Array.isArray(stadium.imageUrl)) stadium.imageUrl = [];
 
-    stadium.imageUrl = newPaths
+    stadium.imageUrl.push(...newPaths);
     await stadium.save();
 
     res.json({ message: "อัปโหลดรูปสำเร็จ", stadium });
@@ -91,8 +91,6 @@ router.delete("/:id/images/:index", async (req, res) => {
         fs.unlinkSync(filePath);
       }
     }
-
-    console.log('here-----------------')
 
     await stadium.save();
     res.json({ message: "ลบรูปสำเร็จ", imageUrl: stadium.imageUrl });
