@@ -70,7 +70,12 @@ router.delete("/:id/images/:index", async (req, res) => {
 
     // กรณีเป็น Array (หลายรูป)
     if (Array.isArray(stadium.imageUrl)) {
-      stadium.imageUrl = []
+      if (stadium.imageUrl[targetIndex]) {
+        imagePathToDelete = stadium.imageUrl[targetIndex];
+        stadium.imageUrl.splice(targetIndex, 1);
+      } else {
+        return res.status(400).json({ message: "ไม่พบรูปภาพในตำแหน่งที่ระบุ" });
+      }
     }
     // กรณีเป็น String (รูปเดียว - เผื่อไว้)
     else if (typeof stadium.imageUrl === "string" && stadium.imageUrl !== "") {
