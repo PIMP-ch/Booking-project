@@ -5,10 +5,11 @@ import { useRouter } from "next/navigation";
 import { getAllStadiums, API_BASE } from "@/utils/api";
 import { toast } from "react-toastify";
 import { Volleyball } from "lucide-react";
+import { ImageCarousel } from "./ImageCarousel";
 import Image from "next/image";
 
 // ✅ Component แสดงรูปพร้อม fallback กรณีรูปโหลดไม่ได้
-function SafeImage({ src, alt }: { src: string; alt: string }) {
+export function SafeImage({ src, alt }: { src: string; alt: string }) {
   const [img, setImg] = useState(src);
 
   // อัปเดต src เมื่อ props เปลี่ยน
@@ -113,24 +114,32 @@ const Booking = () => {
           <h1 className="text-base mb-4 text-start text-gray-800">รายการสนามทั้งหมด</h1>
           <div className="grid grid-cols-2 gap-4">
             {stadiums.map((stadium) => {
-              // ✅ เลือก URL รูปภาพ (ดึงจาก Array imageUrl ตำแหน่งที่ 0)
-              let rawPath = "";
+              // Build array of full image URLs (handle both array and string cases)
+              let imagesArr: string[] = [];
+
               if (Array.isArray(stadium.imageUrl) && stadium.imageUrl.length > 0) {
-                rawPath = stadium.imageUrl[0];
+                imagesArr = stadium.imageUrl.map((p: string) =>
+                  p && p.trim() !== "" ? (p.startsWith("http") ? p : `${API_BASE}${p}`) : "/images/stadium-placeholder.jpg"
+                );
               } else if (typeof stadium.imageUrl === "string") {
-                rawPath = stadium.imageUrl;
+                const p = stadium.imageUrl;
+                imagesArr = [p && p.trim() !== "" ? (p.startsWith("http") ? p : `${API_BASE}${p}`) : "/images/stadium-placeholder.jpg"];
+              } else {
+                imagesArr = ["/images/stadium-placeholder.jpg"];
               }
 
-              // ✅ สร้าง Full URL สำหรับแสดงผล
-              const imgSrc = (rawPath && rawPath.trim() !== "")
-                ? (rawPath.startsWith("http") ? rawPath : `${API_BASE}${rawPath}`)
-                : "/images/stadium-placeholder.jpg";
+              // Use first image as thumbnail/source for selection link
+              const imgSrc = imagesArr[0] || "/images/stadium-placeholder.jpg";
 
               return (
                 <div key={stadium._id} className="border rounded-sm shadow-md bg-white overflow-hidden">
                   {/* ส่วนแสดงรูปภาพ */}
                   <div className="relative w-full h-32 bg-gray-100">
-                    <SafeImage src={imgSrc} alt={stadium.nameStadium} />
+                    {Array.isArray(stadium.imageUrl) && stadium.imageUrl.length > 1 ? (
+                      <ImageCarousel images={imagesArr} alt={stadium.nameStadium} />
+                    ) : (
+                      <SafeImage src={imgSrc} alt={stadium.nameStadium} />
+                    )}
                   </div>
 
                   {/* ข้อมูลสนาม */}
