@@ -122,6 +122,25 @@ const BookingDetail = () => {
   const [loadingUser, setLoadingUser] = useState(true);
   const [stadiumImgSrc, setStadiumImgSrc] = useState<string>(resolveStadiumImage(stadiumImage));
 
+  const fetchStadiumData = async () => {
+    try {
+      const response = await fetch(`${API_BASE}/api/stadiums/${stadiumId}`);
+      const data = await response.json();
+
+      if (data?.imageUrl && Array.isArray(data.imageUrl) && data.imageUrl.length > 0) {
+        const imageUrl = data.imageUrl[0];
+        setStadiumImgSrc(resolveStadiumImage(imageUrl));
+      }
+
+    } catch (error) {
+      console.error("Error fetching stadium data:", error);
+    }
+  };
+
+  useEffect(() => {
+    fetchStadiumData();
+  }, []);
+
   useEffect(() => {
     setStadiumImgSrc(resolveStadiumImage(stadiumImage));
   }, [stadiumImage]);
@@ -242,6 +261,7 @@ const BookingDetail = () => {
                       fill
                       className="object-cover"
                       sizes="(max-width: 768px) 100vw, 360px"
+                      // เพิ่มรูปตรงนี้
                       onError={() => setStadiumImgSrc(DEFAULT_STADIUM_IMAGE)}
                     />
                   </div>
