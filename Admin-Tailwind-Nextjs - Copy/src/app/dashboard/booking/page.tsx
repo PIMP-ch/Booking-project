@@ -291,7 +291,7 @@ const BookingTable: React.FC<{ bookings: Booking[]; onConfirm: (id: string) => v
                         </Table.Cell>
                         <Table.Cell className="text-xs">
                             <div className="flex flex-col">
-                                <span className="font-medium text-blue-600">{new Date(booking.startDate).toLocaleDateString("th-TH")}</span>
+                                <span className="font-medium text-blue-600">{new Date(booking.startDate).toLocaleDateString("th-TH")} - {new Date(booking.endDate).toLocaleDateString("th-TH")}</span>
                                 <span className="text-gray-500">{booking.startTime} - {booking.endTime}</span>
                             </div>
                         </Table.Cell>
