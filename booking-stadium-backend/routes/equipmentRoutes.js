@@ -2,7 +2,7 @@ import express from "express";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
-import Equipment from "../models/Equipment.js";
+import Equipment from "../models/Equipmentt.js";
 import {
   createEquipment,
   getEquipments,
@@ -49,7 +49,8 @@ router.post("/:id/image", upload.single("image"), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ message: "ไม่พบไฟล์ภาพ" });
 
-    const equipment = await Equipment.findById(req.params.id);
+    // const equipment = await Equipment.findById(req.params.id);
+    const equipment = await Equipment.findByPk(req.params.id);
     if (!equipment) return res.status(404).json({ message: "ไม่พบอุปกรณ์" });
 
     if (equipment.imageUrl) {
@@ -71,7 +72,8 @@ router.post("/:id/image", upload.single("image"), async (req, res) => {
 /** ---------- Delete Equipment Image ---------- */
 router.delete("/:id/image", async (req, res) => {
   try {
-    const equipment = await Equipment.findById(req.params.id);
+    // const equipment = await Equipment.findById(req.params.id);
+    const equipment = await Equipment.findByPk(req.params.id);
     if (!equipment) return res.status(404).json({ message: "ไม่พบอุปกรณ์" });
 
     if (equipment.imageUrl) {

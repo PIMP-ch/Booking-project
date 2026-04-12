@@ -16,7 +16,7 @@ import { toast } from "react-toastify";
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:5008";
 
 interface Equipment {
-    _id: string;
+    id: string;
     name: string;
     quantity: number;
     status: string;
@@ -82,13 +82,13 @@ const EquipmentPage = () => {
     const handleSave = async () => {
         try {
             setIsSaving(true);
-            let eqId = currentEquipment?._id;
+            let eqId = currentEquipment?.id;
 
             if (currentEquipment) {
-                await updateEquipment(currentEquipment._id, form);
+                await updateEquipment(currentEquipment.id, form);
             } else {
                 const res = await createEquipment(form);
-                eqId = res._id || res.newEquipment?._id;
+                eqId = res.id || res.newEquipment?.id;
             }
 
             if (eqId && imageFile) {
@@ -110,10 +110,10 @@ const EquipmentPage = () => {
             {/* Header Section */}
             <div className="flex justify-between items-center mb-6">
                 <h2 className="text-2xl font-bold text-gray-800">จัดการอุปกรณ์</h2>
-        <Button onClick={() => openModal()} className="bg-blue-600 hover:bg-blue-700">
-          <Icon icon="solar:add-circle-bold" className="mr-2 h-5 w-5" />
-          เพิ่มอุปกรณ์
-        </Button>
+                <Button onClick={() => openModal()} className="bg-blue-600 hover:bg-blue-700">
+                    <Icon icon="solar:add-circle-bold" className="mr-2 h-5 w-5" />
+                    เพิ่มอุปกรณ์
+                </Button>
             </div>
 
             {/* Table Section */}
@@ -129,7 +129,7 @@ const EquipmentPage = () => {
                     </Table.Head>
                     <Table.Body className="divide-y">
                         {equipmentList.map((eq, index) => (
-                            <Table.Row key={eq._id} className="bg-white">
+                            <Table.Row key={eq.id} className="bg-white">
                                 <Table.Cell className="w-[300px]">
                                     <div className="flex items-center gap-4">
                                         <div className="w-16 h-16 rounded-xl overflow-hidden bg-gray-100 border flex-shrink-0">
@@ -147,13 +147,13 @@ const EquipmentPage = () => {
                                                     className="hidden"
                                                     onChange={(e) => {
                                                         const file = e.target.files?.[0];
-                                                        if (file) handleTableUpload(eq._id, file);
+                                                        if (file) handleTableUpload(eq.id, file);
                                                     }}
                                                 />
                                             </label>
                                             {eq.imageUrl && (
                                                 <button
-                                                    onClick={() => { if(confirm("ลบรูป?")) deleteEquipmentImage(eq._id).then(fetchData); }}
+                                                    onClick={() => { if (confirm("ลบรูป?")) deleteEquipmentImage(eq.id).then(fetchData); }}
                                                     className="text-red-500 text-[10px] text-left hover:underline pl-1"
                                                 >
                                                     ลบรูป
@@ -166,9 +166,8 @@ const EquipmentPage = () => {
                                 <Table.Cell className="font-semibold text-gray-800">{eq.name}</Table.Cell>
                                 <Table.Cell>{eq.quantity}</Table.Cell>
                                 <Table.Cell>
-                                    <span className={`px-4 py-1 rounded-full text-[12px] text-white font-medium ${
-                                        eq.status === "available" ? "bg-[#10b981]" : "bg-[#d97706]"
-                                    }`}>
+                                    <span className={`px-4 py-1 rounded-full text-[12px] text-white font-medium ${eq.status === "available" ? "bg-[#10b981]" : "bg-[#d97706]"
+                                        }`}>
                                         {eq.status === "available" ? "ใช้งานได้" : "กำลังใช้งาน"}
                                     </span>
                                 </Table.Cell>
@@ -179,7 +178,7 @@ const EquipmentPage = () => {
                                         </div>
                                     )} inline>
                                         <Dropdown.Item onClick={() => openModal(eq)}>แก้ไข</Dropdown.Item>
-                                        <Dropdown.Item onClick={() => setConfirmModal({isOpen: true, id: eq._id})} className="text-red-600">ลบ</Dropdown.Item>
+                                        <Dropdown.Item onClick={() => setConfirmModal({ isOpen: true, id: eq.id })} className="text-red-600">ลบ</Dropdown.Item>
                                     </Dropdown>
                                 </Table.Cell>
                             </Table.Row>
@@ -195,19 +194,19 @@ const EquipmentPage = () => {
                 </Modal.Header>
                 <Modal.Body className="px-8 pb-8">
                     <div className="space-y-5">
-                        <TextInput 
-                            value={form.name} 
-                            onChange={(e) => setForm({...form, name: e.target.value})}
+                        <TextInput
+                            value={form.name}
+                            onChange={(e) => setForm({ ...form, name: e.target.value })}
                             placeholder="ชื่ออุปกรณ์"
                             className="rounded-full"
                         />
-                        <TextInput 
+                        <TextInput
                             type="number"
                             value={form.quantity || ""}
-                            onChange={(e) => setForm({...form, quantity: Number(e.target.value)})}
+                            onChange={(e) => setForm({ ...form, quantity: Number(e.target.value) })}
                             placeholder="จำนวน"
                         />
-                        
+
                         <div className="bg-gray-50 p-4 rounded-2xl border border-dashed border-gray-200">
                             <Label className="text-gray-500 mb-2 block text-xs">รูปอุปกรณ์</Label>
                             <div className="flex items-center gap-4">
@@ -219,23 +218,23 @@ const EquipmentPage = () => {
                                         Choose File
                                         <input type="file" className="hidden" onChange={(e) => {
                                             const file = e.target.files?.[0];
-                                            if(file) {
+                                            if (file) {
                                                 setImageFile(file);
                                                 setImagePreview(URL.createObjectURL(file));
                                             }
                                         }} />
                                     </label>
                                     {(imagePreview || currentEquipment?.imageUrl) && (
-                                        <button onClick={() => {setImagePreview(""); setImageFile(null);}} className="text-red-500 text-[10px] text-left hover:underline">ลบรูป</button>
+                                        <button onClick={() => { setImagePreview(""); setImageFile(null); }} className="text-red-500 text-[10px] text-left hover:underline">ลบรูป</button>
                                     )}
                                 </div>
                             </div>
                         </div>
 
                         {currentEquipment && (
-                            <select 
+                            <select
                                 value={form.status}
-                                onChange={(e) => setForm({...form, status: e.target.value})}
+                                onChange={(e) => setForm({ ...form, status: e.target.value })}
                                 className="w-full rounded-xl border-gray-200 text-sm h-11 focus:ring-blue-500"
                             >
                                 <option value="available">ใช้งานได้</option>
@@ -255,17 +254,17 @@ const EquipmentPage = () => {
             </Modal>
 
             {/* Confirm Delete Modal */}
-            <Modal show={confirmModal.isOpen} onClose={() => setConfirmModal({isOpen: false, id: null})} size="sm">
+            <Modal show={confirmModal.isOpen} onClose={() => setConfirmModal({ isOpen: false, id: null })} size="sm">
                 <Modal.Body className="text-center p-6">
                     <Icon icon="solar:danger-triangle-bold" className="mx-auto text-red-500 text-5xl mb-4" />
                     <h3 className="text-lg font-bold mb-6">ยืนยันการลบอุปกรณ์?</h3>
                     <div className="flex gap-3">
                         <Button color="failure" onClick={async () => {
-                            if(confirmModal.id) await deleteEquipment(confirmModal.id);
+                            if (confirmModal.id) await deleteEquipment(confirmModal.id);
                             fetchData();
-                            setConfirmModal({isOpen: false, id: null});
+                            setConfirmModal({ isOpen: false, id: null });
                         }} className="flex-1 rounded-xl">ลบ</Button>
-                        <Button color="gray" onClick={() => setConfirmModal({isOpen: false, id: null})} className="flex-1 rounded-xl">ยกเลิก</Button>
+                        <Button color="gray" onClick={() => setConfirmModal({ isOpen: false, id: null })} className="flex-1 rounded-xl">ยกเลิก</Button>
                     </div>
                 </Modal.Body>
             </Modal>

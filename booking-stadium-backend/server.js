@@ -68,7 +68,7 @@ app.use("/api/staff", staffRoutes);
 const PORT = process.env.PORT || 5008;
 app.listen(PORT, async () => {
   await sequelize.authenticate();
-  await sequelize.sync({ alter: true }); // สร้าง table อัตโนมัติ
+  await sequelize.sync(); // สร้าง table อัตโนมัติ
   console.log("Database connected!")
   console.log(`🚀 Server running on http://localhost:${PORT}`);
   console.log(`📂 Static files served at /uploads`);
