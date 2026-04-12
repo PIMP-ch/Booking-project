@@ -1,4 +1,4 @@
-import Staff from "../models/Staff.js";
+import Staff from "../models/Stafff.js";
 
 // ✅ Login Staff (ไม่ใช้ bcrypt/jwt)
 export const loginStaff = async (req, res) => {
@@ -6,7 +6,10 @@ export const loginStaff = async (req, res) => {
     const { email, password } = req.body;
 
     // ค้นหา Staff จากอีเมล
-    const staff = await Staff.findOne({ email });
+    // const staff = await Staff.findOne({ email });
+    const staff = await Staff.findOne({
+      where: { email }
+    });
     if (!staff) return res.status(400).json({ message: "Invalid email or password" });
 
     // ตรวจสอบรหัสผ่าน (เปรียบเทียบแบบตรง)
@@ -18,7 +21,7 @@ export const loginStaff = async (req, res) => {
     return res.status(200).json({
       message: "Login successful",
       staff: {
-        _id: staff._id,
+        _id: staff.id,
         fullname: staff.fullname,
         email: staff.email,
         role: staff.role,
@@ -36,12 +39,19 @@ export const createStaff = async (req, res) => {
     const { fullname, email, role, password } = req.body;
 
     // ตรวจสอบว่าอีเมลซ้ำหรือไม่
-    const existingStaff = await Staff.findOne({ email });
+    // const existingStaff = await Staff.findOne({ email });
+    const existingStaff = await Staff.findOne({
+      where: { email }
+    });
     if (existingStaff) return res.status(400).json({ message: "Email already exists" });
 
     // สร้างพนักงานใหม่
-    const newStaff = new Staff({ fullname, email, role, password });
-    await newStaff.save();
+    const newStaff = await Staff.create({
+      fullname,
+      email,
+      role,
+      password
+    });
 
     res.status(201).json({ message: "Staff created successfully", newStaff });
   } catch (error) {
@@ -54,8 +64,13 @@ export const deleteStaff = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const deletedStaff = await Staff.findByIdAndDelete(id);
+    const deletedStaff = await Staff.findByPk(id);
+
     if (!deletedStaff) return res.status(404).json({ message: "Staff not found" });
+
+    if (deletedStaff) {
+      await deletedStaff.destroy();
+    }
 
     res.status(200).json({ message: "Staff deleted successfully" });
   } catch (error) {
@@ -69,13 +84,20 @@ export const updateStaff = async (req, res) => {
     const { id } = req.params;
     const { fullname, email, role } = req.body;
 
-    const updatedStaff = await Staff.findByIdAndUpdate(
-      id,
-      { fullname, email, role },
-      { new: true, runValidators: true }
-    );
+    // const updatedStaff = await Staff.findByIdAndUpdate(
+    //   id,
+    //   { fullname, email, role },
+    //   { new: true, runValidators: true }
+    // );
+    const updatedStaff = await Staff.findByPk(id);
 
     if (!updatedStaff) return res.status(404).json({ message: "Staff not found" });
+
+    await updatedStaff.update({
+      fullname,
+      email,
+      role
+    });
 
     res.status(200).json({ message: "Staff updated successfully", updatedStaff });
   } catch (error) {
@@ -86,7 +108,8 @@ export const updateStaff = async (req, res) => {
 // ✅ ดูข้อมูลพนักงานทั้งหมด
 export const getAllStaff = async (req, res) => {
   try {
-    const staffList = await Staff.find();
+    // const staffList = await Staff.find();
+    const staffList = await Staff.findAll();
     res.status(200).json(staffList);
   } catch (error) {
     res.status(500).json({ message: "Server error", error });

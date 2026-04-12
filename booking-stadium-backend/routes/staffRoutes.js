@@ -10,7 +10,7 @@ import {
   getAllStaff,
   loginStaff,
 } from "../controllers/staffController.js";
-import Staff from "../models/Staff.js";
+import Staff from "../models/Stafff.js";
 import { message } from "hawk/lib/client.js";
 
 const router = express.Router();
@@ -53,13 +53,15 @@ router.post("/:id/avatar", upload.single("avatar"), async (req, res) => {
     // พาธสาธารณะสำหรับ frontend (เสิร์ฟผ่าน app.use('/uploads', express.static(...)))
     const publicPath = `/uploads/avatars/${req.file.filename}`;
 
-    const staff = await Staff.findByIdAndUpdate(
-      req.params.id,
-      { avatarUrl: publicPath },
-      { new: true }
-    );
+    const staff = await Staff.findByPk(req.params.id);
+    console.log(req.params)
 
     if (!staff) return res.status(404).json({ message: "ไม่พบพนักงาน" });
+
+    await staff.update({
+      avatarUrl: publicPath
+    });
+
 
     res.json({ message: "อัปโหลดสำเร็จ", staff });
   } catch (err) {
@@ -70,14 +72,15 @@ router.post("/:id/avatar", upload.single("avatar"), async (req, res) => {
 
 //ลบ avatar
 router.delete("/:id/avatar", async (req, res) => {
-  try{
-    const staff = await Staff.findById(req.params.id);
-    if(!staff) return res.status(404).json({message: "ไม่พบพนักงาน"});
+  try {
+    // const staff = await Staff.findById(req.params.id);
+    const staff = await Staff.findByPk(req.params.id);
+    if (!staff) return res.status(404).json({ message: "ไม่พบพนักงาน" });
 
     if (staff.avatarUrl) {
       //ลบไฟล์จริงออกกจาก uploads
       const filePath = path.join(process.cwd(), staff.avatarUrl);
-      if(fs.existsSync(filePath)) {
+      if (fs.existsSync(filePath)) {
         fs.unlinkSync(filePath);
       }
     }
@@ -85,9 +88,9 @@ router.delete("/:id/avatar", async (req, res) => {
     staff.avatarUrl = "";
     await staff.save();
 
-    res.json({message: "ลบรูปสำเร็จ", staff});
+    res.json({ message: "ลบรูปสำเร็จ", staff });
   } catch (err) {
-    res.status(500).json({message: "ลบรูปไม่สำเร็จ", error: err.message});
+    res.status(500).json({ message: "ลบรูปไม่สำเร็จ", error: err.message });
   }
 });
 

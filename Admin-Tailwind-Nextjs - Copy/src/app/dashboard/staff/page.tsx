@@ -9,7 +9,7 @@ import UploadAvatar from "@/app/components/dashboard/UploadAvatar";
 
 // กำหนด Interface สำหรับพนักงาน
 interface Staff {
-  _id: string;           // ใช้ _id แทน id
+  id: string;           // ใช้ _id แทน id
   fullname: string;
   email: string;
   role: string;
@@ -61,9 +61,9 @@ const StaffPage = () => {
   // ฟังก์ชันสร้างหรือแก้ไขพนักงาน
   const handleSave = async () => {
     try {
-      if (currentStaff?._id) {
+      if (currentStaff?.id) {
         // แก้ไขข้อมูลพนักงาน
-        await updateStaff(currentStaff._id, form); // ใช้ _id แทน
+        await updateStaff(currentStaff.id, form); // ใช้ _id แทน
       } else {
         // สร้างพนักงานใหม่
         await createStaff(form);
@@ -121,10 +121,10 @@ const StaffPage = () => {
             </Table.Head>
             <Table.Body>
               {staffList.map((staff) => (
-                <Table.Row key={staff._id}>
+                <Table.Row key={staff.id}>
                   <Table.Cell>
                     <UploadAvatar
-                      staffId={staff._id}
+                      staffId={staff.id}
                       currentAvatar={staff.avatarUrl}
                       onUploaded={fetchStaff}  // รีเฟรชข้อมูลหลังอัปโหลด
                     />
@@ -160,7 +160,7 @@ const StaffPage = () => {
 
                       <Dropdown.Item
                         className="flex gap-3"
-                        onClick={() => openConfirmModal(staff._id)}
+                        onClick={() => openConfirmModal(staff.id)}
                       >
                         <Icon icon="solar:trash-bin-minimalistic-outline" height={18} />
                         <span>ลบ</span>
