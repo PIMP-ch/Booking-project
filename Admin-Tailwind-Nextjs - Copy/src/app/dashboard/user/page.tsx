@@ -5,7 +5,7 @@ import { Table, TextInput, Button, Modal } from "flowbite-react";
 import { getAllUsers, blockUser, unblockUser, deleteUser } from "@/utils/api";
 
 interface User {
-    _id: string;
+    id: string;
     fullname: string;
     email: string;
     phoneNumber: string;
@@ -42,7 +42,7 @@ const UserPage = () => {
     const handleBlockUser = async () => {
         if (!selectedUser) return;
         try {
-            await blockUser(selectedUser._id, blockDays);
+            await blockUser(selectedUser.id, blockDays);
             setIsBlockModalOpen(false);
             fetchUsers(); // รีเฟรชข้อมูลผู้ใช้
         } catch (error) {
@@ -53,7 +53,7 @@ const UserPage = () => {
     const handleDeleteUser = async () => {
         if (!selectedUser) return;
         try {
-            await deleteUser(selectedUser._id);
+            await deleteUser(selectedUser.id);
             setIsDeleteModalOpen(false);
             fetchUsers();
         } catch (error) {
@@ -66,7 +66,7 @@ const UserPage = () => {
     const handleUnblockUser = async () => {
         if (!selectedUser) return;
         try {
-            await unblockUser(selectedUser._id);
+            await unblockUser(selectedUser.id);
             setIsUnblockModalOpen(false);
             fetchUsers(); // รีเฟรชข้อมูลผู้ใช้
         } catch (error) {
@@ -107,7 +107,7 @@ const UserPage = () => {
                 </Table.Head>
                 <Table.Body>
                     {filteredUsers.map((user, index) => (
-                        <Table.Row key={user._id}>
+                        <Table.Row key={user.id}>
                             <Table.Cell>{index + 1}</Table.Cell>
                             <Table.Cell>{user.fullname}</Table.Cell>
                             <Table.Cell>{user.email}</Table.Cell>
