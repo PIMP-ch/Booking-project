@@ -37,7 +37,8 @@ router.delete("/:id", deleteStadium);
 // แก้ไขให้ตรงกับ api.js ที่ส่งมาเป็น /stadiums/:id/images
 router.post("/:id/images", upload.array("images", 10), async (req, res) => {
   try {
-    const stadium = await Stadium.findById(req.params.id);
+    // const stadium = await Stadium.findById(req.params.id);
+    const stadium = await Stadium.findByPk(req.params.id);
     if (!stadium) return res.status(404).json({ message: "ไม่พบสนามกีฬา" });
 
     const newPaths = req.files.map(file => `/uploads/stadiums/${file.filename}`);
@@ -58,7 +59,8 @@ router.post("/:id/images", upload.array("images", 10), async (req, res) => {
 router.delete("/:id/images/:index", async (req, res) => {
   try {
     const { id, index } = req.params;
-    const stadium = await Stadium.findById(id);
+    // const stadium = await Stadium.findById(id);
+    const stadium = await Stadium.findByPk(id);
     const targetIndex = parseInt(index);
 
     if (!stadium) {

@@ -1,4 +1,4 @@
-import Stadium from "../models/Stadium.js";
+import Stadium from "../models/Stadiumm.js";
 import fs from "fs";
 import path from "path";
 
@@ -18,7 +18,7 @@ export const createStadium = async (req, res) => {
       payload.buildingIds = [payload.buildingIds];
     }
 
-    const newStadium = new Stadium(payload);
+    const newStadium = Stadium.build(payload);
     await newStadium.save();
     res.status(201).json({ message: "Stadium created successfully", stadium: newStadium });
   } catch (error) {
@@ -46,11 +46,19 @@ export const addStadiumImages = async (req, res) => {
       return res.status(400).json({ message: "กรุณาเลือกไฟล์หรือระบุ URL รูปภาพ" });
     }
 
-    const stadium = await Stadium.findByIdAndUpdate(
-      id,
-      { $push: { imageUrl: { $each: newImagePaths } } }, // เพิ่มรูปเข้าไปในอาเรย์เดิม
-      { new: true }
-    );
+    // const stadium = await Stadium.findByIdAndUpdate(
+    //   id,
+    //   { $push: { imageUrl: { $each: newImagePaths } } }, // เพิ่มรูปเข้าไปในอาเรย์เดิม
+    //   { new: true }
+    // );
+    const stadium = await Stadium.findByPk(id);
+
+    stadium.imageUrl = [
+      ...(stadium.imageUrl || []),
+      ...newImagePaths
+    ];
+
+    await stadium.save();
 
     res.status(200).json({ message: "เพิ่มรูปภาพสำเร็จ", stadium });
   } catch (error) {
@@ -62,7 +70,9 @@ export const addStadiumImages = async (req, res) => {
 export const deleteStadiumImage = async (req, res) => {
   try {
     const { id, index } = req.params;
-    const stadium = await Stadium.findById(id);
+    // const stadium = await Stadium.findById(id);
+    const stadium = await Stadium.findByPk(id);
+
 
     if (!stadium || !stadium.imageUrl[index]) {
       return res.status(404).json({ message: "Image not found" });
@@ -73,8 +83,8 @@ export const deleteStadiumImage = async (req, res) => {
 
     // ลบไฟล์เฉพาะถ้า Path ขึ้นต้นด้วย /uploads (เป็นไฟล์ในเครื่อง)
     if (fileName.startsWith('/uploads')) {
-        const filePath = path.join(process.cwd(), fileName);
-        if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+      const filePath = path.join(process.cwd(), fileName);
+      if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
     }
 
     // ลบ Path ออกจาก Array ใน Database
@@ -91,15 +101,17 @@ export const deleteStadiumImage = async (req, res) => {
 export const updateStadium = async (req, res) => {
   try {
     const { id } = req.params;
-    const stadium = await Stadium.findById(id);
+    // const stadium = await Stadium.findById(id);
+    const stadium = await Stadium.findByPk(id);
+
     if (!stadium) return res.status(404).json({ message: "ไม่พบข้อมูลสนาม" });
 
     const payload = { ...req.body };
 
     // ✅ ตรวจสอบและแปลง buildingIds ให้เป็น Array เสมอ
     if (payload.buildingIds) {
-      payload.buildingIds = Array.isArray(payload.buildingIds) 
-        ? payload.buildingIds 
+      payload.buildingIds = Array.isArray(payload.buildingIds)
+        ? payload.buildingIds
         : [payload.buildingIds];
     }
 
@@ -110,8 +122,10 @@ export const updateStadium = async (req, res) => {
         descriptionStadium: payload.descriptionStadium || stadium.descriptionStadium,
         contactStadium: payload.contactStadium || stadium.contactStadium,
       };
-      
-      const updated = await Stadium.findByIdAndUpdate(id, allowedData, { new: true });
+
+      const stadium = await Stadium.findByPk(id);
+
+      await stadium.update(allowedData);
       return res.status(200).json({ message: "อัปเดตข้อมูลทั่วไปสำเร็จ (สถานะจองอยู่)", stadium: updated });
     }
 
@@ -127,7 +141,9 @@ export const updateStadium = async (req, res) => {
 // ✅ 5. ดึงข้อมูลทั้งหมด
 export const getStadiums = async (_req, res) => {
   try {
-    const stadiums = await Stadium.find().sort({ createdAt: -1 });
+    const stadiums = await Stadium.findAll({
+      order: [['createdAt', 'DESC']]
+    });
     res.status(200).json(stadiums);
   } catch (error) {
     res.status(500).json({ message: "Server error", error });
@@ -137,7 +153,12 @@ export const getStadiums = async (_req, res) => {
 // ✅ 6. ดึงข้อมูลตาม ID
 export const getStadiumById = async (req, res) => {
   try {
-    const stadium = await Stadium.findById(req.params.id).populate("buildingIds", "name active");
+    const stadium = await Stadium.findByPk(req.params.id, {
+      include: [{
+        association: 'buildingIds', // ต้องตั้ง association ไว้ก่อน
+        attributes: ['name', 'active']
+      }]
+    });
     if (!stadium) return res.status(404).json({ message: "Stadium not found" });
     res.status(200).json(stadium);
   } catch (error) {
@@ -148,7 +169,9 @@ export const getStadiumById = async (req, res) => {
 // ✅ 7. ลบ Stadium ทิ้งทั้งหมด
 export const deleteStadium = async (req, res) => {
   try {
-    const stadium = await Stadium.findById(req.params.id);
+    // const stadium = await Stadium.findById(req.params.id);
+    const stadium = await Stadium.findByPk(req.params.id);
+
     if (!stadium) return res.status(404).json({ message: "Stadium not found" });
 
     if (stadium.statusStadium === "IsBooking") {
@@ -161,7 +184,9 @@ export const deleteStadium = async (req, res) => {
       if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
     });
 
-    await Stadium.findByIdAndDelete(req.params.id);
+    await Stadium.destroy({
+      where: { id: req.params.id }
+    });
     res.status(200).json({ message: "Stadium and its images deleted successfully" });
   } catch (error) {
     res.status(500).json({ message: "Server error", error });
