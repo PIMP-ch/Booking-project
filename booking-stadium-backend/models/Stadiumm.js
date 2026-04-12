@@ -1,0 +1,30 @@
+import { DataTypes } from "sequelize";
+import sequelize from "../config/database.js";
+
+const Stadium = sequelize.define("Stadium", {
+    nameStadium: {
+        type: DataTypes.STRING,
+        allowNull: false,
+    },
+    descriptionStadium: {
+        type: DataTypes.TEXT,
+        allowNull: false,
+    },
+    contactStadium: {
+        type: DataTypes.STRING,
+        allowNull: false,
+    },
+    statusStadium: {
+        type: DataTypes.ENUM("active", "inactive", "IsBooking"),
+        allowNull: false,
+        defaultValue: "active",
+    },
+    imageUrl: {
+        type: DataTypes.JSON, // ✅ เก็บ array of string
+        defaultValue: [],
+    },
+}, {
+    timestamps: true,
+});
+
+export default Stadium;

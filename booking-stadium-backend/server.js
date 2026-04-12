@@ -5,6 +5,19 @@ import { fileURLToPath } from "url";
 import cors from "cors";
 import dotenv from "dotenv";
 import connectDB from "./config/db.js";
+import sequelize from "./config/database.js";
+
+import "./models/Userr.js";
+import "./models/Stafff.js";
+import "./models/Stadiumm.js";
+import "./models/Equipmentt.js";
+import "./models/Buildingg.js";
+import "./models/Bookingg.js";
+import "./models/BookingEquipment.js";
+import "./models/BookingBuilding.js";
+import "./models/associations.js";
+
+
 
 // ✅ import routes
 import authRoutes from "./routes/authRoutes.js";
@@ -53,7 +66,10 @@ app.use("/api/staff", staffRoutes);
 
 // ✅ Start server
 const PORT = process.env.PORT || 5008;
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
+  await sequelize.authenticate();
+  await sequelize.sync({ alter: true }); // สร้าง table อัตโนมัติ
+  console.log("Database connected!")
   console.log(`🚀 Server running on http://localhost:${PORT}`);
   console.log(`📂 Static files served at /uploads`);
 });
