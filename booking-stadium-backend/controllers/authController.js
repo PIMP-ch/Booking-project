@@ -2,6 +2,8 @@
 import nodemailer from "nodemailer";
 import User from "../models/User.js";
 import { message } from "hawk/lib/client.js";
+import { Op } from "sequelize";
+import Userr from "../models/Userr.js";
 
 
 // ฟังก์ชันสร้างรหัส Reset (ตัวเลข + ตัวอักษรใหญ่ 6 ตัว)
@@ -17,7 +19,12 @@ const generateResetToken = () => {
 export const requestPasswordReset = async (req, res) => {
     try {
         const { email } = req.body;
-        const user = await User.findOne({ email });
+        // const user = await User.findOne({ email });
+        const user = await Userr.findOne({
+            where: {
+                email: email
+            }
+        });
 
         if (!user) {
             return res.status(400).json({ message: "ไม่พบบัญชีที่ใช้ที่อยู่อีเมลนี้ในระบบ" });
@@ -25,11 +32,22 @@ export const requestPasswordReset = async (req, res) => {
 
         // สร้าง Token สำหรับรีเซ็ตรหัสผ่าน
         const resetToken = generateResetToken();
-        await User.updateOne(
-            { _id: user._id },
+        // await User.updateOne(
+        //     { _id: user._id },
+        //     {
+        //         resetPasswordToken: resetToken,
+        //         resetPasswordExpires: Date.now() + 3600000 // Token มีอายุ 1 ชั่วโมง
+        //     }
+        // );
+        await Userr.update(
             {
                 resetPasswordToken: resetToken,
-                resetPasswordExpires: Date.now() + 3600000 // Token มีอายุ 1 ชั่วโมง
+                resetPasswordExpires: Date.now() + 3600000 // 1 ชั่วโมง
+            },
+            {
+                where: {
+                    id: user.id
+                }
             }
         );
 
@@ -84,9 +102,17 @@ export const resetPassword = async (req, res) => {
     try {
         const { token, newPassword } = req.body;
 
+        // const user = await User.findOne({
+        //     resetPasswordToken: token,
+        //     resetPasswordExpires: { $gt: Date.now() } // ตรวจสอบว่า Token ยังไม่หมดอายุ
+        // });
         const user = await User.findOne({
-            resetPasswordToken: token,
-            resetPasswordExpires: { $gt: Date.now() } // ตรวจสอบว่า Token ยังไม่หมดอายุ
+            where: {
+                resetPasswordToken: token,
+                resetPasswordExpires: {
+                    [Op.gt]: Date.now() // token ต้องยังไม่หมดอายุ
+                }
+            }
         });
 
         if (!user) {
@@ -94,12 +120,24 @@ export const resetPassword = async (req, res) => {
         }
 
         // ✅ ใช้ `updateOne()` เพื่อแก้ปัญหา ValidationError (phoneNumber is required)
-        await User.updateOne(
-            { _id: user._id },
+        // await User.updateOne(
+        //     { _id: user._id },
+        //     {
+        //         password: newPassword, // ✅ บันทึกรหัสผ่านใหม่โดยตรง (ไม่เข้ารหัส)
+        //         resetPasswordToken: null, // ✅ ลบ Token ออก
+        //         resetPasswordExpires: null
+        //     }
+        // );
+        await User.update(
             {
-                password: newPassword, // ✅ บันทึกรหัสผ่านใหม่โดยตรง (ไม่เข้ารหัส)
-                resetPasswordToken: null, // ✅ ลบ Token ออก
+                password: newPassword,
+                resetPasswordToken: null,
                 resetPasswordExpires: null
+            },
+            {
+                where: {
+                    id: user.id
+                }
             }
         );
 
@@ -125,11 +163,14 @@ export const blockUser = async (req, res) => {
         blockUntil.setDate(blockUntil.getDate() + days);
 
         // อัปเดตสถานะผู้ใช้ให้ถูกบล็อก
-        const user = await User.findByIdAndUpdate(id, { blockUntil }, { new: true });
+        // const user = await User.findByIdAndUpdate(id, { blockUntil }, { new: true });
+        const user = await Userr.findByPk(id);
 
         if (!user) {
             return res.status(404).json({ message: "ไม่พบผู้ใช้" });
         }
+
+        await user.update({ blockUntil });
 
         res.status(200).json({
             message: `ผู้ใช้ถูกบล็อกเป็นเวลา ${days} วัน`,
@@ -147,11 +188,14 @@ export const unblockUser = async (req, res) => {
         const { id } = req.params;
 
         // อัปเดตให้ blockUntil เป็น `null`
-        const user = await User.findByIdAndUpdate(id, { blockUntil: null }, { new: true });
+        // const user = await User.findByIdAndUpdate(id, { blockUntil: null }, { new: true });
+        const user = await Userr.findByPk(id);
 
         if (!user) {
             return res.status(404).json({ message: "ไม่พบผู้ใช้" });
         }
+
+        await user.update({ blockUntil: null });
 
         res.status(200).json({ message: "ปลดบล็อกผู้ใช้เรียบร้อยแล้ว" });
 
@@ -164,55 +208,63 @@ export const unblockUser = async (req, res) => {
 
 export const register = async (req, res) => {
     try {
-        const { fullname, email, phoneNumber, password, userType, fieldOfStudy, year, department} = req.body;
+        const { fullname, email, phoneNumber, password, userType, fieldOfStudy, year, department } = req.body;
 
-        if (!fullname || !email || !phoneNumber || !password){
-            return res.stsatus(400).json({ message: "กรุณากรอกชื่อ อีเมล์ เบอร์โทร และรหัสผ่านให้ครบ"});
+        if (!fullname || !email || !phoneNumber || !password) {
+            return res.stsatus(400).json({ message: "กรุณากรอกชื่อ อีเมล์ เบอร์โทร และรหัสผ่านให้ครบ" });
         }
 
         if (!["student", "staff"].includes(userType)) {
-            return res.status(400).json({ message: "ประเภทผู้ใช้งานไม่ถูกต้อง (student/staff)"});
+            return res.status(400).json({ message: "ประเภทผู้ใช้งานไม่ถูกต้อง (student/staff)" });
         }
 
-        if (userType === "student"){
-            if (!fieldOfStudy || !year){
-                return res.status(400).json({ message: "กรุณากรอกสาขาวิชาและชั้นปี"});
+        if (userType === "student") {
+            if (!fieldOfStudy || !year) {
+                return res.status(400).json({ message: "กรุณากรอกสาขาวิชาและชั้นปี" });
             }
         }
 
-        if (userType == "staff"){
+        if (userType == "staff") {
             if (!department) {
-                return res.status(400).json({ message: "กรุณากรอกหน่วยงาน"});
+                return res.status(400).json({ message: "กรุณากรอกหน่วยงาน" });
             }
         }
 
         // ตรวจสอบว่าอีเมลหรือเบอร์โทรถูกใช้ไปแล้วหรือไม่
-        const existingUser = await User.findOne({ $or: [{ email }, { phoneNumber }] });
+        // const existingUser = await User.findOne({ $or: [{ email }, { phoneNumber }] });
+        // if (existingUser) {
+        //     return res.status(400).json({ message: "Email or phone number already exists" });
+        // }
+        const existingUser = await Userr.findOne({
+            where: {
+                [Op.or]: [{ email }, { phoneNumber }]
+            }
+        });
         if (existingUser) {
             return res.status(400).json({ message: "Email or phone number already exists" });
         }
 
         // ✅ สร้างข้อมูลใหม่และบันทึกลงฐานข้อมูล
-        const newUser = await User.create({
+        const newUser = await Userr.create({
             fullname,
             email,
             phoneNumber,
             userType,
-            fieldOfStudy: userType == "student" ? fieldOfStudy : null,
+            fieldOfStudy: userType === "student" ? fieldOfStudy : null,
             year: userType === "student" ? year : null,
             department: userType === "staff" ? department : null,
-            password, // ไม่เข้ารหัส (ถ้าต้องการเข้ารหัสควรใช้ bcrypt)
-            blockUntil: null // ผู้ใช้ใหม่จะยังไม่ถูกบล็อก
+            password,
+            blockUntil: null
         });
 
-        // ✅ ตัด `password` ออกจากข้อมูลที่ส่งกลับ
-        const userResponse = { ...newUser.toObject() };
+        // ✅ Sequelize ใช้ .dataValues แทน .toObject()
+        const userResponse = { ...newUser.dataValues };
         delete userResponse.password;
 
         res.status(201).json({
             success: true,
             message: "สมัครสมาชิกสำเร็จ",
-            user: userResponse, // ✅ ส่งข้อมูลกลับโดยไม่มี `password`
+            user: userResponse,
         });
     } catch (error) {
         res.status(500).json({ message: "Server error", error });
@@ -224,7 +276,12 @@ export const register = async (req, res) => {
 export const login = async (req, res) => {
     try {
         const { email, password } = req.body;
-        const user = await User.findOne({ email });
+        // const user = await User.findOne({ email });
+        const user = await Userr.findOne({
+            where: {
+                email: email
+            }
+        });
 
         // ✅ กรณีไม่มีอีเมลในระบบ
         if (!user) {
@@ -257,7 +314,13 @@ export const deleteUser = async (req, res) => {
     try {
         const { id } = req.params;
 
-        const user = await User.findByIdAndDelete(id);
+        // const user = await User.findByIdAndDelete(id);
+        const user = await Userr.findByPk(id);
+
+        if (user) {
+            await user.destroy();
+        }
+
         if (!user) return res.status(404).json({ message: "User not found" });
 
         res.status(200).json({ message: "User deleted successfully" });
@@ -272,9 +335,15 @@ export const updateUser = async (req, res) => {
         const { fullname, email, phoneNumber, fieldOfStudy, year } = req.body;
 
         // ตรวจสอบว่าอีเมลหรือเบอร์โทรถูกใช้ไปแล้วหรือไม่ (ยกเว้นของ user เอง)
-        const existingUser = await User.findOne({
-            $or: [{ email }, { phoneNumber }],
-            _id: { $ne: id }, // ✅ ตรวจสอบเฉพาะคนอื่นที่ไม่ใช่ตัวเอง
+        // const existingUser = await User.findOne({
+        //     $or: [{ email }, { phoneNumber }],
+        //     _id: { $ne: id }, // ✅ ตรวจสอบเฉพาะคนอื่นที่ไม่ใช่ตัวเอง
+        // });
+        const existingUser = await Userr.findOne({
+            where: {
+                [Op.or]: [{ email }, { phoneNumber }],
+                id: { [Op.ne]: id }
+            }
         });
 
         if (existingUser) {
@@ -282,10 +351,17 @@ export const updateUser = async (req, res) => {
         }
 
         // อัปเดตข้อมูลผู้ใช้
-        const updatedUser = await User.findByIdAndUpdate(
-            id,
+        // const updatedUser = await User.findByIdAndUpdate(
+        //     id,
+        //     { fullname, email, phoneNumber, fieldOfStudy, year },
+        //     { new: true, runValidators: true }
+        // );
+        const [affectedRows, [updatedUser]] = await Userr.update(
             { fullname, email, phoneNumber, fieldOfStudy, year },
-            { new: true, runValidators: true }
+            {
+                where: { id },
+                returning: true // ให้ return ข้อมูลที่อัปเดต (ใช้ได้กับ PostgreSQL)
+            }
         );
 
         if (!updatedUser) return res.status(404).json({ message: "User not found" });
@@ -300,7 +376,8 @@ export const updateUser = async (req, res) => {
 // ✅ Fetch all users
 export const getAllUsers = async (req, res) => {
     try {
-        const users = await User.find(); // Fetch all users from the database
+        // const users = await User.find(); // Fetch all users from the database
+        const users = await Userr.findAll();
         res.status(200).json(users);
     } catch (error) {
         res.status(500).json({ message: "Server error", error });
