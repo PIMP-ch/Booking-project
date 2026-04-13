@@ -8,7 +8,7 @@ import { getAllStaff, deleteStaff, createStaff, updateStaff } from "@/utils/api"
 
 // กำหนด Interface สำหรับพนักงาน
 interface Staff {
-    _id: string; // ใช้ _id แทน id
+    id: string; // ใช้ id แทน id
     fullname: string;
     email: string;
     role: string;
@@ -63,9 +63,9 @@ const StaffPage = () => {
     // ฟังก์ชันสร้างหรือแก้ไขพนักงาน
     const handleSave = async () => {
         try {
-            if (currentStaff?._id) {
+            if (currentStaff?.id) {
                 // แก้ไขข้อมูลพนักงาน
-                await updateStaff(currentStaff._id, form); // ใช้ _id แทน
+                await updateStaff(currentStaff.id, form); // ใช้ id แทน
             } else {
                 // สร้างพนักงานใหม่
                 await createStaff(form);
@@ -154,7 +154,7 @@ const StaffPage = () => {
                                             </Dropdown.Item>
                                             <Dropdown.Item
                                                 className="flex gap-3"
-                                                onClick={() => openConfirmModal(staff._id)}
+                                                onClick={() => openConfirmModal(staff.id)}
                                             >
                                                 <Icon icon="solar:trash-bin-minimalistic-outline" height={18} />
                                                 <span>ลบ</span>

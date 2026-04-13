@@ -18,10 +18,10 @@ const equipment = await Equipment.findOne();
 
 await Booking.insertMany([
   {
-    userId: user._id,
-    stadiumId: stadium._id,
+    userId: user.id,
+    stadiumId: stadium.id,
     equipment: [
-      { equipmentId: equipment._id, quantity: 2 }
+      { equipmentId: equipment.id, quantity: 2 }
     ],
     startDate: new Date("2025-09-15"),
     endDate: new Date("2025-09-15"),

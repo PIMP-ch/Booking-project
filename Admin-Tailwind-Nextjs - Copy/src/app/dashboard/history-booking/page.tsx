@@ -6,9 +6,9 @@ import { getReturnedBookings } from "@/utils/api";
 import { Icon } from "@iconify/react";
 
 interface Booking {
-    _id: string;
+    id: string;
     userId: {
-        _id: string;
+        id: string;
         fullname: string;
         email: string;
         phoneNumber: string;
@@ -16,12 +16,12 @@ interface Booking {
         year: number;
     };
     stadiumId: {
-        _id: string;
+        id: string;
         nameStadium: string;
     };
     equipment: {
         equipmentId: {
-            _id: string;
+            id: string;
             name: string;
         };
         quantity: number;
@@ -64,7 +64,7 @@ const HistoryBookingPage = () => {
                         </Table.Row>
                     ) : (
                         bookings.map((booking, index) => (
-                            <Table.Row key={booking._id}>
+                            <Table.Row key={booking.id}>
                                 {/* ลำดับ */}
                                 <Table.Cell>{index + 1}</Table.Cell>
 
@@ -84,13 +84,13 @@ const HistoryBookingPage = () => {
                                 <Table.Cell>
                                     <ol className="list-decimal pl-4">
                                         {booking.equipment.map((item, index) => {
-                                        const equipment = item?.equipmentId;
+                                            const equipment = item?.equipmentId;
 
-                                        return (
-                                            <li key={equipment?._id ?? `${booking._id}-eq-${index}`}>
-                                            {equipment?.name ?? "อุปกรณ์ถูกลบ/ไม่พบข้อมูล"} - {item?.quantity ?? 0} ชิ้น
-                                            </li>
-                                        );
+                                            return (
+                                                <li key={equipment?.id ?? `${booking.id}-eq-${index}`}>
+                                                    {equipment?.name ?? "อุปกรณ์ถูกลบ/ไม่พบข้อมูล"} - {item?.quantity ?? 0} ชิ้น
+                                                </li>
+                                            );
                                         })}
                                     </ol>
                                 </Table.Cell>

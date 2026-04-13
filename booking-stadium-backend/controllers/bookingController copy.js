@@ -113,7 +113,7 @@ export const bookStadium = async (req, res) => {
 
         // ✅ ดึงข้อมูลการจองพร้อมข้อมูลผู้ใช้
         console.log("📥 Populating booking data...");
-        const populatedBooking = await Booking.findById(newBooking._id)
+        const populatedBooking = await Booking.findById(newBooking.id)
             .populate("userId", "fullname phoneNumber email fieldOfStudy year")
             .populate("stadiumId", "nameStadium descriptionStadium")
             .populate("equipment.equipmentId", "name quantity");
@@ -134,7 +134,7 @@ export const bookStadium = async (req, res) => {
 
 export const getUserBookings = async (req, res) => {
     try {
-        const  { userId } = req.params;
+        const { userId } = req.params;
 
         const bookings = await Booking.find({ userId })
             .populate("stadiumId", "nameStadium imageUrl descriptionStadium contactStadium");
@@ -142,7 +142,7 @@ export const getUserBookings = async (req, res) => {
         res.json(bookings);
     } catch (err) {
         console.error("getuserBookings error:", err);
-        res.status(500).json({ message: "server error"});
+        res.status(500).json({ message: "server error" });
     }
 };
 
@@ -304,9 +304,9 @@ export const cancelBooking = async (req, res) => {
 
         // ✅ 1. คืนค่าอุปกรณ์ที่ถูกใช้
         for (const item of booking.equipment) {
-            const equipment = await Equipment.findById(item.equipmentId._id);
+            const equipment = await Equipment.findById(item.equipmentId.id);
             if (equipment) {
-                await Equipment.findByIdAndUpdate(item.equipmentId._id, {
+                await Equipment.findByIdAndUpdate(item.equipmentId.id, {
                     status: "available",
                     $inc: { quantity: item.quantity }, // เพิ่มจำนวนอุปกรณ์กลับเข้าไป
                 });
@@ -361,7 +361,7 @@ export const getMonthlyBookingStats = async (req, res) => {
         const stats = await Booking.aggregate([
             {
                 $group: {
-                    _id: {
+                    id: {
                         year: { $year: "$startDate" },
                         month: { $month: "$startDate" },
                     },
@@ -369,14 +369,14 @@ export const getMonthlyBookingStats = async (req, res) => {
                 },
             },
             {
-                $sort: { "_id.year": 1, "_id.month": 1 }, // Sort by year and month
+                $sort: { "id.year": 1, "id.month": 1 }, // Sort by year and month
             },
             {
                 $project: {
-                    year: "$_id.year",
-                    month: "$_id.month",
+                    year: "$id.year",
+                    month: "$id.month",
                     count: 1,
-                    _id: 0, // Exclude the default `_id`
+                    id: 0, // Exclude the default `id`
                 },
             },
         ]);
@@ -408,9 +408,9 @@ export const resetBookingStatus = async (req, res) => {
 
         // Reset Equipment Status
         for (const item of booking.equipment) {
-            const equipment = await Equipment.findById(item.equipmentId._id);
+            const equipment = await Equipment.findById(item.equipmentId.id);
             if (equipment) {
-                await Equipment.findByIdAndUpdate(item.equipmentId._id, {
+                await Equipment.findByIdAndUpdate(item.equipmentId.id, {
                     status: "available",
                     $inc: { quantity: item.quantity }, // คืนจำนวนอุปกรณ์ที่ถูกใช้
                 });

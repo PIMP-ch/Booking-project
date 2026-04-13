@@ -6,7 +6,7 @@ import { getAllEquipment, createEquipment, updateEquipment, deleteEquipment } fr
 import { Icon } from "@iconify/react";
 
 interface Equipment {
-    _id: string;
+    id: string;
     name: string;
     quantity: number;
     status: string;
@@ -36,7 +36,7 @@ const EquipmentPage = () => {
     const handleSave = async () => {
         try {
             if (currentEquipment) {
-                await updateEquipment(currentEquipment._id, form);
+                await updateEquipment(currentEquipment.id, form);
             } else {
                 await createEquipment({ ...form, status: "available" });
             }
@@ -105,7 +105,7 @@ const EquipmentPage = () => {
                 </Table.Head>
                 <Table.Body>
                     {equipmentList.map((equipment, index) => (
-                        <Table.Row key={equipment._id}>
+                        <Table.Row key={equipment.id}>
                             <Table.Cell>{index + 1}</Table.Cell>
                             <Table.Cell>{equipment.name}</Table.Cell>
                             <Table.Cell>{equipment.quantity}</Table.Cell>
@@ -137,7 +137,7 @@ const EquipmentPage = () => {
                                     </Dropdown.Item>
                                     <Dropdown.Item
                                         className="flex gap-2 items-center"
-                                        onClick={() => openConfirmModal(equipment._id)}
+                                        onClick={() => openConfirmModal(equipment.id)}
                                     >
                                         <Icon icon="solar:trash-bin-minimalistic-outline" height={18} />
                                         <span>ลบ</span>

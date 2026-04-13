@@ -6,21 +6,21 @@ import { getReturnedBookings } from "@/utils/api";
 import { Icon } from "@iconify/react";
 
 interface Booking {
-    _id: string;
+    id: string;
     userId: {
-        _id: string;
+        id: string;
         fullname: string;
         email: string;
         fieldOfStudy: string;
         year: number;
     };
     stadiumId: {
-        _id: string;
+        id: string;
         nameStadium: string;
     };
     equipment: {
         equipmentId: {
-            _id: string;
+            id: string;
             name: string;
         };
         quantity: number;
@@ -63,7 +63,7 @@ const HistoryBookingPage = () => {
                         </Table.Row>
                     ) : (
                         bookings.map((booking, index) => (
-                            <Table.Row key={booking._id}>
+                            <Table.Row key={booking.id}>
                                 {/* ลำดับ */}
                                 <Table.Cell>{index + 1}</Table.Cell>
 
@@ -82,7 +82,7 @@ const HistoryBookingPage = () => {
                                 <Table.Cell>
                                     <ol className="list-decimal pl-4">
                                         {booking.equipment.map((item, index) => (
-                                            <li key={item.equipmentId._id}>
+                                            <li key={item.equipmentId.id}>
                                                 {item.equipmentId.name} - {item.quantity} ชิ้น
                                             </li>
                                         ))}

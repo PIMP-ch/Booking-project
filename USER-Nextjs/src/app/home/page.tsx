@@ -8,7 +8,7 @@ import Booking from "./components/Booking";
 import { useEffect, useState } from "react";
 
 type Stadium = {
-  _id: string;
+  id: string;
   nameStadium: string;
   descriptionStadium: string;
   contactStadium: string;

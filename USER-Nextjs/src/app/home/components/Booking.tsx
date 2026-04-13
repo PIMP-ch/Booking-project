@@ -53,7 +53,7 @@ const Booking = () => {
     if (storedUser && storedUser !== "undefined") {
       try {
         const parsedUser = JSON.parse(storedUser);
-        setUserId(parsedUser._id);
+        setUserId(parsedUser.id);
       } catch (error) {
         console.error("❌ Error parsing user JSON:", error);
         localStorage.removeItem("user");
@@ -132,7 +132,7 @@ const Booking = () => {
               const imgSrc = imagesArr[0] || "/images/stadium-placeholder.jpg";
 
               return (
-                <div key={stadium._id} className="border rounded-sm shadow-md bg-white overflow-hidden">
+                <div key={stadium.id} className="border rounded-sm shadow-md bg-white overflow-hidden">
                   {/* ส่วนแสดงรูปภาพ */}
                   <div className="relative w-full h-32 bg-gray-100">
                     {Array.isArray(stadium.imageUrl) && stadium.imageUrl.length > 1 ? (
@@ -155,7 +155,7 @@ const Booking = () => {
                     <button
                       className="w-full bg-orange-500 text-white py-2 rounded-md text-sm font-semibold hover:bg-orange-600 transition active:scale-95"
                       onClick={() =>
-                        handleSelectStadium(stadium._id, stadium.nameStadium, imgSrc)
+                        handleSelectStadium(stadium.id, stadium.nameStadium, imgSrc)
                       }
                     >
                       จองสนามนี้

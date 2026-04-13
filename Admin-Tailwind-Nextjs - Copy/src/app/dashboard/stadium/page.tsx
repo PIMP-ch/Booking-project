@@ -17,7 +17,7 @@ import { toast } from "react-toastify";
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:5008";
 
 interface Stadium {
-    _id: string;
+    id: string;
     nameStadium: string;
     descriptionStadium: string;
     contactStadium: string;
@@ -37,7 +37,7 @@ const INITIAL_FORM = {
 const StadiumPage = () => {
     // --- States ---
     const [stadiumList, setStadiumList] = useState<Stadium[]>([]);
-    const [buildings, setBuildings] = useState<{ _id: string; name: string }[]>([]);
+    const [buildings, setBuildings] = useState<{ id: string; name: string }[]>([]);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [currentStadium, setCurrentStadium] = useState<Stadium | null>(null);
@@ -71,14 +71,16 @@ const StadiumPage = () => {
     }, [fetchData]);
 
     const openModal = (stadium: Stadium | null = null) => {
-        setCurrentStadium(stadium);
         if (stadium) {
+            const relatedBuildingIds = buildings
+                .filter((b: any) => b.stadiumId === stadium.id)
+                .map((b) => b.id);
             setForm({
                 nameStadium: stadium.nameStadium,
                 descriptionStadium: stadium.descriptionStadium,
                 contactStadium: stadium.contactStadium,
                 statusStadium: stadium.statusStadium,
-                buildingIds: stadium.buildingIds || [],
+                buildingIds: relatedBuildingIds || [],
             });
             // แสดง Preview ถ้ารูปภาพมีอยู่
             setImagePreview(stadium.imageUrl?.[0] ? `${API_BASE}${stadium.imageUrl[0]}` : "");
@@ -89,6 +91,10 @@ const StadiumPage = () => {
         setImageFiles([]);
         setIsModalOpen(true);
     };
+
+    useEffect(() => {
+        console.log("form updated:", form);
+    }, [form]);
 
     const closeModal = () => {
         setIsModalOpen(false);
@@ -132,15 +138,17 @@ const StadiumPage = () => {
         }
 
         try {
+
             setIsSaving(true);
-            let stadiumId = currentStadium?._id;
+            let stadiumId = currentStadium?.id;
 
             if (currentStadium) {
-                await updateStadium(currentStadium._id, form);
+                await updateStadium(currentStadium.id, form);
             } else {
                 const res = await createStadium(form);
-                stadiumId = res.stadium._id;
+                stadiumId = res.stadium.id;
             }
+
 
             // ถ้ามีการเลือกไฟล์ใหม่ ให้ทำการอัปโหลด
             if (stadiumId &&
@@ -187,7 +195,7 @@ const StadiumPage = () => {
                     </Table.Head>
                     <Table.Body className="divide-y">
                         {stadiumList.map((stadium, index) => (
-                            <Table.Row key={stadium._id} className="bg-white">
+                            <Table.Row key={stadium.id} className="bg-white">
                                 <Table.Cell className="w-[300px]">
                                     <div className="flex items-center gap-4">
                                         <div className="w-16 h-16 rounded-xl overflow-hidden bg-gray-100 border flex-shrink-0">
@@ -205,13 +213,13 @@ const StadiumPage = () => {
                                                     className="hidden"
                                                     onChange={(e) => {
                                                         const file = e.target.files?.[0];
-                                                        if (file) handleTableUpload(stadium._id, file);
+                                                        if (file) handleTableUpload(stadium.id, file);
                                                     }}
                                                 />
                                             </label>
                                             {stadium.imageUrl?.length > 0 && (
                                                 <button
-                                                    onClick={() => handleDeleteImage(stadium._id)}
+                                                    onClick={() => handleDeleteImage(stadium.id)}
                                                     className="text-red-500 text-[10px] text-left hover:underline pl-1"
                                                 >
                                                     ลบรูป
@@ -237,8 +245,10 @@ const StadiumPage = () => {
                                             <Icon icon="lucide:more-vertical" className="text-gray-400" />
                                         </div>
                                     )} inline>
-                                        <Dropdown.Item onClick={() => openModal(stadium)}>แก้ไข</Dropdown.Item>
-                                        <Dropdown.Item onClick={() => setConfirmModal({ isOpen: true, id: stadium._id })} className="text-red-600">ลบ</Dropdown.Item>
+                                        <Dropdown.Item onClick={() => {
+                                            openModal(stadium)
+                                        }}>แก้ไข</Dropdown.Item>
+                                        <Dropdown.Item onClick={() => setConfirmModal({ isOpen: true, id: stadium.id })} className="text-red-600">ลบ</Dropdown.Item>
                                     </Dropdown>
                                 </Table.Cell>
                             </Table.Row>
@@ -274,14 +284,14 @@ const StadiumPage = () => {
                             <Label className="text-xs text-gray-500">อาคารที่เกี่ยวข้อง</Label>
                             <div className="max-h-32 overflow-y-auto border rounded-xl p-3 bg-gray-50 space-y-2">
                                 {buildings.map((b) => (
-                                    <label key={b._id} className="flex items-center gap-2 cursor-pointer">
+                                    <label key={b.id} className="flex items-center gap-2 cursor-pointer">
                                         <input
                                             type="checkbox"
-                                            checked={form.buildingIds.includes(b._id)}
+                                            checked={form.buildingIds.includes(b.id)}
                                             onChange={(e) => {
                                                 const next = e.target.checked
-                                                    ? [...form.buildingIds, b._id]
-                                                    : form.buildingIds.filter((id) => id !== b._id);
+                                                    ? [...form.buildingIds, b.id]
+                                                    : form.buildingIds.filter((id) => id !== b.id);
                                                 setForm({ ...form, buildingIds: next });
                                             }}
                                             className="rounded text-blue-600 focus:ring-blue-500"
@@ -317,7 +327,7 @@ const StadiumPage = () => {
                                             onClick={() => {
                                                 if (currentStadium && currentStadium.imageUrl?.length > 0 && imagePreview.includes(API_BASE)) {
                                                     // ลบจาก Database จริง
-                                                    handleDeleteImage(currentStadium._id, true);
+                                                    handleDeleteImage(currentStadium.id, true);
                                                 } else {
                                                     // แค่ล้างรูปที่เพิ่งเลือกมา (ยังไม่บันทึก)
                                                     setImagePreview("");

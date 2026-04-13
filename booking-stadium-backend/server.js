@@ -67,7 +67,7 @@ app.use("/api/staff", staffRoutes);
 // ✅ Start server
 const PORT = process.env.PORT || 5008;
 app.listen(PORT, async () => {
-  await sequelize.authenticate();
+  await sequelize.authenticate({ alter: true }); // ทดสอบการเชื่อมต่อ DB
   await sequelize.sync(); // สร้าง table อัตโนมัติ
   console.log("Database connected!")
   console.log(`🚀 Server running on http://localhost:${PORT}`);

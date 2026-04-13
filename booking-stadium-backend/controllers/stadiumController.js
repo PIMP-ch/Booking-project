@@ -17,8 +17,9 @@ export const createStadium = async (req, res) => {
     if (payload.buildingIds && !Array.isArray(payload.buildingIds)) {
       payload.buildingIds = [payload.buildingIds];
     }
+    console.log(payload)
 
-    const newStadium = Stadium.build(payload);
+    const newStadium = await Stadium.create(payload);
     await newStadium.save();
     res.status(201).json({ message: "Stadium created successfully", stadium: newStadium });
   } catch (error) {
@@ -116,7 +117,7 @@ export const updateStadium = async (req, res) => {
     }
 
     // ✅ กรณีสนามถูกจอง (IsBooking): ล็อกฟิลด์สำคัญ แต่ให้แก้ชื่อ/คำอธิบายได้
-    if (stadium.statusStadium === "IsBooking") {
+    if (stadium.dataValues.statusStadium === "IsBooking") {
       const allowedData = {
         nameStadium: payload.nameStadium || stadium.nameStadium,
         descriptionStadium: payload.descriptionStadium || stadium.descriptionStadium,
@@ -130,7 +131,17 @@ export const updateStadium = async (req, res) => {
     }
 
     // ✅ กรณีปกติ: อัปเดตได้ทุกฟิลด์
-    const updatedStadium = await Stadium.findByIdAndUpdate(id, payload, { new: true });
+    // const updatedStadium = await Stadium.findByIdAndUpdate(id, payload, { new: true });
+    // const [_, [updatedStadium]] = await Stadium.update(payload, {
+    //   where: { id },
+    //   returning: true,
+    // });
+    await Stadium.update(payload, {
+      where: { id },
+    });
+
+    const updatedStadium = await Stadium.findByPk(id);
+    console.log(updateStadium)
     res.status(200).json({ message: "บันทึกการแก้ไขสำเร็จ", stadium: updatedStadium });
 
   } catch (error) {

@@ -10,7 +10,7 @@ const ProfilePage = () => {
     const { user, updateUser: updateLocalUser } = useAuth();
     const [isEditing, setIsEditing] = useState(false);
     const [formData, setFormData] = useState({
-        _id: "",
+        id: "",
         fullname: "",
         email: "",
         phoneNumber: "", // ✅ เพิ่ม `phoneNumber`
@@ -22,7 +22,7 @@ const ProfilePage = () => {
     useEffect(() => {
         if (user) {
             setFormData({
-                _id: user._id || "",
+                id: user.id || "",
                 fullname: user.fullname || "",
                 email: user.email || "",
                 phoneNumber: user.phoneNumber || "", // ✅ ตั้งค่าเบอร์โทร
@@ -38,12 +38,12 @@ const ProfilePage = () => {
 
     const handleSave = async () => {
         try {
-            if (!formData._id) {
+            if (!formData.id) {
                 toast.error("ไม่พบ ID ของผู้ใช้");
                 return;
             }
 
-            const updatedUser = await updateUser(formData._id, formData); // ✅ ส่ง `phoneNumber` ไป Backend
+            const updatedUser = await updateUser(formData.id, formData); // ✅ ส่ง `phoneNumber` ไป Backend
             updateLocalUser(updatedUser.updatedUser); // ✅ อัปเดต LocalStorage
             setIsEditing(false);
             toast.success("บันทึกข้อมูลสำเร็จ!");

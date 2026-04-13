@@ -9,7 +9,7 @@ import UploadAvatar from "@/app/components/dashboard/UploadAvatar";
 
 // กำหนด Interface สำหรับพนักงาน
 interface Staff {
-  id: string;           // ใช้ _id แทน id
+  id: string;           // ใช้ id แทน id
   fullname: string;
   email: string;
   role: string;
@@ -63,7 +63,7 @@ const StaffPage = () => {
     try {
       if (currentStaff?.id) {
         // แก้ไขข้อมูลพนักงาน
-        await updateStaff(currentStaff.id, form); // ใช้ _id แทน
+        await updateStaff(currentStaff.id, form); // ใช้ id แทน
       } else {
         // สร้างพนักงานใหม่
         await createStaff(form);

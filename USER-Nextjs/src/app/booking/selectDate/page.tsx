@@ -21,12 +21,12 @@ dayjs.extend(isBetween);
 
 // ตัวเลือกอาคาร
 type Building = {
-  _id: string;
+  id: string;
   name: string;
 };
 
 type StadiumBooking = {
-  _id: string;
+  id: string;
   startDate: string;
   endDate: string;
   startTime: string;
@@ -90,8 +90,8 @@ const SelectDate = () => {
           Array.isArray((data as any)?.dates)
             ? (data as any).dates
             : Array.isArray((data as any)?.availableDates)
-            ? (data as any).availableDates
-            : [];
+              ? (data as any).availableDates
+              : [];
         setDateStatusList(
           normalized
             .filter((x: any) => x && x.date)
@@ -380,27 +380,27 @@ const SelectDate = () => {
             สถานที่ / อาคาร
           </label>
 
-        <select
-          value={building}
-          onChange={(e) => {
-            const selectedId = e.target.value;
-            setBuilding(selectedId);
+          <select
+            value={building}
+            onChange={(e) => {
+              const selectedId = e.target.value;
+              setBuilding(selectedId);
 
-            const selectedBuilding = availableBuildings.find((b) => b._id === selectedId);
-            setBuildingName(selectedBuilding?.name || "");
-          }}
-          className="w-full p-3.5 rounded-xl bg-white text-gray-800 font-semibold focus:ring-4 focus:ring-orange-500/50 outline-none transition-all shadow-inner"
-        >
-          <option value="" disabled>
-            กรุณาเลือกอาคารที่ต้องการเข้าใช้งาน...
-          </option>
-
-          {availableBuildings.map((b) => (
-            <option key={b._id} value={b._id}>
-              {b.name}
+              const selectedBuilding = availableBuildings.find((b) => b.id === selectedId);
+              setBuildingName(selectedBuilding?.name || "");
+            }}
+            className="w-full p-3.5 rounded-xl bg-white text-gray-800 font-semibold focus:ring-4 focus:ring-orange-500/50 outline-none transition-all shadow-inner"
+          >
+            <option value="" disabled>
+              กรุณาเลือกอาคารที่ต้องการเข้าใช้งาน...
             </option>
-          ))}
-        </select>
+
+            {availableBuildings.map((b) => (
+              <option key={b.id} value={b.id}>
+                {b.name}
+              </option>
+            ))}
+          </select>
         </div>
 
         <div className="bg-white/10 backdrop-blur-md p-5 rounded-2xl mb-6 border border-white/20 shadow-2xl">
@@ -456,13 +456,12 @@ const SelectDate = () => {
                   onClick={() => handleDateSelect(d, status)}
                   disabled={disabled}
                   className={`relative h-14 flex flex-col items-center justify-center rounded-xl text-sm font-bold transition-all
-                  ${
-                    active
+                  ${active
                       ? "bg-orange-600 text-white shadow-lg scale-105 z-10"
                       : disabled
-                      ? "bg-gray-100 text-gray-400 cursor-not-allowed opacity-50"
-                      : "bg-orange-50 text-orange-700 hover:bg-orange-100 hover:scale-105"
-                  }`}
+                        ? "bg-gray-100 text-gray-400 cursor-not-allowed opacity-50"
+                        : "bg-orange-50 text-orange-700 hover:bg-orange-100 hover:scale-105"
+                    }`}
                 >
                   <span>{dayjs(d).date()}</span>
                   <span className={`text-[9px] mt-0.5 ${active ? "text-orange-100" : "text-gray-500"}`}>
@@ -550,7 +549,7 @@ const SelectDate = () => {
                     <div className="grid gap-3">
                       {bookings.map((booking) => (
                         <div
-                          key={booking._id}
+                          key={booking.id}
                           className="bg-white rounded-xl p-3 shadow-sm flex justify-between items-center"
                         >
                           <div>
@@ -562,13 +561,12 @@ const SelectDate = () => {
                             </p>
                           </div>
                           <span
-                            className={`px-3 py-1 rounded-full text-[10px] font-bold ${
-                              booking.status === "confirmed"
+                            className={`px-3 py-1 rounded-full text-[10px] font-bold ${booking.status === "confirmed"
                                 ? "bg-green-100 text-green-700"
                                 : booking.status === "pending"
-                                ? "bg-yellow-100 text-yellow-700"
-                                : "bg-red-100 text-red-700"
-                            }`}
+                                  ? "bg-yellow-100 text-yellow-700"
+                                  : "bg-red-100 text-red-700"
+                              }`}
                           >
                             {bookingStatusLabel[booking.status] || booking.status}
                           </span>

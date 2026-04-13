@@ -33,7 +33,7 @@ export const requestPasswordReset = async (req, res) => {
         // สร้าง Token สำหรับรีเซ็ตรหัสผ่าน
         const resetToken = generateResetToken();
         // await User.updateOne(
-        //     { _id: user._id },
+        //     { id: user.id },
         //     {
         //         resetPasswordToken: resetToken,
         //         resetPasswordExpires: Date.now() + 3600000 // Token มีอายุ 1 ชั่วโมง
@@ -121,7 +121,7 @@ export const resetPassword = async (req, res) => {
 
         // ✅ ใช้ `updateOne()` เพื่อแก้ปัญหา ValidationError (phoneNumber is required)
         // await User.updateOne(
-        //     { _id: user._id },
+        //     { id: user.id },
         //     {
         //         password: newPassword, // ✅ บันทึกรหัสผ่านใหม่โดยตรง (ไม่เข้ารหัส)
         //         resetPasswordToken: null, // ✅ ลบ Token ออก
@@ -337,7 +337,7 @@ export const updateUser = async (req, res) => {
         // ตรวจสอบว่าอีเมลหรือเบอร์โทรถูกใช้ไปแล้วหรือไม่ (ยกเว้นของ user เอง)
         // const existingUser = await User.findOne({
         //     $or: [{ email }, { phoneNumber }],
-        //     _id: { $ne: id }, // ✅ ตรวจสอบเฉพาะคนอื่นที่ไม่ใช่ตัวเอง
+        //     id: { $ne: id }, // ✅ ตรวจสอบเฉพาะคนอื่นที่ไม่ใช่ตัวเอง
         // });
         const existingUser = await Userr.findOne({
             where: {

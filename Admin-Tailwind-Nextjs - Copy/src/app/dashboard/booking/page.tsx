@@ -8,10 +8,10 @@ import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
 interface Booking {
-    _id: string;
+    id: string;
     activityName?: string;
     userId: {
-        _id: string;
+        id: string;
         fullname: string;
         email: string;
         phoneNumber: string;
@@ -19,17 +19,17 @@ interface Booking {
         year: number;
     } | null; // แก้ไขให้รองรับค่า null จาก Database
     stadiumId: {
-        _id: string;
+        id: string;
         nameStadium: string;
         descriptionStadium: string;
     } | null;
     buildingIds?: {
-        _id: string;
+        id: string;
         name: string;
     }[];
     equipment: {
         equipmentId: {
-            _id: string;
+            id: string;
             name: string;
             quantity: number;
         };
@@ -110,13 +110,13 @@ const BookingPage = () => {
     const openConfirmModal = (id: string) => setConfirmModal({ isOpen: true, id });
     const closeConfirmModal = () => setConfirmModal({ isOpen: false, id: null });
     const openCancelModal = (id: string) => {
-    setCancelReason("");              // reset ทุกครั้ง
-    setCancelModal({ isOpen: true, id });
+        setCancelReason("");              // reset ทุกครั้ง
+        setCancelModal({ isOpen: true, id });
     };
 
     const closeCancelModal = () => {
-    setCancelModal({ isOpen: false, id: null });
-    setCancelReason("");
+        setCancelModal({ isOpen: false, id: null });
+        setCancelReason("");
     };
     const openReturnModal = (id: string) => setReturnModal({ isOpen: true, id });
     const closeReturnModal = () => setReturnModal({ isOpen: false, id: null });
@@ -141,9 +141,8 @@ const BookingPage = () => {
                 {["pending", "confirmed", "canceled"].map((tab) => (
                     <button
                         key={tab}
-                        className={`px-4 py-2 rounded-lg transition-colors ${
-                            activeTab === tab ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                        }`}
+                        className={`px-4 py-2 rounded-lg transition-colors ${activeTab === tab ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                            }`}
                         onClick={() => setActiveTab(tab)}
                     >
                         {tab === "pending" ? "รอการยืนยัน" : tab === "confirmed" ? "ยืนยันแล้ว" : "ยกเลิกแล้ว"}
@@ -164,19 +163,19 @@ const BookingPage = () => {
 
             {/* Modals (รวมไว้ที่เดียวเพื่อความสะอาด) */}
             <Modal show={confirmModal.isOpen} onClose={closeConfirmModal} className="font-kanit">
-            <Modal.Header>ยืนยันการจอง</Modal.Header>
-            <Modal.Body>คุณต้องการยืนยันการจองนี้หรือไม่?</Modal.Body>
-            <Modal.Footer>
-                <Button
-                color="success"
-                type="button"
-                onClick={() => confirmModal.id && handleConfirmBooking(confirmModal.id)}
-                >
-                    ยืนยัน
-                </Button>
-                <Button color="gray" type="button" onClick={closeConfirmModal}>
-                 ยกเลิก
-                </Button>
+                <Modal.Header>ยืนยันการจอง</Modal.Header>
+                <Modal.Body>คุณต้องการยืนยันการจองนี้หรือไม่?</Modal.Body>
+                <Modal.Footer>
+                    <Button
+                        color="success"
+                        type="button"
+                        onClick={() => confirmModal.id && handleConfirmBooking(confirmModal.id)}
+                    >
+                        ยืนยัน
+                    </Button>
+                    <Button color="gray" type="button" onClick={closeConfirmModal}>
+                        ยกเลิก
+                    </Button>
                 </Modal.Footer>
             </Modal>
 
@@ -186,56 +185,56 @@ const BookingPage = () => {
                 onClose={closeCancelModal}
                 className="font-kanit"
             >
-            <Modal.Header className="text-red-600">
-                ยกเลิกการจอง
-            </Modal.Header>
+                <Modal.Header className="text-red-600">
+                    ยกเลิกการจอง
+                </Modal.Header>
 
-            <Modal.Body>
-                <p className="text-gray-500 text-sm mb-4">
-                คุณต้องการยกเลิกการจองนี้หรือไม่? ระบบจะคืนทรัพยากรสนามและอุปกรณ์
-                </p>
+                <Modal.Body>
+                    <p className="text-gray-500 text-sm mb-4">
+                        คุณต้องการยกเลิกการจองนี้หรือไม่? ระบบจะคืนทรัพยากรสนามและอุปกรณ์
+                    </p>
 
-                <textarea
-                value={cancelReason}
-                onChange={(e) => setCancelReason(e.target.value)}
-                placeholder="กรุณาระบุเหตุผลที่ยกเลิกการจอง"
-                className="w-full border rounded-lg p-3 text-sm focus:ring-2 focus:ring-red-400 outline-none"
-                rows={4}
-                />
-            </Modal.Body>
+                    <textarea
+                        value={cancelReason}
+                        onChange={(e) => setCancelReason(e.target.value)}
+                        placeholder="กรุณาระบุเหตุผลที่ยกเลิกการจอง"
+                        className="w-full border rounded-lg p-3 text-sm focus:ring-2 focus:ring-red-400 outline-none"
+                        rows={4}
+                    />
+                </Modal.Body>
 
-            <Modal.Footer>
-                <Button
-                color="failure"
-                type="button"
-                onClick={() =>
-                    cancelModal.id && handleCancelBooking(cancelModal.id)
-                }
-                >
-                ยืนยันการยกเลิก
-                </Button>
+                <Modal.Footer>
+                    <Button
+                        color="failure"
+                        type="button"
+                        onClick={() =>
+                            cancelModal.id && handleCancelBooking(cancelModal.id)
+                        }
+                    >
+                        ยืนยันการยกเลิก
+                    </Button>
 
-                <Button color="gray" type="button" onClick={closeCancelModal}>
-                ปิด
-                </Button>
-            </Modal.Footer>
+                    <Button color="gray" type="button" onClick={closeCancelModal}>
+                        ปิด
+                    </Button>
+                </Modal.Footer>
             </Modal>
-  
+
 
             <Modal show={returnModal.isOpen} onClose={closeReturnModal} className="font-kanit">
                 <Modal.Header>ยืนยันการส่งคืนสนาม</Modal.Header>
                 <Modal.Body>คุณต้องการส่งคืนสนามและรีเซ็ตสถานะการจองนี้ใช่หรือไม่?</Modal.Body>
                 <Modal.Footer>
-                 <Button
-                    color="success"
-                    type="button"
-                    onClick={() => returnModal.id && handleResetBooking(returnModal.id)}
+                    <Button
+                        color="success"
+                        type="button"
+                        onClick={() => returnModal.id && handleResetBooking(returnModal.id)}
                     >
-                    ยืนยันการคืนสนาม
-                 </Button>
+                        ยืนยันการคืนสนาม
+                    </Button>
 
                     <Button color="gray" type="button" onClick={closeReturnModal}>
-                    ปิด
+                        ปิด
                     </Button>
                 </Modal.Footer>
             </Modal>
@@ -261,7 +260,7 @@ const BookingTable: React.FC<{ bookings: Booking[]; onConfirm: (id: string) => v
                 <Table.Row><Table.Cell colSpan={6} className="text-center py-10 text-gray-500">ไม่มีข้อมูลรอการยืนยัน</Table.Cell></Table.Row>
             ) : (
                 bookings.map((booking, index) => (
-                    <Table.Row key={booking._id} className="bg-white">
+                    <Table.Row key={booking.id} className="bg-white">
                         <Table.Cell>{index + 1}</Table.Cell>
                         <Table.Cell>
                             <p className="font-bold text-gray-900">{booking.userId?.fullname || "ไม่พบชื่อผู้ใช้"}</p>
@@ -281,7 +280,7 @@ const BookingTable: React.FC<{ bookings: Booking[]; onConfirm: (id: string) => v
                             <div className="text-xs text-gray-500">
                                 กิจกรรม: {booking.activityName || "-"}
                             </div>
-                            </Table.Cell>
+                        </Table.Cell>
                         <Table.Cell>
                             <ul className="text-xs list-disc pl-4 text-gray-600">
                                 {booking.equipment.map((item, idx) => (
@@ -305,10 +304,10 @@ const BookingTable: React.FC<{ bookings: Booking[]; onConfirm: (id: string) => v
                                     </button>
                                 )}
                             >
-                                <Dropdown.Item onClick={() => onConfirm(booking._id)} className="text-green-600 gap-2">
+                                <Dropdown.Item onClick={() => onConfirm(booking.id)} className="text-green-600 gap-2">
                                     <Icon icon="solar:check-circle-bold" /> ยืนยัน
                                 </Dropdown.Item>
-                                <Dropdown.Item onClick={() => onCancel(booking._id)} className="text-red-600 gap-2">
+                                <Dropdown.Item onClick={() => onCancel(booking.id)} className="text-red-600 gap-2">
                                     <Icon icon="solar:trash-bin-minimalistic-outline" /> ยกเลิก
                                 </Dropdown.Item>
                             </Dropdown>
@@ -334,7 +333,7 @@ const BookingTableConfirmed: React.FC<{ bookings: Booking[]; onReset: (id: strin
                 <Table.Row><Table.Cell colSpan={5} className="text-center py-10 text-gray-500">ไม่มีข้อมูลยืนยันแล้ว</Table.Cell></Table.Row>
             ) : (
                 bookings.map((booking, index) => (
-                    <Table.Row key={booking._id}>
+                    <Table.Row key={booking.id}>
                         <Table.Cell>{index + 1}</Table.Cell>
                         <Table.Cell>
                             <p className="font-medium">{booking.userId?.fullname || "N/A"}</p>
@@ -342,18 +341,18 @@ const BookingTableConfirmed: React.FC<{ bookings: Booking[]; onReset: (id: strin
                             <div className="text-xs text-gray-400">{booking.userId?.phoneNumber || "-"}</div>
                         </Table.Cell>
                         <Table.Cell>
-                        <div className="font-medium">
-                            {booking.stadiumId?.nameStadium || "-"}
-                        </div>
-
-                        {booking.buildingIds && booking.buildingIds.length > 0 && (
-                            <div className="text-xs text-gray-500">
-                                อาคาร: {booking.buildingIds.map((b) => b.name).join(", ") || "-"}
+                            <div className="font-medium">
+                                {booking.stadiumId?.nameStadium || "-"}
                             </div>
-                        )}
-                        <div className="text-xs text-gray-500">
-                            กิจกรรม: {booking.activityName || "-"}
-                        </div>
+
+                            {booking.buildingIds && booking.buildingIds.length > 0 && (
+                                <div className="text-xs text-gray-500">
+                                    อาคาร: {booking.buildingIds.map((b) => b.name).join(", ") || "-"}
+                                </div>
+                            )}
+                            <div className="text-xs text-gray-500">
+                                กิจกรรม: {booking.activityName || "-"}
+                            </div>
                         </Table.Cell>
                         <Table.Cell className="text-xs">
                             {new Date(booking.startDate).toLocaleDateString("th-TH")} | {booking.startTime} - {booking.endTime}
@@ -368,7 +367,7 @@ const BookingTableConfirmed: React.FC<{ bookings: Booking[]; onReset: (id: strin
                                     </button>
                                 )}
                             >
-                                <Dropdown.Item onClick={() => onReset(booking._id)} className="text-blue-600 gap-2">
+                                <Dropdown.Item onClick={() => onReset(booking.id)} className="text-blue-600 gap-2">
                                     <Icon icon="solar:refresh-outline" /> ส่งคืนสนาม
                                 </Dropdown.Item>
                             </Dropdown>
@@ -391,7 +390,7 @@ const BookingTableCanceled: React.FC<{ bookings: Booking[] }> = ({ bookings }) =
         </Table.Head>
         <Table.Body className="divide-y">
             {bookings.map((booking, index) => (
-                <Table.Row key={booking._id} className="opacity-70 bg-gray-50">
+                <Table.Row key={booking.id} className="opacity-70 bg-gray-50">
                     <Table.Cell>{index + 1}</Table.Cell>
                     <Table.Cell>{booking.userId?.fullname || "N/A"}</Table.Cell>
                     <Table.Cell>{booking.stadiumId?.nameStadium}</Table.Cell>

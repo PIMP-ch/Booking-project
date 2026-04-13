@@ -21,7 +21,7 @@ export const loginStaff = async (req, res) => {
     return res.status(200).json({
       message: "Login successful",
       staff: {
-        _id: staff.id,
+        id: staff.id,
         fullname: staff.fullname,
         email: staff.email,
         role: staff.role,

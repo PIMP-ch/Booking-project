@@ -315,7 +315,7 @@ export const getStadiumBookings = async (stadiumId) => {
     const raw = res.data;
     if (!Array.isArray(raw)) return [];
     return raw.filter((item) => {
-      const id = typeof item?.stadiumId === "object" ? item.stadiumId?._id : item?.stadiumId;
+      const id = typeof item?.stadiumId === "object" ? item.stadiumId?.id : item?.stadiumId;
       return id?.toString() === stadiumId.toString();
     });
   } catch (error) {

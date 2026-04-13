@@ -8,7 +8,7 @@ import { AlertCircle, Calendar, Package } from "lucide-react";
 import dayjs from "dayjs";
 
 interface Booking {
-  _id: string;
+  id: string;
   startDate: string;
   endDate: string;
   status: "pending" | "confirmed" | "canceled" | "Return Success";
@@ -37,8 +37,8 @@ const BookingHistory = () => {
   useEffect(() => {
     if (typeof window !== "undefined") {
       const user = JSON.parse(localStorage.getItem("user") || "{}");
-      if (user?._id) {
-        setUserId(user._id);
+      if (user?.id) {
+        setUserId(user.id);
       } else {
         toast.error("⛔ กรุณาเข้าสู่ระบบ");
         router.push("/user/login");
@@ -137,22 +137,20 @@ const BookingHistory = () => {
       <div className="flex justify-start gap-4 mb-4">
         <button
           onClick={() => setActiveTab("all")}
-          className={`px-4 py-2 rounded-lg text-md font-semibold transition ${
-            activeTab === "all"
+          className={`px-4 py-2 rounded-lg text-md font-semibold transition ${activeTab === "all"
               ? "bg-orange-500 text-white"
               : "bg-gray-200 text-gray-800"
-          }`}
+            }`}
         >
           ทั้งหมด
         </button>
 
         <button
           onClick={() => setActiveTab("cancelled")}
-          className={`px-4 py-2 rounded-lg text-md font-semibold transition ${
-            activeTab === "cancelled"
+          className={`px-4 py-2 rounded-lg text-md font-semibold transition ${activeTab === "cancelled"
               ? "bg-red-500 text-white"
               : "bg-gray-200 text-gray-800"
-          }`}
+            }`}
         >
           รายการยกเลิก
         </button>
@@ -169,7 +167,7 @@ const BookingHistory = () => {
       {!loading &&
         filteredBookings.map((booking) => (
           <div
-            key={booking._id}
+            key={booking.id}
             className="bg-white p-4 rounded-lg shadow-md mb-4 border border-gray-300"
           >
             <h2 className="text-lg font-bold mb-2 flex items-center gap-2">
@@ -183,15 +181,14 @@ const BookingHistory = () => {
             </p>
 
             <p
-              className={`text-md font-bold mt-2 ${
-                booking.status === "canceled"
+              className={`text-md font-bold mt-2 ${booking.status === "canceled"
                   ? "text-red-500"
                   : booking.status === "pending"
-                  ? "text-yellow-500"
-                  : booking.status === "confirmed"
-                  ? "text-green-500"
-                  : "text-blue-500"
-              }`}
+                    ? "text-yellow-500"
+                    : booking.status === "confirmed"
+                      ? "text-green-500"
+                      : "text-blue-500"
+                }`}
             >
               {booking.status === "pending" && "⏳ รอการยืนยัน"}
               {booking.status === "confirmed" && "✅ จองสำเร็จ"}
@@ -255,7 +252,7 @@ const BookingHistory = () => {
             {booking.status === "pending" && (
               <button
                 onClick={() => {
-                  setSelectedBooking(booking._id);
+                  setSelectedBooking(booking.id);
                   setShowModal(true);
                 }}
                 className="mt-3 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition"

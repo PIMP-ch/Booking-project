@@ -103,6 +103,10 @@ export const deleteEquipmentImage = async (id) => {
 export const getAllStadiums = async () => {
   try {
     const response = await axios.get(`${API_URL}/stadiums`);
+    console.log('*******')
+    console.log(response)
+    console.log('********')
+
     return response.data;
   } catch (error) { handleError(error, "Failed to fetch stadium data"); }
 };
@@ -151,20 +155,20 @@ export const uploadStadiumImages = async (id, files = [], externalUrls = []) => 
       headers: { "Content-Type": "multipart/form-data" },
     });
     return response.data;
-  } catch (error) { 
-    handleError(error, "Failed to upload stadium images"); 
+  } catch (error) {
+    handleError(error, "Failed to upload stadium images");
   }
 };
 
 // --- แก้ไข: ปรับให้รองรับการลบรูปตาม Index ของอาเรย์รูปภาพ ---
 export const deleteStadiumImage = async (id, index = 0) => {
-    try {
-        // ยิงไปที่ /stadiums/:id/images/:index
-        const response = await axios.delete(`${API_URL}/stadiums/${id}/images/${index}`);
-        return response.data;
-    } catch (error) {
-        throw error.response?.data || { message: "Failed to delete stadium image" };
-    }
+  try {
+    // ยิงไปที่ /stadiums/:id/images/:index
+    const response = await axios.delete(`${API_URL}/stadiums/${id}/images/${index}`);
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { message: "Failed to delete stadium image" };
+  }
 };
 
 // ==========================================
@@ -233,9 +237,9 @@ export const getReturnedBookings = async () => {
   try {
     const response = await axios.get(`${API_URL}/bookings/history/returned`);
     return response.data;
-  } catch (error) { 
+  } catch (error) {
     console.error("Error fetching returned bookings:", error);
-    return []; 
+    return [];
   }
 };
 
@@ -261,6 +265,9 @@ export const getDailyBookingStats = async (month, year = new Date().getFullYear(
 export const getBuildings = async () => {
   try {
     const response = await axios.get(`${API_URL}/buildings`);
+    console.log('**bd***')
+    console.log(response)
+    console.log('**bd***')
     return response.data;
   } catch (error) { handleError(error, "Failed to fetch buildings"); }
 };

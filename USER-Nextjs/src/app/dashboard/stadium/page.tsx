@@ -6,7 +6,7 @@ import { Icon } from "@iconify/react";
 import { getAllStadiums, createStadium, updateStadium, deleteStadium } from "@/utils/api";
 
 interface Stadium {
-    _id: string;
+    id: string;
     nameStadium: string;
     descriptionStadium: string;
     contactStadium: string;
@@ -42,7 +42,7 @@ const StadiumPage = () => {
     const handleSave = async () => {
         try {
             if (currentStadium) {
-                await updateStadium(currentStadium._id, form);
+                await updateStadium(currentStadium.id, form);
             } else {
                 await createStadium({ ...form, statusStadium: "active" });
             }
@@ -122,7 +122,7 @@ const StadiumPage = () => {
                 </Table.Head>
                 <Table.Body>
                     {stadiumList.map((stadium, index) => (
-                        <Table.Row key={stadium._id}>
+                        <Table.Row key={stadium.id}>
                             <Table.Cell>{index + 1}</Table.Cell>
                             <Table.Cell>{stadium.nameStadium}</Table.Cell>
                             <Table.Cell>{stadium.descriptionStadium}</Table.Cell>
@@ -163,7 +163,7 @@ const StadiumPage = () => {
                                         </Dropdown.Item>
                                         <Dropdown.Item
                                             className="flex gap-2 items-center"
-                                            onClick={() => openConfirmModal(stadium._id)}
+                                            onClick={() => openConfirmModal(stadium.id)}
                                         >
                                             <Icon icon="solar:trash-bin-minimalistic-outline" height={18} />
                                             <span>ลบ</span>

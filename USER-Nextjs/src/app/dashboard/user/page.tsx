@@ -5,7 +5,7 @@ import { Table } from "flowbite-react";
 import { getAllUsers } from "@/utils/api";
 
 interface User {
-    _id: string;
+    id: string;
     fullname: string;
     email: string;
     fieldOfStudy: string;
@@ -43,7 +43,7 @@ const UserPage = () => {
                 </Table.Head>
                 <Table.Body>
                     {users.map((user, index) => (
-                        <Table.Row key={user._id}>
+                        <Table.Row key={user.id}>
                             <Table.Cell>{index + 1}</Table.Cell>
                             <Table.Cell>{user.fullname}</Table.Cell>
                             <Table.Cell>{user.email}</Table.Cell>

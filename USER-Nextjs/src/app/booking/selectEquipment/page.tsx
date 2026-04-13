@@ -8,7 +8,7 @@ import { PlusCircle, MinusCircle, Package, ArrowLeft, XCircle } from "lucide-rea
 import Image from "next/image";
 
 type EquipmentItem = {
-  _id: string;
+  id: string;
   name: string;
   quantity: number; // จำนวนคงเหลือในสต็อก
   imageUrl?: string;
@@ -320,14 +320,14 @@ const SelectEquipment = () => {
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 pb-32">
             {equipmentList.map((item) => {
-              const selectedItem = selectedEquipment.find((eq) => eq.equipmentId === item._id);
+              const selectedItem = selectedEquipment.find((eq) => eq.equipmentId === item.id);
               const selectedCount = selectedItem ? selectedItem.quantity : 0;
               const isMax = selectedCount >= item.quantity;
               const isMin = selectedCount <= 0;
 
               return (
                 <div
-                  key={item._id}
+                  key={item.id}
                   className="p-3 border rounded-lg shadow-md bg-white/95 backdrop-blur transition hover:shadow-lg"
                 >
                   <EquipmentImage imageUrl={item.imageUrl} name={item.name} />
@@ -337,7 +337,7 @@ const SelectEquipment = () => {
                   <p className="text-[11px] text-gray-500 text-center mb-2">คงเหลือ {item.quantity} ชิ้น</p>
                   <div className="flex items-center justify-center gap-3 mt-1 bg-gray-50 py-2 rounded-md">
                     <button
-                      onClick={() => handleDecrease(item._id)}
+                      onClick={() => handleDecrease(item.id)}
                       className={`transition ${isMin ? "text-gray-300 cursor-not-allowed" : "text-gray-700 hover:text-red-600"}`}
                       disabled={isMin}
                     >
@@ -345,7 +345,7 @@ const SelectEquipment = () => {
                     </button>
                     <span className="text-lg font-bold text-orange-600 w-6 text-center">{selectedCount}</span>
                     <button
-                      onClick={() => handleIncrease(item._id, item.name, item.quantity, item.imageUrl)}
+                      onClick={() => handleIncrease(item.id, item.name, item.quantity, item.imageUrl)}
                       className={`transition ${isMax ? "text-gray-300 cursor-not-allowed" : "text-gray-700 hover:text-orange-600"}`}
                       disabled={isMax}
                     >

@@ -10,7 +10,7 @@ import dayjs from "dayjs";
 
 // ✅ กำหนด Type ให้ชัดเจน (คงเดิม)
 interface UserType {
-  _id: string;
+  id: string;
   fullname: string;
   email: string;
   fieldOfStudy: string;
@@ -189,7 +189,7 @@ const BookingDetail = () => {
 
     try {
       const bookingData = {
-        userId: user._id,
+        userId: user.id,
         stadiumId,
 
         // ✅ สำคัญ: ส่งให้ backend เป็น array ตาม schema (buildingIds)

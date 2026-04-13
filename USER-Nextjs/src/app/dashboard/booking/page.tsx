@@ -6,22 +6,22 @@ import { getAllBookings, confirmBooking, cancelBooking, resetBookingStatus } fro
 import { Icon } from "@iconify/react";
 
 interface Booking {
-    _id: string;
+    id: string;
     userId: {
-        _id: string;
+        id: string;
         fullname: string;
         email: string;
         fieldOfStudy: string;
         year: number;
     };
     stadiumId: {
-        _id: string;
+        id: string;
         nameStadium: string;
         descriptionStadium: string;
     };
     equipment: {
         equipmentId: {
-            _id: string;
+            id: string;
             name: string;
             quantity: number;
         };
@@ -273,7 +273,7 @@ const BookingTable: React.FC<BookingTableProps> = ({ bookings, onConfirm, onCanc
                 </Table.Row>
             ) : (
                 bookings.map((booking, index) => (
-                    <Table.Row key={booking._id}>
+                    <Table.Row key={booking.id}>
                         {/* ลำดับ */}
                         <Table.Cell>{index + 1}</Table.Cell>
 
@@ -292,7 +292,7 @@ const BookingTable: React.FC<BookingTableProps> = ({ bookings, onConfirm, onCanc
                         <Table.Cell>
                             <ol className="list-decimal pl-4">
                                 {booking.equipment.map((item) => (
-                                    <li key={item.equipmentId._id}>
+                                    <li key={item.equipmentId.id}>
                                         {item.equipmentId.name} - {item.quantity} ชิ้น
                                     </li>
                                 ))}
@@ -341,10 +341,10 @@ const BookingTable: React.FC<BookingTableProps> = ({ bookings, onConfirm, onCanc
                                 )}
                                 dismissOnClick={false}
                             >
-                                <Dropdown.Item onClick={() => onConfirm(booking._id)}>
+                                <Dropdown.Item onClick={() => onConfirm(booking.id)}>
                                     <Icon icon="solar:check-circle-bold" /> ยืนยัน
                                 </Dropdown.Item>
-                                <Dropdown.Item onClick={() => onCancel(booking._id)}>
+                                <Dropdown.Item onClick={() => onCancel(booking.id)}>
                                     <Icon icon="solar:trash-bin-minimalistic-outline" /> ยกเลิก
                                 </Dropdown.Item>
                             </Dropdown>
@@ -381,7 +381,7 @@ const BookingTableConfirmed: React.FC<BookingTableConfirmedProps> = ({ bookings,
                 </Table.Row>
             ) : (
                 bookings.map((booking, index) => (
-                    <Table.Row key={booking._id}>
+                    <Table.Row key={booking.id}>
                         <Table.Cell>{index + 1}</Table.Cell>
                         <Table.Cell>
                             {booking.userId.fullname} <br />
@@ -405,7 +405,7 @@ const BookingTableConfirmed: React.FC<BookingTableConfirmedProps> = ({ bookings,
                         </Table.Cell>
                         <Table.Cell>
                             <Button
-                                onClick={() => onReset(booking._id)}
+                                onClick={() => onReset(booking.id)}
                                 className="bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 rounded-lg"
                             >
                                 ส่งคืนสนาม
@@ -436,7 +436,7 @@ const BookingTableCanceled: React.FC<{ bookings: Booking[] }> = ({ bookings }) =
                 </Table.Row>
             ) : (
                 bookings.map((booking, index) => (
-                    <Table.Row key={booking._id}>
+                    <Table.Row key={booking.id}>
                         <Table.Cell>{index + 1}</Table.Cell>
                         <Table.Cell>
                             {booking.userId.fullname} <br />
