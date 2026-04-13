@@ -71,16 +71,14 @@ const StadiumPage = () => {
     }, [fetchData]);
 
     const openModal = (stadium: Stadium | null = null) => {
+        setCurrentStadium(stadium);
         if (stadium) {
-            const relatedBuildingIds = buildings
-                .filter((b: any) => b.stadiumId === stadium.id)
-                .map((b) => b.id);
             setForm({
                 nameStadium: stadium.nameStadium,
                 descriptionStadium: stadium.descriptionStadium,
                 contactStadium: stadium.contactStadium,
                 statusStadium: stadium.statusStadium,
-                buildingIds: relatedBuildingIds || [],
+                buildingIds: stadium.buildingIds || [],
             });
             // แสดง Preview ถ้ารูปภาพมีอยู่
             setImagePreview(stadium.imageUrl?.[0] ? `${API_BASE}${stadium.imageUrl[0]}` : "");
@@ -91,10 +89,6 @@ const StadiumPage = () => {
         setImageFiles([]);
         setIsModalOpen(true);
     };
-
-    useEffect(() => {
-        console.log("form updated:", form);
-    }, [form]);
 
     const closeModal = () => {
         setIsModalOpen(false);
