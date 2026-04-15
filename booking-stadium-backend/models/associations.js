@@ -13,8 +13,8 @@ Userr.hasMany(Booking, { foreignKey: "userId" });
 Booking.belongsTo(Stadium, { foreignKey: "stadiumId" });
 Stadium.hasMany(Booking, { foreignKey: "stadiumId" });
 
-Stadium.hasMany(Building, { foreignKey: "stadiumId" });
-Building.belongsTo(Stadium, { foreignKey: "stadiumId" });
+// Stadium.hasMany(Building, { foreignKey: "stadiumId" });
+// Building.belongsTo(Stadium, { foreignKey: "stadiumId" });
 
 // Booking ↔ Equipment (many-to-many พร้อม quantity)
 Booking.belongsToMany(Equipment, { through: BookingEquipment, foreignKey: "bookingId" });
