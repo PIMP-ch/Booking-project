@@ -212,6 +212,41 @@ export const getStadiums = async (_req, res) => {
 };
 
 // ✅ 6. ดึงข้อมูลตาม ID
+// export const getStadiumById = async (req, res) => {
+//   try {
+//     const stadium = await Stadium.findByPk(req.params.id, {
+//       include: [{
+//         model: BuildingRelation,
+//         as: 'buildingRelations',
+//         attributes: ['buildingId'],
+//         where: { active: '1' }, // 🔥 เอาเฉพาะ active
+//         required: false // กันกรณีไม่มีแล้ว stadium หาย
+//       }]
+//     });
+
+//     if (!stadium) {
+//       return res.status(404).json({ message: 'Not found' });
+//     }
+
+//     console.log(stadium)
+
+//     const { buildingRelations, ...rest } = stadium.toJSON();
+
+//     console.log(buildingRelations)
+
+//     const result = {
+//       ...rest,
+//       buildingIds: buildingRelations.map(item => item.buildingId) // ✅ array ล้วน
+//     };
+
+//     res.status(200).json(result);
+
+//   } catch (error) {
+//     console.error(error);
+//     res.status(500).json({ message: 'error' });
+//   }
+// };
+
 export const getStadiumById = async (req, res) => {
   try {
     const stadium = await Stadium.findByPk(req.params.id, {
@@ -219,8 +254,13 @@ export const getStadiumById = async (req, res) => {
         model: BuildingRelation,
         as: 'buildingRelations',
         attributes: ['buildingId'],
-        where: { active: '1' }, // 🔥 เอาเฉพาะ active
-        required: false // กันกรณีไม่มีแล้ว stadium หาย
+        where: { active: '1' },
+        required: false,
+        include: [{
+          model: Building, // ✅ join Building เพื่อดึงชื่อ
+          as: 'building',  // ชื่อ alias ที่ define ใน association
+          attributes: ['id', 'name']
+        }]
       }]
     });
 
@@ -232,7 +272,10 @@ export const getStadiumById = async (req, res) => {
 
     const result = {
       ...rest,
-      buildingIds: buildingRelations.map(item => item.buildingId) // ✅ array ล้วน
+      buildings: buildingRelations.map(item => ({
+        id: item.building.id,
+        name: item.building.name
+      }))
     };
 
     res.status(200).json(result);

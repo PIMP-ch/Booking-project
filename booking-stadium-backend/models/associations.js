@@ -27,6 +27,8 @@ BuildingRelation.belongsTo(Stadium, {
     foreignKey: 'stadiumId'
 });
 
+BuildingRelation.belongsTo(Building, { foreignKey: 'buildingId', as: 'building' });
+
 // Booking ↔ Equipment (many-to-many พร้อม quantity)
 Booking.belongsToMany(Equipment, { through: BookingEquipment, foreignKey: "bookingId" });
 Equipment.belongsToMany(Booking, { through: BookingEquipment, foreignKey: "equipmentId" });
