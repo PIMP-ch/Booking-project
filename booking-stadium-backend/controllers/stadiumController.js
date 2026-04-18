@@ -1,4 +1,6 @@
 import Stadium from "../models/Stadiumm.js";
+import BuildingRelation from "../models/BuildingRelation.js";
+import Building from "../models/Buildingg.js";
 import fs from "fs";
 import path from "path";
 
@@ -17,10 +19,25 @@ export const createStadium = async (req, res) => {
     if (payload.buildingIds && !Array.isArray(payload.buildingIds)) {
       payload.buildingIds = [payload.buildingIds];
     }
-    console.log(payload)
 
     const newStadium = await Stadium.create(payload);
     await newStadium.save();
+
+    // สร้างคสพกระหว่างสนามกับอาคาร
+
+    const currentStadiumId = newStadium.id
+    const allBuilding = await Building.findAll({ attributes: ['id'] });
+    const allBuildingIds = allBuilding.map(item => item.id);
+    const newBuildingIds = payload.buildingIds;
+
+    allBuildingIds.forEach(buildingId => {
+      BuildingRelation.create({
+        stadiumId: currentStadiumId,
+        buildingId: buildingId,
+        active: newBuildingIds.includes(buildingId) ? '1' : '0'
+      })
+    })
+
     res.status(201).json({ message: "Stadium created successfully", stadium: newStadium });
   } catch (error) {
     res.status(500).json({ message: "Server error", error });
@@ -139,9 +156,23 @@ export const updateStadium = async (req, res) => {
     await Stadium.update(payload, {
       where: { id },
     });
-
     const updatedStadium = await Stadium.findByPk(id);
-    console.log(updateStadium)
+
+    const currentStadiumId = id
+    const allBuilding = await Building.findAll({ attributes: ['id'] });
+    const allBuildingIds = allBuilding.map(item => item.id);
+    const newBuildingIds = payload.buildingIds;
+    allBuildingIds.forEach(buildingId => {
+      BuildingRelation.update({
+        active: newBuildingIds.includes(buildingId) ? '1' : '0'
+      }, {
+        where: {
+          stadiumId: currentStadiumId,
+          buildingId: buildingId
+        }
+      })
+    })
+
     res.status(200).json({ message: "บันทึกการแก้ไขสำเร็จ", stadium: updatedStadium });
 
   } catch (error) {
@@ -153,10 +184,29 @@ export const updateStadium = async (req, res) => {
 export const getStadiums = async (_req, res) => {
   try {
     const stadiums = await Stadium.findAll({
+      include: [{
+        model: BuildingRelation,
+        as: 'buildingRelations',
+        attributes: ['buildingId'], // เอาแค่ id
+        where: { active: '1' }, // เอาเฉพาะ active
+        required: false // กัน stadium ที่ไม่มี building แล้วหาย
+      }],
       order: [['createdAt', 'DESC']]
     });
-    res.status(200).json(stadiums);
+
+    const result = stadiums.map(stadium => {
+      const data = stadium.toJSON();
+
+      return {
+        ...data,
+        buildingIds: data.buildingRelations.map(b => b.buildingId) // ✅ ใช้ key ใหม่
+      };
+    });
+
+    res.status(200).json(result);
+
   } catch (error) {
+    console.error(error);
     res.status(500).json({ message: "Server error", error });
   }
 };
@@ -166,14 +216,30 @@ export const getStadiumById = async (req, res) => {
   try {
     const stadium = await Stadium.findByPk(req.params.id, {
       include: [{
-        association: 'buildingIds', // ต้องตั้ง association ไว้ก่อน
-        attributes: ['name', 'active']
+        model: BuildingRelation,
+        as: 'buildingRelations',
+        attributes: ['buildingId'],
+        where: { active: '1' }, // 🔥 เอาเฉพาะ active
+        required: false // กันกรณีไม่มีแล้ว stadium หาย
       }]
     });
-    if (!stadium) return res.status(404).json({ message: "Stadium not found" });
-    res.status(200).json(stadium);
+
+    if (!stadium) {
+      return res.status(404).json({ message: 'Not found' });
+    }
+
+    const { buildingRelations, ...rest } = stadium.toJSON();
+
+    const result = {
+      ...rest,
+      buildingIds: buildingRelations.map(item => item.buildingId) // ✅ array ล้วน
+    };
+
+    res.status(200).json(result);
+
   } catch (error) {
-    res.status(500).json({ message: "Server error", error });
+    console.error(error);
+    res.status(500).json({ message: 'error' });
   }
 };
 

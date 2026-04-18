@@ -157,6 +157,7 @@ const StadiumPage = () => {
 
             toast.success("บันทึกข้อมูลเรียบร้อย");
             fetchData();
+            fetchData();
             closeModal();
         } catch (err) {
             toast.error("เกิดข้อผิดพลาดในการบันทึก");

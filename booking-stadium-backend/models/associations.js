@@ -5,6 +5,7 @@ import Equipment from "./Equipmentt.js";
 import Building from "./Buildingg.js";
 import BookingEquipment from "./BookingEquipment.js";
 import BookingBuilding from "./BookingBuilding.js";
+import BuildingRelation from "./BuildingRelation.js";
 
 
 Booking.belongsTo(Userr, { foreignKey: "userId" });
@@ -15,6 +16,16 @@ Stadium.hasMany(Booking, { foreignKey: "stadiumId" });
 
 // Stadium.hasMany(Building, { foreignKey: "stadiumId" });
 // Building.belongsTo(Stadium, { foreignKey: "stadiumId" });
+// Stadium.js
+Stadium.hasMany(BuildingRelation, {
+    foreignKey: 'stadiumId',
+    as: 'buildingRelations'
+});
+
+// BuildingRelation.js
+BuildingRelation.belongsTo(Stadium, {
+    foreignKey: 'stadiumId'
+});
 
 // Booking ↔ Equipment (many-to-many พร้อม quantity)
 Booking.belongsToMany(Equipment, { through: BookingEquipment, foreignKey: "bookingId" });

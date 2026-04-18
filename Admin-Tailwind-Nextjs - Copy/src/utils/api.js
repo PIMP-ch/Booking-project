@@ -103,10 +103,6 @@ export const deleteEquipmentImage = async (id) => {
 export const getAllStadiums = async () => {
   try {
     const response = await axios.get(`${API_URL}/stadiums`);
-    console.log('*******')
-    console.log(response)
-    console.log('********')
-
     return response.data;
   } catch (error) { handleError(error, "Failed to fetch stadium data"); }
 };
