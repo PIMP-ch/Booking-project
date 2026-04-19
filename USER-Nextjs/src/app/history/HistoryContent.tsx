@@ -138,8 +138,8 @@ const BookingHistory = () => {
         <button
           onClick={() => setActiveTab("all")}
           className={`px-4 py-2 rounded-lg text-md font-semibold transition ${activeTab === "all"
-              ? "bg-orange-500 text-white"
-              : "bg-gray-200 text-gray-800"
+            ? "bg-orange-500 text-white"
+            : "bg-gray-200 text-gray-800"
             }`}
         >
           ทั้งหมด
@@ -148,8 +148,8 @@ const BookingHistory = () => {
         <button
           onClick={() => setActiveTab("cancelled")}
           className={`px-4 py-2 rounded-lg text-md font-semibold transition ${activeTab === "cancelled"
-              ? "bg-red-500 text-white"
-              : "bg-gray-200 text-gray-800"
+            ? "bg-red-500 text-white"
+            : "bg-gray-200 text-gray-800"
             }`}
         >
           รายการยกเลิก
@@ -164,7 +164,7 @@ const BookingHistory = () => {
         <p className="text-center text-gray-500 mt-4">ไม่มีข้อมูลการจอง</p>
       )}
 
-      {!loading &&
+      {/* {!loading &&
         filteredBookings.map((booking) => (
           <div
             key={booking.id}
@@ -287,7 +287,7 @@ const BookingHistory = () => {
             </div>
           </div>
         </div>
-      )}
+      )} */}
     </div>
   );
 };

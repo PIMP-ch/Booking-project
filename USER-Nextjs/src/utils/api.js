@@ -342,6 +342,9 @@ export const getAvailableDates = async (stadiumId, year, month) => {
 export const getUserBookings = async (userId) => {
   try {
     const response = await axios.get(`${API_URL}/bookings/user/${userId}`);
+    console.log('*********************')
+    console.log(response.data)
+    console.log('*********************')
     return response.data;
   } catch (error) {
     throw error.response?.data || { message: "Failed to fetch user bookings" };

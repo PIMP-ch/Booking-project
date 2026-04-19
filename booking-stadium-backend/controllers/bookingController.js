@@ -9,6 +9,9 @@ import utc from "dayjs/plugin/utc.js";
 import timezone from "dayjs/plugin/timezone.js";
 import "dayjs/locale/th.js";
 import { fn, col, literal, Op } from "sequelize";
+import Userr from "../models/Userr.js";
+import Building from "../models/Buildingg.js";
+import BookingEquipment from "../models/BookingEquipment.js";
 
 dayjs.extend(isBetween);
 dayjs.extend(utc);
@@ -35,7 +38,12 @@ function normalizeEquipment(input) {
     }))
     .filter(
       (it) =>
-        mongoose.Types.ObjectId.isValid(it.equipmentId) &&
+        // ❌ เดิม - mongoose validate ทำให้ integer ผ่านไม่ได้
+        // mongoose.Types.ObjectId.isValid(it.equipmentId) &&
+
+        // ✅ แก้เป็น - เช็ค integer แทน
+        Number.isInteger(Number(it.equipmentId)) &&
+        Number(it.equipmentId) > 0 &&
         Number.isFinite(it.quantity) &&
         it.quantity > 0
     );
@@ -45,7 +53,6 @@ function normalizeEquipment(input) {
 export const bookStadium = async (req, res) => {
   try {
     const { userId, stadiumId, activityName, startDate, endDate, startTime, endTime } = req.body;
-
     // รองรับ buildingIds / buildingId / building (บางหน้าส่งคนละชื่อ)
     const rawBuilding =
       req.body.buildingIds ?? req.body.buildingId ?? req.body.building ?? [];
@@ -110,26 +117,25 @@ export const bookStadium = async (req, res) => {
     }
 
     // ตรวจอุปกรณ์
-    if (normalizedEquipment.length > 0) {
-      const unavailable = [];
-      for (const item of normalizedEquipment) {
-        // const eq = await Equipment.findById(item.equipmentId);
-        const eq = await Equipment.findByPk(item.equipmentId);
-        if (!eq || eq.status !== "available" || eq.quantity < item.quantity) {
-          unavailable.push({ equipmentId: item.equipmentId, message: "Not enough quantity or unavailable" });
-        }
-      }
-      if (unavailable.length) {
-        return res.status(400).json({ message: "Some equipment is unavailable", unavailableEquipments: unavailable });
-      }
-      for (const item of normalizedEquipment) {
-        // await Equipment.findByIdAndUpdate(item.equipmentId, { $inc: { quantity: -item.quantity } });
-        await Equipment.increment(
-          { quantity: -item.quantity },
-          { where: { id: item.equipmentId } }
-        );
-      }
+    console.log("**************************************************************************")
+    console.log("normalizedEquipment:", normalizedEquipment);
+
+    for (const item of normalizedEquipment) {
+      console.log("decrementing equipmentId:", item.equipmentId, "quantity:", item.quantity);
+
+      const eq = await Equipment.findByPk(item.equipmentId);
+      console.log("before decrement - equipment:", eq?.id, "quantity:", eq?.quantity);
+
+      await Equipment.decrement(
+        { quantity: item.quantity },
+        { where: { id: item.equipmentId } }
+      );
+
+      const eqAfter = await Equipment.findByPk(item.equipmentId);
+      console.log("after decrement - equipment:", eqAfter?.id, "quantity:", eqAfter?.quantity);
     }
+    console.log("**************************************************************************")
+
 
     // const booking = await Booking.create({
     //   userId,
@@ -157,12 +163,20 @@ export const bookStadium = async (req, res) => {
       status: "pending",
     });
 
+
     await booking.addBuildings(normalizedBuildingIds);
     // await booking.setBuildings(normalizedBuildingIds);
 
+    // for (const item of normalizedEquipment) {
+    //   await booking.addEquipment(item.equipmentId, {
+    //     through: { quantity: item.quantity }
+    //   });
+    // }
     for (const item of normalizedEquipment) {
-      await booking.addEquipment(item.equipmentId, {
-        through: { quantity: item.quantity }
+      await BookingEquipment.create({
+        bookingId: booking.id,
+        equipmentId: item.equipmentId,
+        quantity: item.quantity,
       });
     }
 
@@ -334,12 +348,15 @@ export const getBookingByUser = async (req, res) => {
         {
           model: Building,
           attributes: ["name"],
-          through: { attributes: [] }, // ไม่เอา pivot table
+          through: { attributes: [] },
         },
         {
           model: Equipment,
-          attributes: ["name", "quantity"],
-          through: { attributes: ["quantity"] }, // เอา quantity จาก BookingEquipment
+          attributes: ["id", "name"],  // ✅ เอา id ด้วยเพื่อ reference
+          through: {
+            model: BookingEquipment,   // ✅ ระบุ model ชัดเจน
+            attributes: ["quantity"],  // ✅ ดึง quantity จาก pivot
+          },
         },
         {
           model: Userr,
