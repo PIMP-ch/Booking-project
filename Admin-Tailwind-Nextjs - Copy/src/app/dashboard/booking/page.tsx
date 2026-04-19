@@ -10,30 +10,30 @@ import "react-toastify/dist/ReactToastify.css";
 interface Booking {
     id: string;
     activityName?: string;
-    userId: {
-        id: string;
+    userId: number | null;
+    User: {
         fullname: string;
         email: string;
         phoneNumber: string;
         fieldOfStudy: string;
         year: number;
-    } | null; // แก้ไขให้รองรับค่า null จาก Database
-    stadiumId: {
+    } | null;
+    // ✅ เปลี่ยนจาก stadiumId -> Stadium
+    Stadium: {
         id: string;
         nameStadium: string;
         descriptionStadium: string;
     } | null;
-    buildingIds?: {
+    // ✅ เปลี่ยนจาก buildingIds -> Buildings
+    Buildings?: {
         id: string;
         name: string;
     }[];
-    equipment: {
-        equipmentId: {
-            id: string;
-            name: string;
-            quantity: number;
-        };
-        quantity: number;
+    // ✅ เปลี่ยนจาก equipment -> Equipment และโครงสร้างใหม่
+    Equipment: {
+        id: string;
+        name: string;
+        BookingEquipment: { quantity: number };
     }[];
     startDate: string;
     startTime: string;
@@ -63,6 +63,7 @@ const BookingPage = () => {
         try {
             const data = await getAllBookings();
             setBookings(data);
+            console.log(data)
         } catch (err) {
             console.error("Failed to fetch bookings:", err);
         }
@@ -263,18 +264,18 @@ const BookingTable: React.FC<{ bookings: Booking[]; onConfirm: (id: string) => v
                     <Table.Row key={booking.id} className="bg-white">
                         <Table.Cell>{index + 1}</Table.Cell>
                         <Table.Cell>
-                            <p className="font-bold text-gray-900">{booking.userId?.fullname || "ไม่พบชื่อผู้ใช้"}</p>
-                            <p className="text-xs text-gray-500">{booking.userId?.email || "-"}</p>
-                            <p className="text-xs text-gray-500">{booking.userId?.phoneNumber || "-"}</p>
+                            <p className="font-bold text-gray-900">{booking.User?.fullname || "ไม่พบชื่อผู้ใช้"}</p>
+                            <p className="text-xs text-gray-500">{booking.User?.email || "-"}</p>
+                            <p className="text-xs text-gray-500">{booking.User?.phoneNumber || "-"}</p>
                         </Table.Cell>
                         <Table.Cell>
                             <div className="font-medium">
-                                {booking.stadiumId?.nameStadium || "ไม่ระบุสนาม"}
+                                {booking.Stadium?.nameStadium || "ไม่ระบุสนาม"}
                             </div>
 
-                            {booking.buildingIds && booking.buildingIds.length > 0 && (
+                            {booking.Buildings && booking.Buildings.length > 0 && (
                                 <div className="text-xs text-gray-500">
-                                    อาคาร: {booking.buildingIds.map((b) => b.name).join(", ") || "-"}
+                                    อาคาร: {booking.Buildings.map((b) => b.name).join(", ") || "-"}
                                 </div>
                             )}
                             <div className="text-xs text-gray-500">
@@ -283,8 +284,8 @@ const BookingTable: React.FC<{ bookings: Booking[]; onConfirm: (id: string) => v
                         </Table.Cell>
                         <Table.Cell>
                             <ul className="text-xs list-disc pl-4 text-gray-600">
-                                {booking.equipment.map((item, idx) => (
-                                    <li key={idx}>{item.equipmentId?.name} ({item.quantity})</li>
+                                {booking.Equipment.map((item, idx) => (
+                                    <li key={idx}>{item.name} ({item.BookingEquipment?.quantity ?? 0})</li>
                                 ))}
                             </ul>
                         </Table.Cell>
@@ -336,18 +337,18 @@ const BookingTableConfirmed: React.FC<{ bookings: Booking[]; onReset: (id: strin
                     <Table.Row key={booking.id}>
                         <Table.Cell>{index + 1}</Table.Cell>
                         <Table.Cell>
-                            <p className="font-medium">{booking.userId?.fullname || "N/A"}</p>
-                            <small className="text-gray-400">{booking.userId?.email || "-"}</small>
-                            <div className="text-xs text-gray-400">{booking.userId?.phoneNumber || "-"}</div>
+                            <p className="font-medium">{booking.User?.fullname || "N/A"}</p>
+                            <small className="text-gray-400">{booking.User?.email || "-"}</small>
+                            <div className="text-xs text-gray-400">{booking.User?.phoneNumber || "-"}</div>
                         </Table.Cell>
                         <Table.Cell>
                             <div className="font-medium">
-                                {booking.stadiumId?.nameStadium || "-"}
+                                {booking.Stadium?.nameStadium || "-"}
                             </div>
 
-                            {booking.buildingIds && booking.buildingIds.length > 0 && (
+                            {booking.Buildings && booking.Buildings.length > 0 && (
                                 <div className="text-xs text-gray-500">
-                                    อาคาร: {booking.buildingIds.map((b) => b.name).join(", ") || "-"}
+                                    อาคาร: {booking.Buildings.map((b) => b.name).join(", ") || "-"}
                                 </div>
                             )}
                             <div className="text-xs text-gray-500">
@@ -392,8 +393,8 @@ const BookingTableCanceled: React.FC<{ bookings: Booking[] }> = ({ bookings }) =
             {bookings.map((booking, index) => (
                 <Table.Row key={booking.id} className="opacity-70 bg-gray-50">
                     <Table.Cell>{index + 1}</Table.Cell>
-                    <Table.Cell>{booking.userId?.fullname || "N/A"}</Table.Cell>
-                    <Table.Cell>{booking.stadiumId?.nameStadium}</Table.Cell>
+                    <Table.Cell>{booking.User?.fullname || "N/A"}</Table.Cell>
+                    <Table.Cell>{booking.Stadium?.nameStadium}</Table.Cell>
                     <Table.Cell className="text-xs">{new Date(booking.startDate).toLocaleDateString("th-TH")}</Table.Cell>
                     <Table.Cell><span className="text-red-500 font-bold uppercase text-[10px]">Canceled</span></Table.Cell>
                 </Table.Row>

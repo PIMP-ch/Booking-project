@@ -13,8 +13,8 @@ interface Booking {
   endDate: string;
   status: "pending" | "confirmed" | "canceled" | "Return Success";
   cancelReason?: string;
-  stadiumId?: { nameStadium: string } | null;
-  equipment: { equipmentId?: { name: string } | null; quantity: number }[];
+  Stadium?: { nameStadium: string } | null;        // ✅ เปลี่ยนจาก stadiumId
+  Equipment: { id: number; name: string; BookingEquipment: { quantity: number } }[]; // ✅
 }
 
 const HistoryContent = () => {
@@ -164,7 +164,7 @@ const BookingHistory = () => {
         <p className="text-center text-gray-500 mt-4">ไม่มีข้อมูลการจอง</p>
       )}
 
-      {/* {!loading &&
+      {!loading &&
         filteredBookings.map((booking) => (
           <div
             key={booking.id}
@@ -177,17 +177,17 @@ const BookingHistory = () => {
             </h2>
 
             <p className="text-gray-700">
-              สนาม: {booking.stadiumId?.nameStadium || "ไม่พบข้อมูลสนาม"}
+              สนาม: {booking.Stadium?.nameStadium || "ไม่พบข้อมูลสนาม"}
             </p>
 
             <p
               className={`text-md font-bold mt-2 ${booking.status === "canceled"
-                  ? "text-red-500"
-                  : booking.status === "pending"
-                    ? "text-yellow-500"
-                    : booking.status === "confirmed"
-                      ? "text-green-500"
-                      : "text-blue-500"
+                ? "text-red-500"
+                : booking.status === "pending"
+                  ? "text-yellow-500"
+                  : booking.status === "confirmed"
+                    ? "text-green-500"
+                    : "text-blue-500"
                 }`}
             >
               {booking.status === "pending" && "⏳ รอการยืนยัน"}
@@ -213,18 +213,18 @@ const BookingHistory = () => {
                 <h3 className="text-md font-bold flex items-center gap-2">
                   <Package className="text-orange-500" size={18} /> อุปกรณ์ที่ใช้
                 </h3>
-                {booking.equipment.length > 0 && (
+                {booking.Equipment.length > 0 && (
                   <span className="text-sm text-gray-500">
-                    {booking.equipment.length} รายการ
+                    {booking.Equipment.length} รายการ
                   </span>
                 )}
               </div>
 
-              {booking.equipment.length > 0 ? (
+              {booking.Equipment.length > 0 ? (
                 <div className="mt-2 flex flex-wrap gap-2">
-                  {booking.equipment.map((item, index) => {
-                    const name = item.equipmentId?.name || "ไม่พบข้อมูล";
-                    const quantity = Number(item.quantity) || 0;
+                  {booking.Equipment.map((item, index) => {
+                    const name = item.name || "ไม่พบข้อมูล";
+                    const quantity = item.BookingEquipment?.quantity ?? 0;
                     return (
                       <div
                         key={`${name}-${index}`}
@@ -287,7 +287,7 @@ const BookingHistory = () => {
             </div>
           </div>
         </div>
-      )} */}
+      )}
     </div>
   );
 };

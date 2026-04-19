@@ -13,6 +13,7 @@ import Userr from "../models/Userr.js";
 import Building from "../models/Buildingg.js";
 import BookingEquipment from "../models/BookingEquipment.js";
 
+
 dayjs.extend(isBetween);
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -669,59 +670,48 @@ export const getMonthlyBookingStats = async (req, res) => {
 export const resetBookingStatus = async (req, res) => {
   try {
     const { id } = req.params;
-    // const booking = await Booking.findById(id).populate("equipment.equipmentId");
     const booking = await Booking.findByPk(id, {
       include: [
         {
           model: Equipment,
           attributes: ["id", "name", "quantity"],
           through: {
-            attributes: ["quantity"], // จาก BookingEquipment
+            model: BookingEquipment, // ✅ เพิ่ม model
+            attributes: ["quantity"],
           },
         },
       ],
     });
+
     if (!booking) return res.status(404).json({ message: "Booking not found" });
     if (booking.status !== "confirmed") return res.status(400).json({ message: "Only confirmed bookings can be reset" });
 
-    for (const item of booking.equipment) {
-      // await Equipment.findByIdAndUpdate(item.equipmentId.id, { status: "available", $inc: { quantity: item.quantity } });
-      await Equipment.update(
-        {
+    for (const item of booking.Equipment ?? []) {
+      const qty = item.BookingEquipment?.quantity ?? 0;
+
+      // ✅ ดึง equipment ปัจจุบันแล้วบวก quantity เอง ไม่ต้องใช้ Sequelize.literal
+      const eq = await Equipment.findByPk(item.id);
+      if (eq) {
+        await eq.update({
           status: "available",
-          quantity: Sequelize.literal(`quantity + ${item.quantity}`),
-        },
-        {
-          where: { id: item.equipmentId },
-        }
-      );
+          quantity: eq.quantity + qty,
+        });
+      }
     }
+
     booking.status = "Return Success";
     await booking.save();
 
-    // อัปเดตสถานะสนามตาม booking ที่ยัง active (pending/confirmed)
-    // const activeCount = await Booking.countDocuments({
-    //   stadiumId: booking.stadiumId,
-    //   status: { $in: ["pending", "confirmed"] },
-    // });
     const activeCount = await Booking.count({
       where: {
         stadiumId: booking.stadiumId,
-        status: {
-          [Op.in]: ["pending", "confirmed"],
-        },
+        status: { [Op.in]: ["pending", "confirmed"] },
       },
     });
-    // await Stadium.findByIdAndUpdate(booking.stadiumId, {
-    //   statusStadium: activeCount > 0 ? "IsBooking" : "Available",
-    // });
+
     await Stadium.update(
-      {
-        statusStadium: activeCount > 0 ? "IsBooking" : "Available",
-      },
-      {
-        where: { id: booking.stadiumId },
-      }
+      { statusStadium: activeCount > 0 ? "IsBooking" : "active" },
+      { where: { id: booking.stadiumId } }
     );
 
     return res.status(200).json({ message: "Booking and stadium reset successfully", booking });
