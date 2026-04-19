@@ -7,24 +7,20 @@ import { Icon } from "@iconify/react";
 
 interface Booking {
     id: string;
-    userId: {
-        id: string;
+    User: {
         fullname: string;
         email: string;
         phoneNumber: string;
         fieldOfStudy: string;
         year: number;
-    };
-    stadiumId: {
-        id: string;
+    } | null;
+    Stadium: {
         nameStadium: string;
-    };
-    equipment: {
-        equipmentId: {
-            id: string;
-            name: string;
-        };
-        quantity: number;
+    } | null;
+    Equipment: {
+        id: string;
+        name: string;
+        BookingEquipment: { quantity: number };
     }[];
     startDate: string;
     endDate: string;
@@ -70,28 +66,24 @@ const HistoryBookingPage = () => {
 
                                 {/* รายละเอียดผู้จอง */}
                                 <Table.Cell>
-                                    <p><strong>{booking.userId?.fullname ?? "-"}</strong></p>
-                                    <p className="text-sm text-gray-600">{booking.userId?.email ?? "-"}</p>
-                                    <p>เบอร์โทร : {booking.userId?.phoneNumber ?? "-"}</p>
-                                    <p className="text-sm">สาขา: {booking.userId?.fieldOfStudy ?? "-"}</p>
-                                    <p className="text-sm">ปีที่ศึกษา: {booking.userId?.year ?? "-"}</p>
+                                    <p><strong>{booking.User?.fullname ?? "-"}</strong></p>
+                                    <p className="text-sm text-gray-600">{booking.User?.email ?? "-"}</p>
+                                    <p>เบอร์โทร : {booking.User?.phoneNumber ?? "-"}</p>
+                                    <p className="text-sm">สาขา: {booking.User?.fieldOfStudy ?? "-"}</p>
+                                    <p className="text-sm">ปีที่ศึกษา: {booking.User?.year ?? "-"}</p>
                                 </Table.Cell>
 
                                 {/* ข้อมูลสนามกีฬา */}
-                                <Table.Cell>{booking.stadiumId.nameStadium}</Table.Cell>
+                                <Table.Cell>{booking.Stadium?.nameStadium ?? "-"}</Table.Cell>
 
                                 {/* ข้อมูลอุปกรณ์ที่จอง */}
                                 <Table.Cell>
                                     <ol className="list-decimal pl-4">
-                                        {booking.equipment.map((item, index) => {
-                                            const equipment = item?.equipmentId;
-
-                                            return (
-                                                <li key={equipment?.id ?? `${booking.id}-eq-${index}`}>
-                                                    {equipment?.name ?? "อุปกรณ์ถูกลบ/ไม่พบข้อมูล"} - {item?.quantity ?? 0} ชิ้น
-                                                </li>
-                                            );
-                                        })}
+                                        {(booking.Equipment ?? []).map((item, index) => (
+                                            <li key={item?.id ?? `${booking.id}-eq-${index}`}>
+                                                {item?.name ?? "ไม่พบข้อมูล"} - {item?.BookingEquipment?.quantity ?? 0} ชิ้น
+                                            </li>
+                                        ))}
                                     </ol>
                                 </Table.Cell>
 
