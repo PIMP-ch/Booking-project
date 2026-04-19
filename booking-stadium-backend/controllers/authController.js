@@ -334,41 +334,31 @@ export const updateUser = async (req, res) => {
         const { id } = req.params;
         const { fullname, email, phoneNumber, fieldOfStudy, year } = req.body;
 
-        // ตรวจสอบว่าอีเมลหรือเบอร์โทรถูกใช้ไปแล้วหรือไม่ (ยกเว้นของ user เอง)
-        // const existingUser = await User.findOne({
-        //     $or: [{ email }, { phoneNumber }],
-        //     id: { $ne: id }, // ✅ ตรวจสอบเฉพาะคนอื่นที่ไม่ใช่ตัวเอง
-        // });
+        // ✅ เช็คว่า email หรือ phone ซ้ำกับคนอื่นไหม (ไม่นับตัวเอง)
         const existingUser = await Userr.findOne({
             where: {
                 [Op.or]: [{ email }, { phoneNumber }],
-                id: { [Op.ne]: id }
-            }
+                id: { [Op.ne]: id },
+            },
         });
 
         if (existingUser) {
             return res.status(400).json({ message: "Email or phone number already exists" });
         }
 
-        // อัปเดตข้อมูลผู้ใช้
-        // const updatedUser = await User.findByIdAndUpdate(
-        //     id,
-        //     { fullname, email, phoneNumber, fieldOfStudy, year },
-        //     { new: true, runValidators: true }
-        // );
-        const [affectedRows, [updatedUser]] = await Userr.update(
+        // ✅ อัปเดตก่อน
+        await Userr.update(
             { fullname, email, phoneNumber, fieldOfStudy, year },
-            {
-                where: { id },
-                returning: true // ให้ return ข้อมูลที่อัปเดต (ใช้ได้กับ PostgreSQL)
-            }
+            { where: { id } }
         );
 
+        // ✅ แล้วค่อย findByPk เพื่อ return ข้อมูลล่าสุด (ใช้ได้ทั้ง MySQL และ PostgreSQL)
+        const updatedUser = await Userr.findByPk(id);
         if (!updatedUser) return res.status(404).json({ message: "User not found" });
 
-        res.status(200).json({ message: "User updated successfully", updatedUser });
+        return res.status(200).json({ message: "User updated successfully", updatedUser });
     } catch (error) {
-        res.status(500).json({ message: "Server error", error });
+        res.status(500).json({ message: "Server error", error: error.message });
     }
 };
 

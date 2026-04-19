@@ -24,6 +24,7 @@ const Stadium = sequelize.define("Stadium", {
         defaultValue: [],
     },
 }, {
+    tableName: "stadium",
     timestamps: true,
 });
 
