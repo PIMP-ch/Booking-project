@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Suspense, useMemo } from "react";
+import { useState, useEffect, Suspense, useMemo, use } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { getAvailableDates, getStadiumBookings, getStadiumById } from "@/utils/api";
 import { toast } from "react-toastify";
@@ -388,7 +388,7 @@ const SelectDate = () => {
               const selectedId = e.target.value;
               setBuilding(selectedId);
 
-              const selectedBuilding = availableBuildings.find((b) => b.id === selectedId);
+              const selectedBuilding = availableBuildings.find((b) => b.id == selectedId);
               setBuildingName(selectedBuilding?.name || "");
             }}
             className="w-full p-3.5 rounded-xl bg-white text-gray-800 font-semibold focus:ring-4 focus:ring-orange-500/50 outline-none transition-all shadow-inner"

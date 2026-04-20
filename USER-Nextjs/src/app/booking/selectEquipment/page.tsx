@@ -6,6 +6,7 @@ import { getAllEquipment, API_BASE } from "@/utils/api";
 import { toast } from "react-toastify";
 import { PlusCircle, MinusCircle, Package, ArrowLeft, XCircle } from "lucide-react";
 import Image from "next/image";
+import { set } from "lodash";
 
 type EquipmentItem = {
   id: string;
@@ -137,11 +138,12 @@ const SelectEquipment = () => {
     const fetchEquipment = async () => {
       try {
         const data = await getAllEquipment();
-        console.log(data)
-        const filtered = sportTypeId
-          ? data.filter((item) => item.sportTypeId == sportTypeId)
-          : data;
-        setEquipmentList(Array.isArray(filtered) ? filtered : []);
+        if (sportTypeId == 1) {
+          setEquipmentList(data)
+        } else {
+          const filtered = data.filter((item) => item.sportTypeId == sportTypeId || item.sportTypeId == 2);
+          setEquipmentList(Array.isArray(filtered) ? filtered : []);
+        }
       } catch (error) {
         toast.error("โหลดข้อมูลอุปกรณ์ไม่สำเร็จ");
       } finally {
@@ -316,6 +318,7 @@ const SelectEquipment = () => {
         </div>
 
         {/* 📋 รายการอุปกรณ์ทั้งหมด */}
+
         {loading ? (
           <div className="flex flex-col items-center py-10">
             <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-orange-500 mb-3"></div>
