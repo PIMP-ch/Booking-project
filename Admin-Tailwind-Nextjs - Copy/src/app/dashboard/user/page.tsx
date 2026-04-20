@@ -18,7 +18,7 @@ const UserPage = () => {
     const [users, setUsers] = useState<User[]>([]);
     const [searchQuery, setSearchQuery] = useState("");
     const [selectedUser, setSelectedUser] = useState<User | null>(null);
-    const [blockDays, setBlockDays] = useState<number>(15);
+    const [blockDays, setBlockDays] = useState<number>(1);
     const [isBlockModalOpen, setIsBlockModalOpen] = useState(false);
     const [isUnblockModalOpen, setIsUnblockModalOpen] = useState(false);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -39,16 +39,16 @@ const UserPage = () => {
     }, []);
 
     // ฟังก์ชันบล็อกผู้ใช้
-    // const handleBlockUser = async () => {
-    //     if (!selectedUser) return;
-    //     try {
-    //         await blockUser(selectedUser.id, blockDays);
-    //         setIsBlockModalOpen(false);
-    //         fetchUsers(); // รีเฟรชข้อมูลผู้ใช้
-    //     } catch (error) {
-    //         console.error("Failed to block user:", error);
-    //     }
-    // };
+    const handleBlockUser = async () => {
+        if (!selectedUser) return;
+        try {
+            await blockUser(selectedUser.id, blockDays);
+            setIsBlockModalOpen(false);
+            fetchUsers(); // รีเฟรชข้อมูลผู้ใช้
+        } catch (error) {
+            console.error("Failed to block user:", error);
+        }
+    };
 
     const handleDeleteUser = async () => {
         if (!selectedUser) return;
@@ -63,16 +63,16 @@ const UserPage = () => {
 
 
     // ฟังก์ชันปลดบล็อกผู้ใช้
-    // const handleUnblockUser = async () => {
-    //     if (!selectedUser) return;
-    //     try {
-    //         await unblockUser(selectedUser.id);
-    //         setIsUnblockModalOpen(false);
-    //         fetchUsers(); // รีเฟรชข้อมูลผู้ใช้
-    //     } catch (error) {
-    //         console.error("Failed to unblock user:", error);
-    //     }
-    // };
+    const handleUnblockUser = async () => {
+        if (!selectedUser) return;
+        try {
+            await unblockUser(selectedUser.id);
+            setIsUnblockModalOpen(false);
+            fetchUsers(); // รีเฟรชข้อมูลผู้ใช้
+        } catch (error) {
+            console.error("Failed to unblock user:", error);
+        }
+    };
 
     // Filter users based on search query
     const filteredUsers = users.filter((user) =>
@@ -124,7 +124,7 @@ const UserPage = () => {
 
                             <Table.Cell>
                                 <div className="flex flex-row gap-2">
-                                    {/* {user.blockUntil && new Date(user.blockUntil) > new Date() ? (
+                                    {user.blockUntil && new Date(user.blockUntil) > new Date() ? (
                                         <Button
                                             color="green"
                                             size="xs"
@@ -146,7 +146,7 @@ const UserPage = () => {
                                         >
                                             บล็อก
                                         </Button>
-                                    )} */}
+                                    )}
                                     <Button
                                         color="failure"
                                         size="xs"
@@ -188,11 +188,11 @@ const UserPage = () => {
 
 
             {/* Modal ยืนยันการบล็อกผู้ใช้ */}
-            {/* <Modal className="font-kanit" show={isBlockModalOpen} onClose={() => setIsBlockModalOpen(false)}>
+            <Modal className="font-kanit" show={isBlockModalOpen} onClose={() => setIsBlockModalOpen(false)}>
                 <Modal.Header>บล็อกผู้ใช้</Modal.Header>
                 <Modal.Body>
                     <p>คุณต้องการบล็อก <strong>{selectedUser?.fullname}</strong> หรือไม่?</p>
-                    <p>กรุณาเลือกระยะเวลาที่ต้องการบล็อก:</p>
+                    {/* <p>กรุณาเลือกระยะเวลาที่ต้องการบล็อก:</p>
                     <select
                         className="w-full p-2 border rounded mt-2"
                         value={blockDays}
@@ -201,7 +201,7 @@ const UserPage = () => {
                         <option value={15}>15 วัน</option>
                         <option value={30}>30 วัน</option>
                         <option value={60}>60 วัน</option>
-                    </select>
+                    </select> */}
                 </Modal.Body>
                 <Modal.Footer>
                     <Button color="gray" onClick={() => setIsBlockModalOpen(false)}>
@@ -211,10 +211,10 @@ const UserPage = () => {
                         ยืนยันบล็อก
                     </Button>
                 </Modal.Footer>
-            </Modal> */}
+            </Modal>
 
             {/* Modal ยืนยันการปลดบล็อกผู้ใช้ */}
-            {/* <Modal className="font-kanit" show={isUnblockModalOpen} onClose={() => setIsUnblockModalOpen(false)}>
+            <Modal className="font-kanit" show={isUnblockModalOpen} onClose={() => setIsUnblockModalOpen(false)}>
                 <Modal.Header>ปลดบล็อกผู้ใช้</Modal.Header>
                 <Modal.Body>
                     <p>คุณต้องการปลดบล็อก <strong>{selectedUser?.fullname}</strong> หรือไม่?</p>
@@ -227,7 +227,7 @@ const UserPage = () => {
                         ยืนยันปลดบล็อก
                     </Button>
                 </Modal.Footer>
-            </Modal> */}
+            </Modal>
         </div>
     );
 };

@@ -151,16 +151,17 @@ export const resetPassword = async (req, res) => {
 export const blockUser = async (req, res) => {
     try {
         const { id } = req.params;
-        const { days } = req.body; // ค่าที่รับ: 15, 30, 60
+        // const { days } = req.body; // ค่าที่รับ: 15, 30, 60
 
-        // ตรวจสอบค่าที่รับว่าถูกต้องหรือไม่
-        if (![15, 30, 60].includes(days)) {
-            return res.status(400).json({ message: "ระยะเวลาบล็อกต้องเป็น 15, 30 หรือ 60 วันเท่านั้น" });
-        }
+        // // ตรวจสอบค่าที่รับว่าถูกต้องหรือไม่
+        // if (![15, 30, 60].includes(days)) {
+        //     return res.status(400).json({ message: "ระยะเวลาบล็อกต้องเป็น 15, 30 หรือ 60 วันเท่านั้น" });
+        // }
 
         // คำนวณวันหมดอายุของการบล็อก
         const blockUntil = new Date();
-        blockUntil.setDate(blockUntil.getDate() + days);
+        // blockUntil.setDate(blockUntil.getDate() + days);
+        blockUntil.setMinutes(blockUntil.getMinutes() + 5);
 
         // อัปเดตสถานะผู้ใช้ให้ถูกบล็อก
         // const user = await User.findByIdAndUpdate(id, { blockUntil }, { new: true });
@@ -172,8 +173,13 @@ export const blockUser = async (req, res) => {
 
         await user.update({ blockUntil });
 
+        const now = new Date();
+        const diffMs = new Date(user.blockUntil) - now;
+
+        const remainingMinutes = Math.max(0, Math.ceil(diffMs / (1000 * 60)));
+
         res.status(200).json({
-            message: `ผู้ใช้ถูกบล็อกเป็นเวลา ${days} วัน`,
+            message: `ผู้ใช้ถูกบล็อกเป็นเวลา ${remainingMinutes} นาที`,
             blockUntil: user.blockUntil
         });
 

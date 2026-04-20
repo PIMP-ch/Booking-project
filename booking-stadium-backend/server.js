@@ -16,6 +16,7 @@ import "./models/Bookingg.js";
 import "./models/BookingEquipment.js";
 import "./models/BookingBuilding.js";
 import "./models/associations.js";
+import "./models/sportCategory.js";
 
 
 
