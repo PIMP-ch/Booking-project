@@ -23,6 +23,10 @@ const Stadium = sequelize.define("Stadium", {
         type: DataTypes.JSON, // ✅ เก็บ array of string
         defaultValue: [],
     },
+    sportTypeId: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+    }
 }, {
     tableName: "stadium",
     timestamps: true,

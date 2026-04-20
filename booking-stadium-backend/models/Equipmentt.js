@@ -20,6 +20,10 @@ const Equipment = sequelize.define("Equipment", {
         type: DataTypes.STRING,
         defaultValue: "",
     },
+    sportTypeId: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+    },
 }, {
     timestamps: true,
 });

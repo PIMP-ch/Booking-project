@@ -16,9 +16,9 @@ export const createEquipment = async (req, res) => {
 export const updateEquipment = async (req, res) => {
     try {
         const { id } = req.params;
-        const { name, quantity, status, imageUrl } = req.body;
+        const { name, quantity, status, imageUrl, sportTypeId } = req.body;
 
-        const payload = { name, quantity, status };
+        const payload = { name, quantity, status, sportTypeId };
         if (typeof imageUrl !== "undefined") {
             payload.imageUrl = imageUrl;
         }

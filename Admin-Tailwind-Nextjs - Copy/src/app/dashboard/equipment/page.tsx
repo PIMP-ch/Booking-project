@@ -9,9 +9,11 @@ import {
     deleteEquipment,
     uploadEquipmentImage,
     deleteEquipmentImage,
+    getSportTypes,
 } from "@/utils/api";
 import { Icon } from "@iconify/react";
 import { toast } from "react-toastify";
+import { get } from "lodash";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:5008";
 
@@ -21,6 +23,7 @@ interface Equipment {
     quantity: number;
     status: string;
     imageUrl?: string;
+    sportTypeId?: number;
 }
 
 const EquipmentPage = () => {
@@ -31,10 +34,11 @@ const EquipmentPage = () => {
         id: null,
     });
     const [currentEquipment, setCurrentEquipment] = useState<Equipment | null>(null);
-    const [form, setForm] = useState({ name: "", quantity: 0, status: "available" });
+    const [form, setForm] = useState({ name: "", quantity: 0, status: "available", sportTypeId: undefined });
     const [imagePreview, setImagePreview] = useState<string>("");
     const [imageFile, setImageFile] = useState<File | null>(null);
     const [isSaving, setIsSaving] = useState(false);
+    const [sportTypes, setSportTypes] = useState<{ id: number; name: string }[]>([]);
 
     const fetchData = async () => {
         try {
@@ -45,16 +49,36 @@ const EquipmentPage = () => {
         }
     };
 
+    const getSportTypeData = async () => {
+        try {
+            const data = await getSportTypes();
+
+            const filtered = data.filter(
+                (item) => item.name !== "ทุกประเภท"
+            );
+            setSportTypes(filtered);
+
+            setSportTypes(filtered);
+        } catch (err) {
+            toast.error("โหลดข้อมูลประเภทกีฬาไม่สำเร็จ");
+        }
+    }
+
     useEffect(() => {
         fetchData();
+        getSportTypeData();
     }, []);
+
+    useEffect(() => {
+        console.log(form)
+    }, [form])
 
     const openModal = (equipment: Equipment | null = null) => {
         setCurrentEquipment(equipment);
         setForm(
             equipment
-                ? { name: equipment.name, quantity: equipment.quantity, status: equipment.status }
-                : { name: "", quantity: 0, status: "available" }
+                ? { name: equipment.name, quantity: equipment.quantity, status: equipment.status, sportTypeId: equipment.sportTypeId }
+                : { name: "", quantity: 0, status: "available", sportTypeId: undefined }
         );
         setImagePreview(equipment?.imageUrl ? `${API_BASE}${equipment.imageUrl}` : "");
         setImageFile(null);
@@ -83,6 +107,11 @@ const EquipmentPage = () => {
         try {
             setIsSaving(true);
             let eqId = currentEquipment?.id;
+
+            if (!form.name || !form.quantity || !form.sportTypeId) {
+                toast.error("กรุณากรอกข้อมูลให้ครบถ้วน");
+                return;
+            }
 
             if (currentEquipment) {
                 await updateEquipment(currentEquipment.id, form);
@@ -206,6 +235,20 @@ const EquipmentPage = () => {
                             onChange={(e) => setForm({ ...form, quantity: Number(e.target.value) })}
                             placeholder="จำนวน"
                         />
+
+                        <select
+                            value={form.sportTypeId || ""}
+                            onChange={(e) => setForm({ ...form, sportTypeId: Number(e.target.value) })}
+                            className="w-full rounded-xl border-gray-200 text-sm h-11 focus:ring-blue-500"
+                        >
+                            <option value="">เลือกประเภทกีฬา</option>
+                            {sportTypes.map((type) => (
+                                <option key={type.id} value={type.id}>
+                                    {type.name}
+                                </option>
+                            ))}
+                        </select>
+
 
                         <div className="bg-gray-50 p-4 rounded-2xl border border-dashed border-gray-200">
                             <Label className="text-gray-500 mb-2 block text-xs">รูปอุปกรณ์</Label>

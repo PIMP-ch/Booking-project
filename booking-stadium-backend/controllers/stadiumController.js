@@ -3,6 +3,7 @@ import BuildingRelation from "../models/BuildingRelation.js";
 import Building from "../models/Buildingg.js";
 import fs from "fs";
 import path from "path";
+import SportCategory from "../models/sportCategory.js";
 
 // ✅ 1. เพิ่ม Stadium พร้อมรองรับการอัปโหลดรูปภาพหลายรูป
 export const createStadium = async (req, res) => {
@@ -312,3 +313,12 @@ export const deleteStadium = async (req, res) => {
     res.status(500).json({ message: "Server error", error });
   }
 };
+
+export const sportTypes = async (req, res) => {
+  try {
+    const sportCategories = await SportCategory.findAll();
+    res.status(200).json(sportCategories);
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error });
+  }
+}

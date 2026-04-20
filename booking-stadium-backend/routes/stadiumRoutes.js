@@ -4,7 +4,8 @@ import {
   getStadiums,
   updateStadium,
   deleteStadium,
-  getStadiumById
+  getStadiumById,
+  sportTypes
 } from "../controllers/stadiumController.js";
 import Stadium from "../models/Stadium.js";
 import path from "path";
@@ -28,6 +29,7 @@ const storage = multer.diskStorage({
 export const upload = multer({ storage: storage });
 /** ---------- Stadium CRUD ---------- */
 router.get("/", getStadiums);
+router.get("/sport-types", sportTypes);
 router.get("/:id", getStadiumById);
 router.post("/", createStadium);
 router.put("/:id", updateStadium);

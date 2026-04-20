@@ -107,6 +107,14 @@ export const getAllStadiums = async () => {
   } catch (error) { handleError(error, "Failed to fetch stadium data"); }
 };
 
+export const getSportTypes = async () => {
+  try {
+    const response = await axios.get(`${API_URL}/stadiums/sport-types`);
+    return response.data;
+  } catch (error) { handleError(error, "Failed to fetch sport types"); }
+};
+
+
 export const createStadium = async (data) => {
   try {
     const response = await axios.post(`${API_URL}/stadiums`, data);
@@ -261,9 +269,6 @@ export const getDailyBookingStats = async (month, year = new Date().getFullYear(
 export const getBuildings = async () => {
   try {
     const response = await axios.get(`${API_URL}/buildings`);
-    console.log('**bd***')
-    console.log(response)
-    console.log('**bd***')
     return response.data;
   } catch (error) { handleError(error, "Failed to fetch buildings"); }
 };

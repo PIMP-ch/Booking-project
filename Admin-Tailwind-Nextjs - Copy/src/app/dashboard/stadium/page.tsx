@@ -10,6 +10,7 @@ import {
     getBuildings,
     uploadStadiumImages, // เปลี่ยนให้ตรงกับ api.js (เดิมคือ uploadStadiumImage)
     deleteStadiumImage,
+    getSportTypes,
 } from "@/utils/api";
 import { Icon } from "@iconify/react";
 import { toast } from "react-toastify";
@@ -24,6 +25,7 @@ interface Stadium {
     statusStadium: string;
     imageUrl: string[];
     buildingIds?: string[];
+    sportTypeId?: string;
 }
 
 const INITIAL_FORM = {
@@ -32,6 +34,8 @@ const INITIAL_FORM = {
     contactStadium: "",
     statusStadium: "active",
     buildingIds: [] as string[],
+    sportTypeId: ""
+
 };
 
 const StadiumPage = () => {
@@ -50,17 +54,26 @@ const StadiumPage = () => {
     const [imagePreview, setImagePreview] = useState<string>("");
     const [imageFiles, setImageFiles] = useState<File[]>([]);
     const [externalImageUrls, setExternalImageUrls] = useState<string[]>([]);
+    const [sportTypes, setSportTypes] = useState<{ id: string; name: string }[]>([]);
 
 
     // --- Actions ---
     const fetchData = useCallback(async () => {
         try {
-            const [stadiumData, buildingData] = await Promise.all([
+            const [stadiumData, buildingData, sportTypeData] = await Promise.all([
                 getAllStadiums(),
                 getBuildings(),
+                getSportTypes()
             ]);
+
             setStadiumList(stadiumData);
             setBuildings(buildingData);
+
+            const filtered = sportTypeData.filter(
+                (item) => item.name !== "อุปกรณ์ตัดสิน"
+            );
+            setSportTypes(filtered);
+
         } catch (err) {
             toast.error("โหลดข้อมูลไม่สำเร็จ");
         }
@@ -69,6 +82,10 @@ const StadiumPage = () => {
     useEffect(() => {
         fetchData();
     }, [fetchData]);
+
+    useEffect(() => {
+        console.log("Sport Types:", sportTypes);
+    }, [sportTypes]);
 
     const openModal = (stadium: Stadium | null = null) => {
         setCurrentStadium(stadium);
@@ -79,6 +96,7 @@ const StadiumPage = () => {
                 contactStadium: stadium.contactStadium,
                 statusStadium: stadium.statusStadium,
                 buildingIds: stadium.buildingIds || [],
+                sportTypeId: stadium.sportTypeId || ""
             });
             // แสดง Preview ถ้ารูปภาพมีอยู่
             setImagePreview(stadium.imageUrl?.[0] ? `${API_BASE}${stadium.imageUrl[0]}` : "");
@@ -128,6 +146,11 @@ const StadiumPage = () => {
     const handleSave = async () => {
         if (!form.nameStadium.trim()) {
             toast.warn("กรุณากรอกชื่อสนามกีฬา");
+            return;
+        }
+
+        if (!form.sportTypeId) {
+            toast.warn("กรุณาเลือกประเภทกีฬา");
             return;
         }
 
@@ -274,6 +297,23 @@ const StadiumPage = () => {
                             onChange={(e) => setForm({ ...form, contactStadium: e.target.value })}
                             placeholder="เบอร์ติดต่อ"
                         />
+
+                        <div>
+                            <Label className="text-xs text-gray-500">ประเภทกีฬา</Label>
+                            <select
+                                value={form.sportTypeId}
+                                onChange={(e) => setForm({ ...form, sportTypeId: e.target.value })}
+                                className="w-full rounded-xl border-gray-200 text-sm h-11 focus:ring-blue-500"
+                            >
+                                <option value=""></option>
+                                {sportTypes.map((type) => (
+                                    <option key={type.id} value={type.id}>
+                                        {type.name}
+                                    </option>
+                                ))}
+                            </select>
+
+                        </div>
 
                         <div className="space-y-2">
                             <Label className="text-xs text-gray-500">อาคารที่เกี่ยวข้อง</Label>
