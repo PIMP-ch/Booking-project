@@ -298,6 +298,7 @@ const SelectDate = () => {
       }
     }
 
+    const sportTypeId = searchParams?.get("sportTypeId");
     const end = selectedEndDate ?? selectedStartDate;
     const firstDay = selectedDates[0];
     const firstTimes = dayTimes[firstDay] || { startTime: DEFAULT_START, endTime: DEFAULT_END };
@@ -314,6 +315,7 @@ const SelectDate = () => {
       startTime: firstTimes.startTime,
       endTime: firstTimes.endTime,
       dayTimes: JSON.stringify(dayTimes),
+      sportTypeId: sportTypeId || "",
     });
 
     router.push(`/booking/selectEquipment?${params.toString()}`);

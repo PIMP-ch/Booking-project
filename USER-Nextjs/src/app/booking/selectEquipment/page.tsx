@@ -131,11 +131,17 @@ const SelectEquipment = () => {
     }
   }, [initialSelectedEquipment]);
 
+  const sportTypeId = searchParams?.get("sportTypeId");
+
   useEffect(() => {
     const fetchEquipment = async () => {
       try {
         const data = await getAllEquipment();
-        setEquipmentList(Array.isArray(data) ? data : []);
+        console.log(data)
+        const filtered = sportTypeId
+          ? data.filter((item) => item.sportTypeId == sportTypeId)
+          : data;
+        setEquipmentList(Array.isArray(filtered) ? filtered : []);
       } catch (error) {
         toast.error("โหลดข้อมูลอุปกรณ์ไม่สำเร็จ");
       } finally {
