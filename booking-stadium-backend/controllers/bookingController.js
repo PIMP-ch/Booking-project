@@ -118,8 +118,6 @@ export const bookStadium = async (req, res) => {
     }
 
     // ตรวจอุปกรณ์
-    console.log("**************************************************************************")
-    console.log("normalizedEquipment:", normalizedEquipment);
 
     for (const item of normalizedEquipment) {
       console.log("decrementing equipmentId:", item.equipmentId, "quantity:", item.quantity);
@@ -135,8 +133,6 @@ export const bookStadium = async (req, res) => {
       const eqAfter = await Equipment.findByPk(item.equipmentId);
       console.log("after decrement - equipment:", eqAfter?.id, "quantity:", eqAfter?.quantity);
     }
-    console.log("**************************************************************************")
-
 
     // const booking = await Booking.create({
     //   userId,
@@ -486,7 +482,7 @@ export const cancelBooking = async (req, res) => {
       include: [
         {
           model: Equipment,
-          attributes: ["name", "quantity"],
+          attributes: ["id", "name", "quantity"],
           through: {
             attributes: ["quantity"], // เอา quantity จาก BookingEquipment
           },
@@ -501,22 +497,13 @@ export const cancelBooking = async (req, res) => {
     }
 
     // ✅ คืนอุปกรณ์แบบปลอดภัย (กัน equipmentId เป็น null/undefined)
-    if (Array.isArray(booking.equipment) && booking.equipment.length > 0) {
-      for (const item of booking.equipment) {
-        const eqDoc = item?.equipmentId; // อาจเป็น object (populate) หรือ null
-        const eqId = eqDoc && typeof eqDoc === "object" ? eqDoc.id : eqDoc;
+    if (Array.isArray(booking.Equipment) && booking.Equipment.length > 0) {
+      for (const item of booking.Equipment) {
+        const eqId = item.id;
+        const qty = Number(item.BookingEquipment?.quantity) || 0;
 
-        // ข้ามถ้าไม่มี id หรือไม่ valid
-        // if (!mongoose.Types.ObjectId.isValid(eqId)) continue;
-        if (!Number.isInteger(Number(eqId))) continue;
-
-        const qty = Number(item?.quantity) || 0;
         if (qty <= 0) continue;
 
-        // await Equipment.findByIdAndUpdate(eqId, {
-        //   status: "available",
-        //   $inc: { quantity: qty },
-        // });
         await Equipment.increment(
           { quantity: qty },
           { where: { id: eqId } }
@@ -567,7 +554,7 @@ export const cancelBooking = async (req, res) => {
     // });
     await Stadium.update(
       {
-        statusStadium: activeCount > 0 ? "IsBooking" : "Available",
+        statusStadium: activeCount > 0 ? "IsBooking" : "active",
       },
       {
         where: { id: booking.stadiumId },
