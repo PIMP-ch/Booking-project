@@ -12,6 +12,9 @@ import { fn, col, literal, Op } from "sequelize";
 import Userr from "../models/Userr.js";
 import Building from "../models/Buildingg.js";
 import BookingEquipment from "../models/BookingEquipment.js";
+import multer from "multer";
+import path from "path";
+import fs from "fs";
 
 
 dayjs.extend(isBetween);
@@ -19,6 +22,24 @@ dayjs.extend(utc);
 dayjs.extend(timezone);
 dayjs.locale("th");
 dayjs.tz.setDefault("Asia/Bangkok");
+
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const uploadPath = path.join(process.cwd(), "uploads/files");
+    fs.mkdirSync(uploadPath, { recursive: true });
+    cb(null, uploadPath);
+  },
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname || "").toLowerCase();
+    cb(null, `booking_${Date.now()}${ext}`);
+  },
+});
+
+
+const upload = multer({
+  storage,
+  limits: { fileSize: 5 * 1024 * 1024 },
+});
 
 // helper: รวมวัน+เวลาเป็น Date (เก็บเป็น Date ให้ตรง schema)
 function toDateTime(dateLike, hhmm = "00:00") {
@@ -52,183 +73,185 @@ function normalizeEquipment(input) {
 
 // =================== CREATE (กันทับเวลา) ===================
 export const bookStadium = async (req, res) => {
-  try {
-    const { userId, stadiumId, activityName, startDate, endDate, startTime, endTime } = req.body;
-    // รองรับ buildingIds / buildingId / building (บางหน้าส่งคนละชื่อ)
-    const rawBuilding =
-      req.body.buildingIds ?? req.body.buildingId ?? req.body.building ?? [];
-    // const normalizedBuildingIds = (Array.isArray(rawBuilding) ? rawBuilding : [rawBuilding])
-    //   .filter(Boolean)
-    //   .filter((id) => mongoose.Types.ObjectId.isValid(id));
-    const normalizedBuildingIds = (Array.isArray(rawBuilding) ? rawBuilding : [rawBuilding])
-      .filter(Boolean)
-      .filter((id) => Number.isInteger(Number(id)));
-
-    // normalize equipment
-    const normalizedEquipment = normalizeEquipment(req.body.equipment);
-
-    // activityName ไม่บังคับ (ถ้าไม่ส่งมาใช้ default ตอน create)
-    if (!userId || !stadiumId || !startDate || !endDate || !startTime || !endTime) {
-      return res.status(400).json({ message: "กรุณากรอกข้อมูลให้ครบถ้วน" });
+  upload.single("file")(req, res, async (err) => {
+    if (err) {
+      return res.status(400).json({ message: err.message });
     }
 
-    if (normalizedBuildingIds.length === 0) {
-      return res.status(400).json({ message: "กรุณาเลือกอาคารก่อนทำการจอง" });
-    }
+    try {
+      // ✅ helper (อยู่ใน controller เลย จบในไฟล์เดียว)
+      const parseJSON = (value, defaultValue = null) => {
+        if (!value) return defaultValue;
 
+        if (typeof value === "string") {
+          try {
+            return JSON.parse(value);
+          } catch {
+            return defaultValue;
+          }
+        }
 
-    if (startTime >= endTime) {
-      return res.status(400).json({ message: "เวลาเริ่มต้องน้อยกว่าเวลาสิ้นสุด" });
-    }
+        return value;
+      };
 
-    const newStart = toDateTime(startDate, startTime);
-    const newEnd = toDateTime(endDate, endTime);
-    if (!(newStart < newEnd)) {
-      return res.status(400).json({ message: "เวลาเริ่มต้องน้อยกว่าเวลาสิ้นสุด" });
-    }
+      const toArray = (value) => {
+        const parsed = parseJSON(value, value);
 
-    // const stadium = await Stadium.findById(stadiumId);
-    const stadium = await Stadium.findByPk(stadiumId);
-    if (!stadium) return res.status(404).json({ message: "Stadium not found" });
+        if (!parsed) return [];
+        if (Array.isArray(parsed)) return parsed;
 
-    // 🔒 กัน “จองทับ” : newStart < existEnd && newEnd > existStart
-    // const conflict = await Booking.findOne({
-    //   stadiumId,
-    //   status: { $in: ["pending", "confirmed"] },
-    //   startDate: { $lt: newEnd },
-    //   endDate: { $gt: newStart },
-    // }).lean();
-    const conflict = await Booking.findOne({
-      where: {
+        return [parsed];
+      };
+
+      const {
+        userId,
         stadiumId,
-        status: {
-          [Op.in]: ["pending", "confirmed"],
+        activityName,
+        startDate,
+        endDate,
+        startTime,
+        endTime,
+      } = req.body;
+
+      // ✅ file
+      const filePath = req.file
+        ? `/uploads/files/${req.file.filename}`
+        : null;
+      // ✅ building (แก้จบตรงนี้)
+      const rawBuilding =
+        req.body.buildingIds ?? req.body.buildingId ?? req.body.building;
+
+      const normalizedBuildingIds = toArray(rawBuilding)
+        .map(Number)
+        .filter((id) => Number.isInteger(id));
+
+      // ✅ equipment (แก้จบ)
+      const rawEquipment = parseJSON(req.body.equipment, []);
+      const normalizedEquipment = normalizeEquipment(rawEquipment);
+
+      // ================= VALIDATION =================
+      if (!userId || !stadiumId || !startDate || !endDate || !startTime || !endTime) {
+        return res.status(400).json({ message: "กรุณากรอกข้อมูลให้ครบถ้วน" });
+      }
+
+      if (normalizedBuildingIds.length === 0) {
+        return res.status(400).json({ message: "กรุณาเลือกอาคารก่อนทำการจอง" });
+      }
+
+      if (startTime >= endTime) {
+        return res.status(400).json({ message: "เวลาเริ่มต้องน้อยกว่าเวลาสิ้นสุด" });
+      }
+
+      const newStart = toDateTime(startDate, startTime);
+      const newEnd = toDateTime(endDate, endTime);
+
+      if (!(newStart < newEnd)) {
+        return res.status(400).json({ message: "เวลาเริ่มต้องน้อยกว่าเวลาสิ้นสุด" });
+      }
+
+      const stadium = await Stadium.findByPk(stadiumId);
+      if (!stadium) {
+        return res.status(404).json({ message: "Stadium not found" });
+      }
+
+      // ================= CHECK CONFLICT =================
+      const conflict = await Booking.findOne({
+        where: {
+          stadiumId,
+          status: { [Op.in]: ["pending", "confirmed"] },
+          startDate: { [Op.lt]: newEnd },
+          endDate: { [Op.gt]: newStart },
         },
-        startDate: {
-          [Op.lt]: newEnd,
+      });
+
+      if (conflict) {
+        return res.status(409).json({ message: "ช่วงเวลานี้ถูกจองแล้ว กรุณาเลือกเวลาอื่น" });
+      }
+
+      // ================= EQUIPMENT =================
+      for (const item of normalizedEquipment) {
+        await Equipment.decrement(
+          { quantity: item.quantity },
+          { where: { id: item.equipmentId } }
+        );
+      }
+
+      // ================= CREATE BOOKING =================
+      const booking = await Booking.create({
+        userId,
+        stadiumId,
+        name: activityName?.trim() || "การจองสนาม",
+        activityName: activityName?.trim() || "",
+        startDate: newStart,
+        endDate: newEnd,
+        startTime,
+        endTime,
+        status: "pending",
+        filePath, // ✅ ไฟล์
+      });
+
+      await booking.addBuildings(normalizedBuildingIds);
+
+      for (const item of normalizedEquipment) {
+        await BookingEquipment.create({
+          bookingId: booking.id,
+          equipmentId: item.equipmentId,
+          quantity: item.quantity,
+        });
+      }
+
+      // ================= UPDATE STADIUM =================
+      const activeCount = await Booking.count({
+        where: {
+          stadiumId,
+          status: { [Op.in]: ["pending", "confirmed"] },
         },
-        endDate: {
-          [Op.gt]: newStart,
-        },
-      },
-    });
+      });
 
-    if (conflict) {
-      return res.status(409).json({ message: "ช่วงเวลานี้ถูกจองแล้ว กรุณาเลือกเวลาอื่น" });
-    }
+      stadium.statusStadium =
+        activeCount > 0 ? "IsBooking" : "Available";
 
-    // ตรวจอุปกรณ์
+      await stadium.save();
 
-    for (const item of normalizedEquipment) {
-      console.log("decrementing equipmentId:", item.equipmentId, "quantity:", item.quantity);
+      // ================= POPULATE =================
+      const populated = await Booking.findByPk(booking.id, {
+        include: [
+          {
+            model: Userr,
+            attributes: ["fullname", "phoneNumber", "email", "fieldOfStudy", "year"],
+          },
+          {
+            model: Stadium,
+            attributes: ["nameStadium", "descriptionStadium"],
+          },
+          {
+            model: Building,
+            attributes: ["name"],
+            through: { attributes: [] },
+          },
+          {
+            model: Equipment,
+            attributes: ["name", "quantity"],
+            through: { attributes: ["quantity"] },
+          },
+        ],
+      });
 
-      const eq = await Equipment.findByPk(item.equipmentId);
-      console.log("before decrement - equipment:", eq?.id, "quantity:", eq?.quantity);
+      return res.status(201).json({
+        success: true,
+        message: "Stadium booked successfully",
+        booking,
+        populatedBooking: populated,
+      });
 
-      await Equipment.decrement(
-        { quantity: item.quantity },
-        { where: { id: item.equipmentId } }
-      );
-
-      const eqAfter = await Equipment.findByPk(item.equipmentId);
-      console.log("after decrement - equipment:", eqAfter?.id, "quantity:", eqAfter?.quantity);
-    }
-
-    // const booking = await Booking.create({
-    //   userId,
-    //   stadiumId,
-    //   buildingIds: normalizedBuildingIds,
-    //   // BookingSchema มี field `name` required:true
-    //   name: activityName?.trim() || "การจองสนาม",
-    //   activityName: activityName?.trim() || "",
-    //   equipment: normalizedEquipment,
-    //   startDate: newStart, // เก็บเป็น Date
-    //   endDate: newEnd,     // เก็บเป็น Date
-    //   startTime,
-    //   endTime,
-    //   status: "pending",
-    // });
-    const booking = await Booking.create({
-      userId,
-      stadiumId,
-      name: activityName?.trim() || "การจองสนาม",
-      activityName: activityName?.trim() || "",
-      startDate: newStart,
-      endDate: newEnd,
-      startTime,
-      endTime,
-      status: "pending",
-    });
-
-
-    await booking.addBuildings(normalizedBuildingIds);
-    // await booking.setBuildings(normalizedBuildingIds);
-
-    // for (const item of normalizedEquipment) {
-    //   await booking.addEquipment(item.equipmentId, {
-    //     through: { quantity: item.quantity }
-    //   });
-    // }
-    for (const item of normalizedEquipment) {
-      await BookingEquipment.create({
-        bookingId: booking.id,
-        equipmentId: item.equipmentId,
-        quantity: item.quantity,
+    } catch (error) {
+      console.error("Error booking stadium:", error);
+      return res.status(500).json({
+        message: "Server error",
+        error: error.message,
       });
     }
-
-    // อัปเดตสถานะสนาม (ตาม booking ที่ยัง active: pending/confirmed)
-    // const activeCount = await Booking.countDocuments({ stadiumId, status: { $in: ["pending", "confirmed"] } });
-    const activeCount = await Booking.count({
-      where: {
-        stadiumId,
-        status: {
-          [Op.in]: ["pending", "confirmed"],
-        },
-      },
-    });
-    // stadium.statusStadium = activeCount > 0 ? "IsBooking" : "Available";
-    // await stadium.save();
-
-    stadium.statusStadium =
-      activeCount > 0 ? "IsBooking" : "Available";
-
-    await stadium.save();
-
-    // const populated = await Booking.findById(booking.id)
-    //   .populate("userId", "fullname phoneNumber email fieldOfStudy year")
-    //   .populate("stadiumId", "nameStadium descriptionStadium")
-    //   .populate("buildingIds", "name")
-    //   .populate("equipment.equipmentId", "name quantity");
-
-    const populated = await Booking.findByPk(booking.id, {
-      include: [
-        {
-          model: Userr,
-          attributes: ["fullname", "phoneNumber", "email", "fieldOfStudy", "year"],
-        },
-        {
-          model: Stadium,
-          attributes: ["nameStadium", "descriptionStadium"],
-        },
-        {
-          model: Building,
-          attributes: ["name"],
-          through: { attributes: [] },
-        },
-        {
-          model: Equipment,
-          attributes: ["name", "quantity"],
-          through: { attributes: ["quantity"] },
-        },
-      ],
-    });
-
-    return res.status(201).json({ message: "Stadium booked successfully", success: true, booking, populatedBooking: populated });
-  } catch (error) {
-    console.error("Error booking stadium:", error);
-    return res.status(500).json({ message: "Server error", error: error.message });
-  }
+  });
 };
 
 // =================== READ: ปฏิทินวันว่าง (ทั้งเดือน) ===================

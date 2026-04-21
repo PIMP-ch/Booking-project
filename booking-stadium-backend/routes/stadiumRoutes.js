@@ -7,10 +7,11 @@ import {
   getStadiumById,
   sportTypes
 } from "../controllers/stadiumController.js";
-import Stadium from "../models/Stadium.js";
+import Stadium from "../models/Stadiumm.js";
 import path from "path";
 import fs from "fs";
 import multer from "multer";
+import StadiumImage from "../models/StadiumImage.js";
 
 const router = express.Router();
 
@@ -39,70 +40,49 @@ router.delete("/:id", deleteStadium);
 // แก้ไขให้ตรงกับ api.js ที่ส่งมาเป็น /stadiums/:id/images
 router.post("/:id/images", upload.array("images", 10), async (req, res) => {
   try {
-    // const stadium = await Stadium.findById(req.params.id);
     const stadium = await Stadium.findByPk(req.params.id);
     if (!stadium) return res.status(404).json({ message: "ไม่พบสนามกีฬา" });
 
-    const newPaths = req.files.map(file => `/uploads/stadiums/${file.filename}`);
+    if (!req.files || req.files.length === 0) {
+      return res.status(400).json({ message: "กรุณาเลือกไฟล์" });
+    }
 
-    // ตรวจสอบว่า imageUrl เป็น array หรือไม่ ถ้าไม่ให้สร้างใหม่
-    if (!Array.isArray(stadium.imageUrl)) stadium.imageUrl = [];
+    // ✅ บันทึกแต่ละรูปลงตาราง stadium_images แทน
+    const newImages = await StadiumImage.bulkCreate(
+      req.files.map((file) => ({
+        stadiumId: req.params.id,
+        url: `/uploads/stadiums/${file.filename}`,
+      }))
+    );
 
-    stadium.imageUrl.push(...newPaths);
-    await stadium.save();
-
-    res.json({ message: "อัปโหลดรูปสำเร็จ", stadium });
+    res.json({
+      message: "อัปโหลดรูปสำเร็จ",
+      imageUrl: newImages.map((img) => img.url), // ✅ ส่งกลับเป็น array of url
+    });
   } catch (err) {
     res.status(500).json({ message: "อัปโหลดไม่สำเร็จ", error: err.message });
   }
 });
 
 /** ---------- Delete Stadium Image by Index ---------- */
-router.delete("/:id/images/:index", async (req, res) => {
+router.delete("/:id/images/:imageId", async (req, res) => {
   try {
-    const { id, index } = req.params;
-    // const stadium = await Stadium.findById(id);
-    const stadium = await Stadium.findByPk(id);
-    const targetIndex = parseInt(index);
+    const { imageId } = req.params;
 
-    if (!stadium) {
-      return res.status(404).json({ message: "ไม่พบข้อมูลสนาม" });
+    const image = await StadiumImage.findByPk(imageId);
+    if (!image) {
+      return res.status(404).json({ message: "ไม่พบรูปภาพ" });
     }
 
-    // --- ส่วนที่แก้ไขเพื่อป้องกัน Error 400 ---
-    let imagePathToDelete = "";
-
-    // กรณีเป็น Array (หลายรูป)
-    if (Array.isArray(stadium.imageUrl)) {
-      if (stadium.imageUrl[targetIndex]) {
-        imagePathToDelete = stadium.imageUrl[targetIndex];
-        stadium.imageUrl.splice(targetIndex, 1);
-      } else {
-        return res.status(400).json({ message: "ไม่พบรูปภาพในตำแหน่งที่ระบุ" });
-      }
-    }
-    // กรณีเป็น String (รูปเดียว - เผื่อไว้)
-    else if (typeof stadium.imageUrl === "string" && stadium.imageUrl !== "") {
-      imagePathToDelete = stadium.imageUrl;
-      stadium.imageUrl = "";
-    } else {
-      return res.status(400).json({ message: "ไม่มีรูปภาพให้ลบ" });
+    // ลบไฟล์จริงในเครื่อง
+    if (image.url.startsWith("/uploads/stadiums")) {
+      const filePath = path.join(process.cwd(), image.url);
+      if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
     }
 
-    // --- การลบไฟล์จริง ---
-    if (imagePathToDelete) {
-      const relativePath = imagePathToDelete.replace(/^\//, "");
-      const filePath = path.join(process.cwd(), relativePath);
+    await image.destroy();
 
-      console.log("กำลังลบไฟล์:", filePath); // ดูใน Terminal ว่า Path ถูกไหม
-
-      if (fs.existsSync(filePath)) {
-        fs.unlinkSync(filePath);
-      }
-    }
-
-    await stadium.save();
-    res.json({ message: "ลบรูปสำเร็จ", imageUrl: stadium.imageUrl });
+    res.json({ message: "ลบรูปสำเร็จ" });
   } catch (err) {
     console.error("Delete Error:", err);
     res.status(500).json({ message: "Server Error", error: err.message });

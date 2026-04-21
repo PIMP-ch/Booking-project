@@ -14,6 +14,10 @@ const Booking = sequelize.define("Booking", {
         allowNull: false,
         defaultValue: "pending",
     },
+    filePath: {
+        type: DataTypes.STRING,
+        allowNull: true,
+    },
 }, { timestamps: true });
 
 export default Booking;

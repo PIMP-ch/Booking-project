@@ -78,6 +78,26 @@ const BookingDetail = () => {
   const searchParams = useSearchParams();
   const router = useRouter();
 
+  const [file, setFile] = useState(null);
+
+  const handleFileChange = (e) => {
+    const selectedFile = e.target.files[0];
+    if (!selectedFile) return;
+
+    const allowedTypes = [
+      "image/png",
+      "application/pdf",
+    ];
+
+    if (!allowedTypes.includes(selectedFile.type)) {
+      toast.error("รองรับเฉพาะรูปภาพหรือ PDF");
+      return;
+    }
+
+    setFile(selectedFile);
+  };
+
+
   const stadiumName = searchParams?.get("stadiumName") ?? "ไม่พบชื่อสนาม";
 
   // ✅ สำคัญ: buildingId ต้องเป็น id จริงเท่านั้น (ห้าม default เป็นข้อความ)
@@ -176,7 +196,6 @@ const BookingDetail = () => {
       return;
     }
 
-    // ✅ กันจองแล้ว buildingIds ว่าง -> backend ปฏิเสธ / admin ไม่ขึ้นชื่ออาคาร
     if (!buildingId) {
       alert("⛔ กรุณาเลือกอาคารก่อนทำการจอง");
       return;
@@ -188,25 +207,37 @@ const BookingDetail = () => {
     }
 
     try {
-      const bookingData = {
-        userId: user.id,
-        stadiumId,
+      const formData = new FormData();
 
-        // ✅ สำคัญ: ส่งให้ backend เป็น array ตาม schema (buildingIds)
-        buildingIds: [buildingId],
+      formData.append("userId", user.id);
+      formData.append("stadiumId", stadiumId);
 
-        activityName,
-        startDate,
-        endDate,
-        startTime,
-        endTime,
-        equipment: selectedEquipment.map(({ equipmentId, quantity }) => ({
-          equipmentId,
-          quantity,
-        })),
-      };
+      // 🔥 array ต้อง stringify
+      formData.append("buildingIds", JSON.stringify([buildingId]));
 
-      const response = await createBooking(bookingData);
+      formData.append("activityName", activityName);
+      formData.append("startDate", startDate);
+      formData.append("endDate", endDate);
+      formData.append("startTime", startTime);
+      formData.append("endTime", endTime);
+
+      formData.append(
+        "equipment",
+        JSON.stringify(
+          selectedEquipment.map(({ equipmentId, quantity }) => ({
+            equipmentId,
+            quantity,
+          }))
+        )
+      );
+
+      // ✅ แนบไฟล์
+      if (file) {
+        formData.append("file", file);
+      }
+
+      const response = await createBooking(formData);
+
       if (response?.success) {
         toast.success("✅ จองสำเร็จ");
         router.push("/booking/history");
@@ -367,6 +398,20 @@ const BookingDetail = () => {
                 <p className="text-gray-500">ไม่พบข้อมูลผู้ใช้</p>
               )}
             </section>
+
+            <section className="bg-white/95 p-4 rounded-xl shadow border border-orange-200">
+              <div className="flex items-center gap-2 mb-3">
+                <h2 className="text-lg font-bold">อัปโหลดไฟล์เพิ่มเติม</h2>
+              </div>
+
+              <input
+                type="file"
+                accept="image/*,application/pdf"
+                onChange={handleFileChange}
+              />
+
+            </section>
+
           </div>
         </div>
       </div>

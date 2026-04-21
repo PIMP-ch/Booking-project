@@ -254,6 +254,7 @@ const BookingTable: React.FC<{ bookings: Booking[]; onConfirm: (id: string) => v
             <Table.HeadCell>สนามกีฬา</Table.HeadCell>
             <Table.HeadCell>อุปกรณ์</Table.HeadCell>
             <Table.HeadCell>วันที่ & เวลา</Table.HeadCell>
+            <Table.HeadCell className="text-center">ไฟล์แนบ</Table.HeadCell>
             <Table.HeadCell className="text-center">การจัดการ</Table.HeadCell>
         </Table.Head>
         <Table.Body className="divide-y">
@@ -294,6 +295,18 @@ const BookingTable: React.FC<{ bookings: Booking[]; onConfirm: (id: string) => v
                                 <span className="font-medium text-blue-600">{new Date(booking.startDate).toLocaleDateString("th-TH")} - {new Date(booking.endDate).toLocaleDateString("th-TH")}</span>
                                 <span className="text-gray-500">{booking.startTime} - {booking.endTime}</span>
                             </div>
+                        </Table.Cell>
+                        <Table.Cell className="text-center">
+                            {booking.filePath && (
+                                <a
+                                    href={`http://localhost:5008${booking.filePath}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-block px-3 py-1 text-sm text-blue-600 border border-blue-600 rounded-lg hover:bg-blue-50"
+                                >
+                                    ดูไฟล์
+                                </a>
+                            )}
                         </Table.Cell>
                         <Table.Cell className="text-center">
                             <Dropdown

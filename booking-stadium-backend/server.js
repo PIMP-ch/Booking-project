@@ -28,6 +28,7 @@ import equipmentRoutes from "./routes/equipmentRoutes.js";
 import statsRoutes from "./routes/statsRoutes.js";
 import staffRoutes from "./routes/staffRoutes.js";
 import buildingRoutes from "./routes/buildingRoutes.js";
+import StadiumImage from "./models/StadiumImage.js";
 
 dotenv.config();
 
