@@ -34,11 +34,9 @@ export const createStadium = async (req, res) => {
       payload.buildingIds = [payload.buildingIds];
     }
 
-    // สร้าง stadium (ไม่มี imageUrl แล้ว)
     const newStadium = await Stadium.create(payload);
 
     // ✅ บันทึกรูปลงตาราง stadium_images
-    // const imagePaths = req.files?.map((file) => `/uploads/${file.filename}`) || [];
     const imagePaths = req.files?.map((file) => `/uploads/stadiums/${file.filename}`) || [];
     if (imagePaths.length > 0) {
       await StadiumImage.bulkCreate(
@@ -46,17 +44,17 @@ export const createStadium = async (req, res) => {
       );
     }
 
-    // สร้าง BuildingRelation
+    // ✅ สร้าง BuildingRelation
     const allBuilding = await Building.findAll({ attributes: ["id"] });
     const allBuildingIds = allBuilding.map((item) => item.id);
-    const newBuildingIds = payload.buildingIds || [];
+    const newBuildingIds = (payload.buildingIds || []).map(Number); // normalize type
 
     await Promise.all(
       allBuildingIds.map((buildingId) =>
         BuildingRelation.create({
           stadiumId: newStadium.id,
           buildingId,
-          active: newBuildingIds.includes(buildingId) ? "1" : "0",
+          active: newBuildingIds.includes(Number(buildingId)), // ✅ boolean ตรงกับ model
         })
       )
     );
@@ -73,10 +71,20 @@ export const createStadium = async (req, res) => {
 export const addStadiumImages = async (req, res) => {
   try {
     const { id } = req.params;
+
+    const stadium = await Stadium.findByPk(id);
+    if (!stadium) return res.status(404).json({ message: "ไม่พบข้อมูลสนาม" });
+
     let newImagePaths = [];
 
     if (req.files?.length > 0) {
-      // newImagePaths = req.files.map((file) => `/uploads/${file.filename}`);
+      const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
+      const invalidFiles = req.files.filter(
+        (file) => !allowedTypes.includes(file.mimetype)
+      );
+      if (invalidFiles.length > 0) {
+        return res.status(400).json({ message: "รองรับเฉพาะไฟล์ jpg, png, webp เท่านั้น" });
+      }
       newImagePaths = req.files.map((file) => `/uploads/stadiums/${file.filename}`);
     }
 
@@ -91,15 +99,30 @@ export const addStadiumImages = async (req, res) => {
       return res.status(400).json({ message: "กรุณาเลือกไฟล์หรือระบุ URL รูปภาพ" });
     }
 
-    // ✅ bulkCreate ลงตาราง stadium_images ตรงๆ เลย
-    await StadiumImage.bulkCreate(
-      newImagePaths.map((url) => ({ stadiumId: id, url }))
+    // ✅ upsert แทน bulkCreate — ถ้ามี url อยู่แล้วให้ set active = 1, ถ้าไม่มีค่อยสร้างใหม่
+    await Promise.all(
+      newImagePaths.map((url) =>
+        StadiumImage.upsert({ stadiumId: id, url, active: "1" })
+      )
     );
 
-    const images = await StadiumImage.findAll({ where: { stadiumId: id } });
+    // ✅ set active = 0 สำหรับรูปที่ไม่ได้ส่งมา (ถือว่าถูกลบออก)
+    await StadiumImage.update(
+      { active: "0" },
+      {
+        where: {
+          stadiumId: id,
+          url: { [Op.notIn]: newImagePaths },
+        },
+      }
+    );
+
+    const images = await StadiumImage.findAll({
+      where: { stadiumId: id, active: "1" },
+    });
 
     res.status(200).json({
-      message: "เพิ่มรูปภาพสำเร็จ",
+      message: `อัปเดตรูปภาพสำเร็จ`,
       imageUrl: images.map((img) => img.url),
     });
   } catch (error) {
@@ -149,7 +172,7 @@ export const updateStadium = async (req, res) => {
         : [payload.buildingIds];
     }
 
-    if (stadium.statusStadium === "IsBooking") {
+    if (stadium.dataValues.statusStadium === "IsBooking") {
       const allowedData = {
         nameStadium: payload.nameStadium || stadium.nameStadium,
         descriptionStadium: payload.descriptionStadium || stadium.descriptionStadium,
@@ -162,21 +185,40 @@ export const updateStadium = async (req, res) => {
       });
     }
 
-    await stadium.update(payload);
+    await Stadium.update(payload, { where: { id } });
 
-    // อัปเดต BuildingRelation
-    const allBuilding = await Building.findAll({ attributes: ["id"] });
-    const allBuildingIds = allBuilding.map((item) => item.id);
-    const newBuildingIds = payload.buildingIds || [];
+    if (payload.buildingIds !== undefined) {
+      const allBuilding = await Building.findAll({ attributes: ["id"] });
+      const allBuildingIds = allBuilding.map((item) => item.id);
+      const newBuildingIds = payload.buildingIds.map(Number);
 
-    await Promise.all(
-      allBuildingIds.map((buildingId) =>
-        BuildingRelation.update(
-          { active: newBuildingIds.includes(buildingId) ? "1" : "0" },
-          { where: { stadiumId: id, buildingId } }
+      await Promise.all(
+        allBuildingIds.map((buildingId) =>
+          BuildingRelation.update(
+            { active: newBuildingIds.includes(Number(buildingId)) },
+            { where: { stadiumId: id, buildingId } }
+          )
         )
-      )
-    );
+      );
+    }
+
+    if (payload.imageUrls !== undefined) {
+      const newImageUrls = Array.isArray(payload.imageUrls)
+        ? payload.imageUrls
+        : [payload.imageUrls];
+
+      if (newImageUrls.length > 0) {
+        await StadiumImage.update(
+          { active: true },
+          { where: { stadiumId: id, url: { [Op.in]: newImageUrls } } }
+        );
+      }
+
+      await StadiumImage.update(
+        { active: false },
+        { where: { stadiumId: id, url: { [Op.notIn]: newImageUrls } } }
+      );
+    }
 
     const updatedStadium = await Stadium.findByPk(id, { include: [includeImages] });
 
