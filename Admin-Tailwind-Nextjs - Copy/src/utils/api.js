@@ -87,6 +87,14 @@ export const uploadEquipmentImage = async (id, file) => {
   } catch (error) { handleError(error, "Failed to upload equipment image"); }
 };
 
+export const adjustEquipment = async (payload) => {
+  try {
+    const response = await axios.post(`${API_URL}/equipments/adjust-stock`, payload);
+    console.log("Stock adjustment response:", response);
+    return response.data;
+  } catch (error) { handleError(error, "Failed to adjust equipment stock"); }
+};
+
 // --- แก้ไข: ตรวจสอบการส่ง ID ไปยัง Backend เพื่อลบรูปอุปกรณ์ ---
 export const deleteEquipmentImage = async (id) => {
   try {

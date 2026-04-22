@@ -29,6 +29,7 @@ import statsRoutes from "./routes/statsRoutes.js";
 import staffRoutes from "./routes/staffRoutes.js";
 import buildingRoutes from "./routes/buildingRoutes.js";
 import StadiumImage from "./models/StadiumImage.js";
+import EquipmentAdjustmentTransaction from "./models/EquipmentAdjustmentTransaction.js";
 
 dotenv.config();
 

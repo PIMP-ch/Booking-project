@@ -8,6 +8,7 @@ import {
   getEquipments,
   deleteEquipment,
   updateEquipment,
+  adjustEquipmentStock,
 } from "../controllers/equipmentController.js";
 
 const router = express.Router();
@@ -43,6 +44,7 @@ router.post("/", createEquipment);
 router.get("/", getEquipments);
 router.delete("/:id", deleteEquipment);
 router.put("/:id", updateEquipment);
+router.post("/adjust-stock", adjustEquipmentStock)
 
 /** ---------- Upload Equipment Image ---------- */
 router.post("/:id/image", upload.single("image"), async (req, res) => {

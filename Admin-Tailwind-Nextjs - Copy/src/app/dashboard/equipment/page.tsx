@@ -14,6 +14,7 @@ import {
 import { Icon } from "@iconify/react";
 import { toast } from "react-toastify";
 import { get } from "lodash";
+import StockModal from "./StockModal";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:5008";
 
@@ -39,6 +40,7 @@ const EquipmentPage = () => {
     const [imageFile, setImageFile] = useState<File | null>(null);
     const [isSaving, setIsSaving] = useState(false);
     const [sportTypes, setSportTypes] = useState<{ id: number; name: string }[]>([]);
+    const [isStockModalOpen, setIsStockModalOpen] = useState(false);
 
     const fetchData = async () => {
         try {
@@ -134,15 +136,27 @@ const EquipmentPage = () => {
         }
     };
 
+
     return (
         <div className="p-6 font-kanit bg-gray-50 min-h-screen">
+            <StockModal
+                isOpen={isStockModalOpen}
+                onClose={() => setIsStockModalOpen(false)}
+                equipmentList={equipmentList}
+                onSuccess={fetchData}
+            />
             {/* Header Section */}
             <div className="flex justify-between items-center mb-6">
                 <h2 className="text-2xl font-bold text-gray-800">จัดการอุปกรณ์</h2>
-                <Button onClick={() => openModal()} className="bg-blue-600 hover:bg-blue-700">
-                    <Icon icon="solar:add-circle-bold" className="mr-2 h-5 w-5" />
-                    เพิ่มอุปกรณ์
-                </Button>
+                <div className="flex gap-x-2">
+                    <Button onClick={() => setIsStockModalOpen(true)} className="bg-yellow-600 hover:bg-yellow-700">
+                        รับเข้า/จำหน่ายออก
+                    </Button>
+                    <Button onClick={() => openModal()} className="bg-blue-600 hover:bg-blue-700">
+                        <Icon icon="solar:add-circle-bold" className="mr-2 h-5 w-5" />
+                        เพิ่มอุปกรณ์
+                    </Button>
+                </div>
             </div>
 
             {/* Table Section */}
