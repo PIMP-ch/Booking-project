@@ -15,6 +15,7 @@ import { Icon } from "@iconify/react";
 import { toast } from "react-toastify";
 import { get } from "lodash";
 import StockModal from "./StockModal";
+import TransactionHistoryModal from "./TransactionHistoryModal"; // 👈 เพิ่ม
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:5008";
 
@@ -42,6 +43,12 @@ const EquipmentPage = () => {
     const [sportTypes, setSportTypes] = useState<{ id: number; name: string }[]>([]);
     const [isStockModalOpen, setIsStockModalOpen] = useState(false);
 
+    // 👇 state สำหรับ history modal
+    const [historyModal, setHistoryModal] = useState<{ isOpen: boolean; equipment: Equipment | null }>({
+        isOpen: false,
+        equipment: null,
+    });
+
     const fetchData = async () => {
         try {
             const data = await getAllEquipment();
@@ -54,26 +61,17 @@ const EquipmentPage = () => {
     const getSportTypeData = async () => {
         try {
             const data = await getSportTypes();
-
-            const filtered = data.filter(
-                (item) => item.name !== "ทุกประเภท"
-            );
-            setSportTypes(filtered);
-
+            const filtered = data.filter((item) => item.name !== "ทุกประเภท");
             setSportTypes(filtered);
         } catch (err) {
             toast.error("โหลดข้อมูลประเภทกีฬาไม่สำเร็จ");
         }
-    }
+    };
 
     useEffect(() => {
         fetchData();
         getSportTypeData();
     }, []);
-
-    useEffect(() => {
-        console.log(form)
-    }, [form])
 
     const openModal = (equipment: Equipment | null = null) => {
         setCurrentEquipment(equipment);
@@ -136,7 +134,6 @@ const EquipmentPage = () => {
         }
     };
 
-
     return (
         <div className="p-6 font-kanit bg-gray-50 min-h-screen">
             <StockModal
@@ -145,6 +142,14 @@ const EquipmentPage = () => {
                 equipmentList={equipmentList}
                 onSuccess={fetchData}
             />
+
+            {/* 👇 History Modal */}
+            <TransactionHistoryModal
+                isOpen={historyModal.isOpen}
+                onClose={() => setHistoryModal({ isOpen: false, equipment: null })}
+                equipment={historyModal.equipment}
+            />
+
             {/* Header Section */}
             <div className="flex justify-between items-center mb-6">
                 <h2 className="text-2xl font-bold text-gray-800">จัดการอุปกรณ์</h2>
@@ -209,8 +214,7 @@ const EquipmentPage = () => {
                                 <Table.Cell className="font-semibold text-gray-800">{eq.name}</Table.Cell>
                                 <Table.Cell>{eq.quantity}</Table.Cell>
                                 <Table.Cell>
-                                    <span className={`px-4 py-1 rounded-full text-[12px] text-white font-medium ${eq.status === "available" ? "bg-[#10b981]" : "bg-[#d97706]"
-                                        }`}>
+                                    <span className={`px-4 py-1 rounded-full text-[12px] text-white font-medium ${eq.status === "available" ? "bg-[#10b981]" : "bg-[#d97706]"}`}>
                                         {eq.status === "available" ? "ใช้งานได้" : "กำลังใช้งาน"}
                                     </span>
                                 </Table.Cell>
@@ -221,7 +225,18 @@ const EquipmentPage = () => {
                                         </div>
                                     )} inline>
                                         <Dropdown.Item onClick={() => openModal(eq)}>แก้ไข</Dropdown.Item>
-                                        <Dropdown.Item onClick={() => setConfirmModal({ isOpen: true, id: eq.id })} className="text-red-600">ลบ</Dropdown.Item>
+                                        {/* 👇 เชื่อมกับ history modal */}
+                                        <Dropdown.Item
+                                            onClick={() => setHistoryModal({ isOpen: true, equipment: eq })}
+                                        >
+                                            ประวัติการรับเข้า/ออก
+                                        </Dropdown.Item>
+                                        <Dropdown.Item
+                                            onClick={() => setConfirmModal({ isOpen: true, id: eq.id })}
+                                            className="text-red-600"
+                                        >
+                                            ลบ
+                                        </Dropdown.Item>
                                     </Dropdown>
                                 </Table.Cell>
                             </Table.Row>
@@ -230,7 +245,7 @@ const EquipmentPage = () => {
                 </Table>
             </div>
 
-            {/* Modal Edit/Add - รูปแบบตามภาพที่ 1 */}
+            {/* Modal Edit/Add */}
             <Modal show={isModalOpen} onClose={closeModal} size="md" className="font-kanit">
                 <Modal.Header className="border-b-0 pb-0 pt-6 px-8 text-xl font-bold">
                     {currentEquipment ? "แก้ไขอุปกรณ์" : "เพิ่มอุปกรณ์"}
@@ -249,7 +264,6 @@ const EquipmentPage = () => {
                             onChange={(e) => setForm({ ...form, quantity: Number(e.target.value) })}
                             placeholder="จำนวน"
                         />
-
                         <select
                             value={form.sportTypeId || ""}
                             onChange={(e) => setForm({ ...form, sportTypeId: Number(e.target.value) })}
@@ -257,13 +271,9 @@ const EquipmentPage = () => {
                         >
                             <option value="">เลือกประเภทกีฬา</option>
                             {sportTypes.map((type) => (
-                                <option key={type.id} value={type.id}>
-                                    {type.name}
-                                </option>
+                                <option key={type.id} value={type.id}>{type.name}</option>
                             ))}
                         </select>
-
-
                         <div className="bg-gray-50 p-4 rounded-2xl border border-dashed border-gray-200">
                             <Label className="text-gray-500 mb-2 block text-xs">รูปอุปกรณ์</Label>
                             <div className="flex items-center gap-4">
@@ -287,7 +297,6 @@ const EquipmentPage = () => {
                                 </div>
                             </div>
                         </div>
-
                         {currentEquipment && (
                             <select
                                 value={form.status}

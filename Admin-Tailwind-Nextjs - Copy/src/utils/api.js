@@ -90,7 +90,13 @@ export const uploadEquipmentImage = async (id, file) => {
 export const adjustEquipment = async (payload) => {
   try {
     const response = await axios.post(`${API_URL}/equipments/adjust-stock`, payload);
-    console.log("Stock adjustment response:", response);
+    return response.data;
+  } catch (error) { handleError(error, "Failed to adjust equipment stock"); }
+};
+
+export const adjustEquipmentTransactions = async (id) => {
+  try {
+    const response = await axios.get(`${API_URL}/equipments/${id}/transactions`);
     return response.data;
   } catch (error) { handleError(error, "Failed to adjust equipment stock"); }
 };
