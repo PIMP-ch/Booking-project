@@ -45,7 +45,7 @@ export default function LoginPage() {
             เข้าสู่ระบบ
           </h2>
 
-          <GoogleOAuthProvider clientId="1098822441578-5cvb1c7cfiha22pqgm2cf2d2e7a78p0l.apps.googleusercontent.com">
+          <GoogleOAuthProvider clientId="{ใส่ client id}">
             <GoogleLogin
               onSuccess={(credentialResponse) => {
                 // ✅ decode อยู่ใน scope ที่ถูกต้อง + type กำหนดให้ชัด
