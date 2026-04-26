@@ -17,7 +17,6 @@ const API_URL =
 export const RegisterUser = async ({
   fullname,
   email,
-  password,
   fieldOfStudy,
   year,
   phoneNumber,
@@ -28,7 +27,6 @@ export const RegisterUser = async ({
     const payload = {
       fullname,
       email: String(email || "").trim().toLowerCase(),
-      password,
       fieldOfStudy,
       year,
       userType,
@@ -43,11 +41,14 @@ export const RegisterUser = async ({
 };
 
 // เข้าสู่ระบบผู้ใช้ (หน้า user/login)
-export const loginUser = async (email, password) => {
+export const loginUser = async (email, name, sub) => {
   try {
+    console.log(API_URL)
     const res = await axios.post(`${API_URL}/auth/login`, {
+      // const res = await axios.post(`http://localhost:5008/api/auth/login`, {
       email: String(email || "").trim().toLowerCase(),
-      password,
+      name: name,
+      sub: sub
     });
     return res.data; // { success, message, user }
   } catch (error) {

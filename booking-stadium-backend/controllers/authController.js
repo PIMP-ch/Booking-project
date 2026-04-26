@@ -214,9 +214,10 @@ export const unblockUser = async (req, res) => {
 
 export const register = async (req, res) => {
     try {
-        const { fullname, email, phoneNumber, password, userType, fieldOfStudy, year, department } = req.body;
+        const { fullname, email, phoneNumber, userType, fieldOfStudy, year, department } = req.body;
 
-        if (!fullname || !email || !phoneNumber || !password) {
+
+        if (!fullname || !email || !phoneNumber) {
             return res.stsatus(400).json({ message: "กรุณากรอกชื่อ อีเมล์ เบอร์โทร และรหัสผ่านให้ครบ" });
         }
 
@@ -259,7 +260,6 @@ export const register = async (req, res) => {
             fieldOfStudy: userType === "student" ? fieldOfStudy : null,
             year: userType === "student" ? year : null,
             department: userType === "staff" ? department : null,
-            password,
             blockUntil: null
         });
 
@@ -281,7 +281,7 @@ export const register = async (req, res) => {
 
 export const login = async (req, res) => {
     try {
-        const { email, password } = req.body;
+        const { email, name, sub } = req.body;
         // const user = await User.findOne({ email });
         const user = await Userr.findOne({
             where: {
@@ -291,7 +291,10 @@ export const login = async (req, res) => {
 
         // ✅ กรณีไม่มีอีเมลในระบบ
         if (!user) {
-            return res.status(404).json({ message: "ไม่พบอีเมลนี้ในระบบ" });
+            return res.status(200).json({
+                message: "ไม่พบอีเมลนี้ในระบบ", user,
+                isNewUser: true
+            });
         }
 
         // ✅ กรณีผู้ใช้ถูกบล็อก
@@ -302,11 +305,17 @@ export const login = async (req, res) => {
         }
 
         // ✅ รหัสผ่านผิด
-        if (password !== user.password) {
-            return res.status(400).json({ message: "รหัสผ่านไม่ถูกต้อง" });
-        }
+        // if (password !== user.password) {
+        //     return res.status(400).json({ message: "รหัสผ่านไม่ถูกต้อง" });
+        // }
 
-        res.status(200).json({ message: "เข้าสู่ระบบสำเร็จ", user });
+        return res.status(200).json({
+            message: "เข้าสู่ระบบสำเร็จ",
+            user,
+            isNewUser: false
+        })
+
+        // res.status(200).json({ message: "เข้าสู่ระบบสำเร็จ", user });
 
     } catch (error) {
         res.status(500).json({ message: "เกิดข้อผิดพลาดในเซิร์ฟเวอร์", error });

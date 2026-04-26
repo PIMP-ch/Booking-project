@@ -8,10 +8,24 @@ import { RegisterUser } from "@/utils/api"; // ฟังก์ชันที่
 import useAuth from "@/hooks/useAuth";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import { useSearchParams } from "next/navigation";
+import { useEffect } from "react";
 
 const BoxedRegister = () => {
+  const searchParams = useSearchParams();
   const { login } = useAuth();
   const router = useRouter();
+
+  useEffect(() => {
+    const emailFromQuery = searchParams.get("email");
+
+    if (emailFromQuery) {
+      setFormData((prev) => ({
+        ...prev,
+        email: emailFromQuery,
+      }));
+    }
+  }, [searchParams]);
 
   const [formData, setFormData] = useState({
     fullname: "",
@@ -26,7 +40,7 @@ const BoxedRegister = () => {
 
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [step, setStep] = useState(1);
+  const [step, setStep] = useState(2);
   const [error, setError] = useState("");
   const [showStep1Error, setShowStep1Error] = useState(false);
 
@@ -46,6 +60,17 @@ const BoxedRegister = () => {
     if (!okFullname || !okEmail || !okPhone) return;
     setStep(2);
   };
+
+  useEffect(() => {
+    const emailFromQuery = searchParams.get("email");
+    const nameFromQuery = searchParams.get("name");
+
+    setFormData((prev) => ({
+      ...prev,
+      email: emailFromQuery || "",
+      fullname: nameFromQuery || "",
+    }));
+  }, [searchParams]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -72,12 +97,11 @@ const BoxedRegister = () => {
       const payload = {
         fullname: formData.fullname,
         email: formData.email,
-        password: formData.password,
         phoneNumber: formData.phoneNumber,
         userType: formData.userType, // ✅ ส่งค่า "student" หรือ "staff" ไปด้วย
         // ส่งค่าว่างไปในฟิลด์ที่ไม่ได้ใช้ เพื่อป้องกัน Backend Error
         fieldOfStudy: formData.userType === "student" ? formData.fieldOfStudy : formData.department,
-        year: formData.userType === "student" ? formData.year : "Staff", 
+        year: formData.userType === "student" ? formData.year : "Staff",
         department: formData.userType === "staff" ? formData.department : "",
       };
 
@@ -125,44 +149,7 @@ const BoxedRegister = () => {
           <form onSubmit={handleSubmit} className="space-y-4">
             {step === 1 ? (
               <>
-                <div>
-                  <label className="block text-sm mb-1">ชื่อ-นามสกุล</label>
-                  <input
-                    type="text"
-                    name="fullname"
-                    value={formData.fullname}
-                    onChange={handleChange}
-                    placeholder="กรอกชื่อและนามสกุล"
-                    className={`w-full p-3 rounded bg-white border text-gray-800 focus:ring-2 focus:ring-orange-500 ${step1FullnameError ? "border-red-500" : "border-gray-300"}`}
-                  />
-                  {step1FullnameError && <p className="mt-1 text-xs text-red-400">✖ กรุณากรอกชื่อ-นามสกุล</p>}
-                </div>
 
-                <div>
-                  <label className="block text-sm mb-1">อีเมล</label>
-                  <input
-                    type="email"
-                    name="email"
-                    value={formData.email}
-                    onChange={handleChange}
-                    placeholder="example@mail.com"
-                    className={`w-full p-3 rounded bg-white border text-gray-800 focus:ring-2 focus:ring-orange-500 ${step1EmailError ? "border-red-500" : "border-gray-300"}`}
-                  />
-                  {step1EmailError && <p className="mt-1 text-xs text-red-400">✖ รูปแบบอีเมลไม่ถูกต้อง</p>}
-                </div>
-
-                <div>
-                  <label className="block text-sm mb-1">เบอร์โทรศัพท์</label>
-                  <input
-                    type="text"
-                    name="phoneNumber"
-                    value={formData.phoneNumber}
-                    onChange={handleChange}
-                    placeholder="08XXXXXXXX"
-                    className={`w-full p-3 rounded bg-white border text-gray-800 focus:ring-2 focus:ring-orange-500 ${step1PhoneError ? "border-red-500" : "border-gray-300"}`}
-                  />
-                  {step1PhoneError && <p className="mt-1 text-xs text-red-400">✖ กรุณากรอกเบอร์โทร 10 หลัก</p>}
-                </div>
 
                 <button
                   type="button"
@@ -178,6 +165,18 @@ const BoxedRegister = () => {
               </>
             ) : (
               <>
+                <div>
+                  <label className="block text-sm mb-1">เบอร์โทรศัพท์</label>
+                  <input
+                    type="text"
+                    name="phoneNumber"
+                    value={formData.phoneNumber}
+                    onChange={handleChange}
+                    placeholder="08XXXXXXXX"
+                    className={`w-full p-3 rounded bg-white border text-gray-800 focus:ring-2 focus:ring-orange-500 ${step1PhoneError ? "border-red-500" : "border-gray-300"}`}
+                  />
+                  {step1PhoneError && <p className="mt-1 text-xs text-red-400">✖ กรุณากรอกเบอร์โทร 10 หลัก</p>}
+                </div>
                 <div>
                   <label className="block text-sm mb-1">ประเภทผู้ใช้</label>
                   <select
@@ -230,7 +229,7 @@ const BoxedRegister = () => {
                   </div>
                 )}
 
-                <div>
+                {/* <div>
                   <label className="block text-sm mb-1">รหัสผ่าน</label>
                   <div className="relative">
                     <input
@@ -249,20 +248,20 @@ const BoxedRegister = () => {
                       {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                     </button>
                   </div>
-                </div>
+                </div> */}
 
                 <div className="flex gap-4 pt-2">
-                  <button
+                  {/* <button
                     type="button"
                     onClick={() => { setStep(1); setShowStep1Error(false); }}
                     className="w-1/2 bg-gray-600 text-white py-3 rounded-md font-semibold hover:bg-gray-700 transition"
                   >
                     ย้อนกลับ
-                  </button>
+                  </button> */}
                   <button
                     type="submit"
                     disabled={loading}
-                    className="w-1/2 bg-orange-500 text-white py-3 rounded-md font-semibold hover:bg-orange-600 disabled:bg-orange-300 shadow-lg"
+                    className="w-full bg-orange-500 text-white py-3 rounded-md font-semibold hover:bg-orange-600 disabled:bg-orange-300 shadow-lg"
                   >
                     {loading ? "กำลังโหลด..." : "สมัครสมาชิก"}
                   </button>

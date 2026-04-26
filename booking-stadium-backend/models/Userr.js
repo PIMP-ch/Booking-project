@@ -36,7 +36,7 @@ const Userr = sequelize.define("User", {
     },
     password: {
         type: DataTypes.STRING,
-        allowNull: false,
+        allowNull: true,
     },
     blockUntil: {
         type: DataTypes.DATE,
