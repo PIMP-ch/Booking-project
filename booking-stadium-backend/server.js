@@ -56,7 +56,7 @@ app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
 // ✅ เชื่อม DB
-connectDB();
+// connectDB();
 
 // ✅ ใช้งาน routes
 app.use("/api/auth", authRoutes);
