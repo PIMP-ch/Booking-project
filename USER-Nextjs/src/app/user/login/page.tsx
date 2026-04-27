@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { loginUser } from "@/utils/api";
 import { toast } from "react-toastify";
@@ -12,6 +12,7 @@ export default function LoginPage() {
   const router = useRouter();
   const { login } = useAuth();
   const [loading, setLoading] = useState(false);
+  const [clientId, setClientId] = useState("")
 
   // ✅ รับ email เป็น parameter แทน event
   const handleLogin = async (email: string, name: string, sub: string) => {
@@ -34,6 +35,10 @@ export default function LoginPage() {
     }
   };
 
+  useEffect(() => {
+    setClientId(process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID)
+  })
+
   return (
     <main className="relative min-h-screen w-full">
       <div className="absolute inset-0 w-full h-full bg-[url('/images/backgrounds/bg-football-stadium.png')] bg-no-repeat bg-cover bg-center" />
@@ -45,7 +50,7 @@ export default function LoginPage() {
             เข้าสู่ระบบ
           </h2>
 
-          <GoogleOAuthProvider clientId="{ใส่ client id}">
+          <GoogleOAuthProvider clientId={clientId}>
             <GoogleLogin
               onSuccess={(credentialResponse) => {
                 // ✅ decode อยู่ใน scope ที่ถูกต้อง + type กำหนดให้ชัด
@@ -61,6 +66,6 @@ export default function LoginPage() {
           </GoogleOAuthProvider>
         </div>
       </div>
-    </main>
+    </main >
   );
 }
