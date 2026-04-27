@@ -233,12 +233,21 @@ export const getStadiumById = async (stadiumId) => {
   try {
     if (!stadiumId) return null;
     const res = await axios.get(`${API_URL}/stadiums/${stadiumId}`);
-    console.log(res.data)
     return res.data;
   } catch (error) {
     throw error.response?.data || { message: "Failed to fetch stadium by id" };
   }
 };
+
+export const checkBuilding = async (data) => {
+  try {
+    const res = await axios.post(`${API_URL}/buildings/check-building`, data);
+    console.log(res.data)
+    return res.data;
+  } catch (error) {
+    throw error.response?.data || { message: "Failed" };
+  }
+}
 
 
 /* ===================== Bookings / Stats ===================== */

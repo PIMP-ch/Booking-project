@@ -18,6 +18,7 @@ const Booking = sequelize.define("Booking", {
         type: DataTypes.STRING,
         allowNull: true,
     },
+    buildingId: { type: DataTypes.INTEGER, allowNull: false },
 }, { timestamps: true });
 
 export default Booking;

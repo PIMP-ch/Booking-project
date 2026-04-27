@@ -2,7 +2,7 @@
 
 import { useState, useEffect, Suspense, useMemo, use } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { getAvailableDates, getStadiumBookings, getStadiumById } from "@/utils/api";
+import { checkBuilding, getAvailableDates, getStadiumBookings, getStadiumById } from "@/utils/api";
 import { toast } from "react-toastify";
 import {
   CircleChevronLeft,
@@ -268,7 +268,7 @@ const SelectDate = () => {
     }));
   };
 
-  const handleGoToEquipment = () => {
+  const handleGoToEquipment = async () => {
     if (!building) {
       toast.error("⛔ กรุณาเลือกอาคารที่ต้องการเข้าใช้งาน");
       return;
@@ -297,6 +297,29 @@ const SelectDate = () => {
         return;
       }
     }
+
+    const sid = stadiumId
+    const bd = building
+    const sdate = selectedDates
+    const edate = selectedEndDate
+
+    const checkData = {
+      stadiumId: sid,
+      buildingId: bd,
+      startDate: sdate,
+      endDate: edate,
+    }
+
+    const response = await checkBuilding(checkData);
+
+    // ถ้าผ่าน (status 200) ให้ไปต่อ
+    console.log('22222')
+    if (response && response.available === false) {
+      // เผื่อกรณี API return 200 แต่ available เป็น false
+      toast.error(response.message || "❌ อาคารนี้ถูกจองแล้ว");
+      return;
+    }
+
 
     const sportTypeId = searchParams?.get("sportTypeId");
     const end = selectedEndDate ?? selectedStartDate;

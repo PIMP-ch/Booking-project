@@ -176,6 +176,8 @@ export const bookStadium = async (req, res) => {
         );
       }
 
+      const bId = normalizedBuildingIds[0];
+
       // ================= CREATE BOOKING =================
       const booking = await Booking.create({
         userId,
@@ -188,6 +190,7 @@ export const bookStadium = async (req, res) => {
         endTime,
         status: "pending",
         filePath, // ✅ ไฟล์
+        buildingId: bId
       });
 
       await booking.addBuildings(normalizedBuildingIds);
