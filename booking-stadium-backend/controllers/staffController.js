@@ -1,23 +1,18 @@
 import Staff from "../models/Stafff.js";
+import ExecutiveHistory from "../models/ExecutiveHistory.js";
 
 // ✅ Login Staff (ไม่ใช้ bcrypt/jwt)
 export const loginStaff = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    // ค้นหา Staff จากอีเมล
-    // const staff = await Staff.findOne({ email });
-    const staff = await Staff.findOne({
-      where: { email }
-    });
+    const staff = await Staff.findOne({ where: { email } });
     if (!staff) return res.status(400).json({ message: "Invalid email or password" });
 
-    // ตรวจสอบรหัสผ่าน (เปรียบเทียบแบบตรง)
     if (password !== staff.password) {
       return res.status(400).json({ message: "Invalid email or password" });
     }
 
-    // ✅ Login สำเร็จ -> ส่งกลับ staff พร้อม avatarUrl
     return res.status(200).json({
       message: "Login successful",
       staff: {
@@ -36,22 +31,28 @@ export const loginStaff = async (req, res) => {
 // ✅ สร้างพนักงานใหม่
 export const createStaff = async (req, res) => {
   try {
-    const { fullname, email, role, password } = req.body;
+    const { fullname, email, role, password, startDate, endDate } = req.body;
 
-    // ตรวจสอบว่าอีเมลซ้ำหรือไม่
-    // const existingStaff = await Staff.findOne({ email });
-    const existingStaff = await Staff.findOne({
-      where: { email }
-    });
+    // ตรวจสอบอีเมลซ้ำ
+    const existingStaff = await Staff.findOne({ where: { email } });
     if (existingStaff) return res.status(400).json({ message: "Email already exists" });
 
-    // สร้างพนักงานใหม่
-    const newStaff = await Staff.create({
-      fullname,
-      email,
-      role,
-      password
-    });
+    // ตรวจสอบว่าถ้าเป็น superadmin ต้องมีวันที่
+    if (role === "superadmin" && !startDate) {
+      return res.status(400).json({ message: "กรุณาระบุวันที่เริ่มดำรงตำแหน่ง" });
+    }
+
+    // สร้างพนักงาน
+    const newStaff = await Staff.create({ fullname, email, role, password });
+
+    // ✅ ถ้าเป็น superadmin -> บันทึกประวัติผู้บริหารด้วย
+    if (role === "superadmin") {
+      await ExecutiveHistory.create({
+        staffId: newStaff.id,
+        startDate,
+        endDate: endDate || null,
+      });
+    }
 
     res.status(201).json({ message: "Staff created successfully", newStaff });
   } catch (error) {
@@ -64,13 +65,10 @@ export const deleteStaff = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const deletedStaff = await Staff.findByPk(id);
+    const staff = await Staff.findByPk(id);
+    if (!staff) return res.status(404).json({ message: "Staff not found" });
 
-    if (!deletedStaff) return res.status(404).json({ message: "Staff not found" });
-
-    if (deletedStaff) {
-      await deletedStaff.destroy();
-    }
+    await staff.destroy();
 
     res.status(200).json({ message: "Staff deleted successfully" });
   } catch (error) {
@@ -82,24 +80,40 @@ export const deleteStaff = async (req, res) => {
 export const updateStaff = async (req, res) => {
   try {
     const { id } = req.params;
-    const { fullname, email, role } = req.body;
+    const { fullname, email, role, startDate, endDate } = req.body;
 
-    // const updatedStaff = await Staff.findByIdAndUpdate(
-    //   id,
-    //   { fullname, email, role },
-    //   { new: true, runValidators: true }
-    // );
-    const updatedStaff = await Staff.findByPk(id);
+    const staff = await Staff.findByPk(id);
+    if (!staff) return res.status(404).json({ message: "Staff not found" });
 
-    if (!updatedStaff) return res.status(404).json({ message: "Staff not found" });
+    // ตรวจสอบว่าถ้าเปลี่ยนเป็น superadmin ต้องมีวันที่
+    if (role === "superadmin" && !startDate) {
+      return res.status(400).json({ message: "กรุณาระบุวันที่เริ่มดำรงตำแหน่ง" });
+    }
 
-    await updatedStaff.update({
-      fullname,
-      email,
-      role
-    });
+    // อัปเดตข้อมูล staff
+    await staff.update({ fullname, email, role });
 
-    res.status(200).json({ message: "Staff updated successfully", updatedStaff });
+    if (role === "superadmin") {
+      // ค้นหาประวัติล่าสุดของ staff คนนี้
+      const existingHistory = await ExecutiveHistory.findOne({
+        where: { staffId: id },
+        order: [["createdAt", "DESC"]], // เอาอันล่าสุด
+      });
+
+      if (existingHistory) {
+        // ✅ อัปเดตประวัติที่มีอยู่
+        await existingHistory.update({ startDate, endDate: endDate || null });
+      } else {
+        // ✅ ยังไม่มีประวัติ -> สร้างใหม่
+        await ExecutiveHistory.create({
+          staffId: id,
+          startDate,
+          endDate: endDate || null,
+        });
+      }
+    }
+
+    res.status(200).json({ message: "Staff updated successfully", staff });
   } catch (error) {
     res.status(500).json({ message: "Server error", error });
   }
@@ -108,7 +122,6 @@ export const updateStaff = async (req, res) => {
 // ✅ ดูข้อมูลพนักงานทั้งหมด
 export const getAllStaff = async (req, res) => {
   try {
-    // const staffList = await Staff.find();
     const staffList = await Staff.findAll();
     res.status(200).json(staffList);
   } catch (error) {
