@@ -12,6 +12,7 @@ import path from "path";
 import fs from "fs";
 import multer from "multer";
 import StadiumImage from "../models/StadiumImage.js";
+import { bookMonthlyStadium } from "../controllers/bookingController.js";
 
 const router = express.Router();
 
@@ -35,6 +36,7 @@ router.get("/:id", getStadiumById);
 router.post("/", createStadium);
 router.put("/:id", updateStadium);
 router.delete("/:id", deleteStadium);
+router.post('/lock-booking', bookMonthlyStadium)
 
 /** ---------- Upload Multiple Images ---------- */
 // แก้ไขให้ตรงกับ api.js ที่ส่งมาเป็น /stadiums/:id/images

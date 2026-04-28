@@ -261,6 +261,19 @@ export const getReturnedBookings = async () => {
   }
 };
 
+export const lockBooking = async (data) => {
+  try {
+    const response = await axios.post(
+      `${API_URL}/stadiums/lock-booking`,
+      data // ✅ ส่ง body ตรงนี้
+    );
+    return response.data;
+  } catch (error) {
+    console.error("Error lock booking:", error);
+    throw error;
+  }
+};
+
 // ==========================================
 // 6. STATISTICS & BUILDINGS
 // ==========================================

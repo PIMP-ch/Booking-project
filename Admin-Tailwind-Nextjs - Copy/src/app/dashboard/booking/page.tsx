@@ -5,6 +5,7 @@ import { Table, Button, Modal, Dropdown } from "flowbite-react";
 import { getAllBookings, confirmBooking, cancelBooking, resetBookingStatus } from "@/utils/api";
 import { Icon } from "@iconify/react";
 import { toast, ToastContainer } from "react-toastify";
+import MonthlyBookingModal from "./MonthlyBookingModal";
 import "react-toastify/dist/ReactToastify.css";
 
 interface Booking {
@@ -149,6 +150,12 @@ const BookingPage = () => {
                         {tab === "pending" ? "รอการยืนยัน" : tab === "confirmed" ? "ยืนยันแล้ว" : "ยกเลิกแล้ว"}
                     </button>
                 ))}
+            </div>
+
+            <div className="flex justify-between items-center mb-6">
+                <h1>ล็อควันตามตารางเรียน</h1>
+                <MonthlyBookingModal
+                />
             </div>
 
             {/* Booking Tables */}

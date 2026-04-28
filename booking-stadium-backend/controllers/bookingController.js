@@ -766,3 +766,97 @@ export const getDailyBookingStats = async (req, res) => {
     return res.status(500).json({ message: "Failed to fetch daily booking stats" });
   }
 };
+
+export const bookMonthlyStadium = async (req, res) => {
+  try {
+    const {
+      userId,
+      stadiumId,
+      buildingId,
+      startMonth,
+      startYear,
+      endMonth,
+      endYear,
+      dayOfWeek,
+    } = req.body;
+
+    const startTime = "08:00";
+    const endTime = "18:00";
+
+    if (!userId || !stadiumId || !buildingId) {
+      return res.status(400).json({ message: "ข้อมูลไม่ครบ" });
+    }
+
+    // 🔁 loop เดือน
+    const start = dayjs(`${startYear}-${startMonth + 1}-01`);
+    const end = dayjs(`${endYear}-${endMonth + 1}-01`).endOf("month");
+
+    let current = start.startOf("month");
+
+    const createdBookings = [];
+    const skippedDates = [];
+
+    while (current.isBefore(end) || current.isSame(end)) {
+
+      const daysInMonth = current.daysInMonth();
+
+      for (let d = 1; d <= daysInMonth; d++) {
+        const date = current.date(d);
+
+        // 🎯 เช็ค dayOfWeek
+        if (date.day() !== dayOfWeek) continue;
+
+        const newStart = toDateTime(date.toDate(), startTime);
+        const newEnd = toDateTime(date.toDate(), endTime);
+
+        // ❌ กันชน
+        const conflict = await Booking.findOne({
+          where: {
+            stadiumId,
+            status: { [Op.in]: ["pending", "confirmed"] },
+            startDate: { [Op.lt]: newEnd },
+            endDate: { [Op.gt]: newStart },
+          },
+        });
+
+        if (conflict) {
+          skippedDates.push(date.format("YYYY-MM-DD"));
+          continue;
+        }
+
+        // ✅ create ทีละ record
+        const booking = await Booking.create({
+          userId: 1,
+          stadiumId,
+          buildingId,
+          name: "ตารางเรียน",
+          activityName: "ตารางเรียน",
+          startDate: newStart,
+          endDate: newEnd,
+          startTime,
+          endTime,
+          status: "pending",
+        });
+
+        createdBookings.push(booking);
+      }
+
+      current = current.add(1, "month");
+    }
+
+    return res.status(201).json({
+      success: true,
+      message: "สร้าง booking รายเดือนสำเร็จ",
+      totalCreated: createdBookings.length,
+      skipped: skippedDates,
+      bookings: createdBookings,
+    });
+
+  } catch (error) {
+    console.error("monthly booking error:", error);
+    return res.status(500).json({
+      message: "server error",
+      error: error.message,
+    });
+  }
+};
