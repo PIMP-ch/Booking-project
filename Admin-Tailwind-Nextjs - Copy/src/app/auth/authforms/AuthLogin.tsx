@@ -19,23 +19,28 @@ const AuthLogin = () => {
     setError(null);
 
     try {
-      // เรียก API ล็อกอิน (ควรคืนค่า: { token, staff: { fullname, role, avatarUrl, ... } })
       const res = await loginUser(email, password);
 
-      // เก็บข้อมูลลง localStorage ให้ Header นำไปใช้แสดงรูป/ชื่อ
+      // ✅ รวมเป็น user object ตัวเดียว (สำคัญมาก)
       if (res?.staff) {
-        localStorage.setItem("staffName", res.staff.fullname || "");
-        localStorage.setItem("staffAvatar", res.staff.avatarUrl || "");
-        localStorage.setItem("staffRole", res.staff.role || "");
-      }
-      if (res?.token) {
-        localStorage.setItem("token", res.token);
+        const user = {
+          id: res.staff.id,
+          fullname: res.staff.fullname,
+          role: res.staff.role,
+          avatar: res.staff.avatarUrl || "",
+        };
+
+        // 👉 ใช้ sessionStorage (ตรงกับ Sidebar)
+        sessionStorage.setItem("user", JSON.stringify(user));
+
+        // (optional) เผื่อที่อื่นยังใช้ localStorage
+        localStorage.setItem("token", res.token || "");
       }
 
-      // หน่วงสั้น ๆ เพื่อให้ UX เห็น loading จากปุ่ม
       setTimeout(() => {
         router.push("/dashboard");
-      }, 1200);
+      }, 800);
+
     } catch (err: any) {
       console.error("❌ Login Failed:", err);
       setError(err?.message || "เกิดข้อผิดพลาดขณะเข้าสู่ระบบ");
@@ -53,7 +58,6 @@ const AuthLogin = () => {
           id="email"
           type="email"
           sizing="md"
-          className="form-control"
           placeholder="กรอก email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
@@ -69,7 +73,6 @@ const AuthLogin = () => {
           id="password"
           type="password"
           sizing="md"
-          className="form-control"
           placeholder="กรอกรหัสผ่าน"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
@@ -79,10 +82,10 @@ const AuthLogin = () => {
 
       {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
 
-      <Button type="submit" color="primary" className="w-full font-kanit" disabled={loading}>
+      <Button type="submit" color="blue" className="w-full" disabled={loading}>
         {loading ? (
           <div className="flex items-center justify-center gap-2">
-            <Spinner size="sm" color="white" />
+            <Spinner size="sm" />
             กำลังเข้าสู่ระบบ...
           </div>
         ) : (
