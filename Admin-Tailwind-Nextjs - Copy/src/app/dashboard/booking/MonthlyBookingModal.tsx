@@ -135,8 +135,6 @@ const MonthlyBookingModal: React.FC<MonthlyBookingModalProps> = ({ onSubmit }) =
 
             const res = await lockBooking(payload);
 
-            console.log("✅ result:", res);
-
             alert(`จองสำเร็จ ${res.totalCreated} รายการ`);
 
             setIsOpen(false);
