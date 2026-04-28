@@ -1,6 +1,5 @@
 // import { v4 as uuidv4 } from "uuid";
 import nodemailer from "nodemailer";
-import User from "../models/User.js";
 import { message } from "hawk/lib/client.js";
 import { Op } from "sequelize";
 import Userr from "../models/Userr.js";

@@ -10,7 +10,7 @@ const Stadium = sequelize.define("Stadium", {
         allowNull: false,
         defaultValue: "active",
     },
-    sportTypeId: { type: DataTypes.INTEGER, allowNull: true },
+    sportType: { type: DataTypes.INTEGER, allowNull: true },
 }, {
     tableName: "stadium",
     timestamps: true,
