@@ -67,11 +67,18 @@ router.post("/:id/images", upload.array("images", 10), async (req, res) => {
 });
 
 /** ---------- Delete Stadium Image by Index ---------- */
-router.delete("/:id/images/:imageId", async (req, res) => {
+router.delete("/:id/images/0", async (req, res) => {
   try {
-    const { imageId } = req.params;
+    const { id } = req.params; // stadiumId
 
-    const image = await StadiumImage.findByPk(imageId);
+    console.log(id)
+
+    // หา "รูปสุดท้าย" ของ stadium นี้
+    const image = await StadiumImage.findOne({
+      where: { stadiumId: id },
+      order: [["id", "ASC"]], // หรือใช้ createdAt ก็ได้
+    });
+
     if (!image) {
       return res.status(404).json({ message: "ไม่พบรูปภาพ" });
     }
@@ -84,7 +91,11 @@ router.delete("/:id/images/:imageId", async (req, res) => {
 
     await image.destroy();
 
-    res.json({ message: "ลบรูปสำเร็จ" });
+    res.json({
+      message: "ลบรูปสุดท้ายสำเร็จ",
+      deletedImage: image,
+    });
+
   } catch (err) {
     console.error("Delete Error:", err);
     res.status(500).json({ message: "Server Error", error: err.message });
