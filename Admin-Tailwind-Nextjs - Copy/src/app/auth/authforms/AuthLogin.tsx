@@ -32,6 +32,9 @@ const AuthLogin = () => {
 
         // 👉 ใช้ sessionStorage (ตรงกับ Sidebar)
         sessionStorage.setItem("user", JSON.stringify(user));
+        localStorage.setItem("staffName", res.staff.fullname || "");
+        localStorage.setItem("staffAvatar", res.staff.avatarUrl || "");
+
 
         // (optional) เผื่อที่อื่นยังใช้ localStorage
         localStorage.setItem("token", res.token || "");
