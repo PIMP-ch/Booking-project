@@ -8,12 +8,13 @@ import {
     updateStadium,
     deleteStadium,
     getBuildings,
-    uploadStadiumImages, // เปลี่ยนให้ตรงกับ api.js (เดิมคือ uploadStadiumImage)
+    uploadStadiumImages,
     deleteStadiumImage,
     getSportTypes,
 } from "@/utils/api";
 import { Icon } from "@iconify/react";
-import { toast } from "react-toastify";
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:5008";
 
@@ -24,8 +25,8 @@ interface Stadium {
     contactStadium: string;
     statusStadium: string;
     imageUrl: string[];
-    buildingIds?: string[];
-    sportTypeId?: string;
+    buildingIds?: (string | number)[];
+    sportType?: number | string;
 }
 
 const INITIAL_FORM = {
@@ -34,12 +35,10 @@ const INITIAL_FORM = {
     contactStadium: "",
     statusStadium: "active",
     buildingIds: [] as string[],
-    sportTypeId: ""
-
+    sportTypeId: "",
 };
 
 const StadiumPage = () => {
-    // --- States ---
     const [stadiumList, setStadiumList] = useState<Stadium[]>([]);
     const [buildings, setBuildings] = useState<{ id: string; name: string }[]>([]);
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -56,24 +55,17 @@ const StadiumPage = () => {
     const [externalImageUrls, setExternalImageUrls] = useState<string[]>([]);
     const [sportTypes, setSportTypes] = useState<{ id: string; name: string }[]>([]);
 
-
-    // --- Actions ---
     const fetchData = useCallback(async () => {
         try {
             const [stadiumData, buildingData, sportTypeData] = await Promise.all([
                 getAllStadiums(),
                 getBuildings(),
-                getSportTypes()
+                getSportTypes(),
             ]);
-
             setStadiumList(stadiumData);
             setBuildings(buildingData);
-
-            const filtered = sportTypeData.filter(
-                (item) => item.name !== "อุปกรณ์ตัดสิน"
-            );
+            const filtered = sportTypeData.filter((item) => item.name !== "อุปกรณ์ตัดสิน");
             setSportTypes(filtered);
-
         } catch (err) {
             toast.error("โหลดข้อมูลไม่สำเร็จ");
         }
@@ -83,10 +75,6 @@ const StadiumPage = () => {
         fetchData();
     }, [fetchData]);
 
-    useEffect(() => {
-        console.log("Sport Types:", sportTypes);
-    }, [sportTypes]);
-
     const openModal = (stadium: Stadium | null = null) => {
         setCurrentStadium(stadium);
         if (stadium) {
@@ -95,10 +83,9 @@ const StadiumPage = () => {
                 descriptionStadium: stadium.descriptionStadium,
                 contactStadium: stadium.contactStadium,
                 statusStadium: stadium.statusStadium,
-                buildingIds: stadium.buildingIds || [],
-                sportTypeId: stadium.sportTypeId || ""
+                buildingIds: (stadium.buildingIds || []).map(String),
+                sportTypeId: stadium.sportType ? String(stadium.sportType) : "",
             });
-            // แสดง Preview ถ้ารูปภาพมีอยู่
             setImagePreview(stadium.imageUrl?.[0] ? `${API_BASE}${stadium.imageUrl[0]}` : "");
         } else {
             setForm(INITIAL_FORM);
@@ -116,17 +103,13 @@ const StadiumPage = () => {
         setImageFiles([]);
     };
 
-    // ฟังก์ชันลบรูปภาพ (ปรับปรุงให้ใช้ได้ทั้งหน้าตารางและใน Modal แก้ไข)
     const handleDeleteImage = async (id: string, isFromModal: boolean = false) => {
         if (!window.confirm("คุณต้องการลบรูปภาพนี้ออกจากระบบใช่หรือไม่?")) return;
         try {
-            await deleteStadiumImage(id, 0); // ส่ง index 0 เพื่อลบรูปแรก
+            await deleteStadiumImage(id, 0);
             toast.success("ลบรูปภาพสำเร็จ");
-
-            if (isFromModal) {
-                setImagePreview(""); // ลบ Preview ในหน้าแก้ไขทันที
-            }
-            fetchData(); // รีเฟรชข้อมูลในตาราง
+            if (isFromModal) setImagePreview("");
+            fetchData();
         } catch (err: any) {
             toast.error(err.message || "ไม่สามารถลบรูปภาพได้");
         }
@@ -148,38 +131,23 @@ const StadiumPage = () => {
             toast.warn("กรุณากรอกชื่อสนามกีฬา");
             return;
         }
-
         if (!form.sportTypeId) {
             toast.warn("กรุณาเลือกประเภทกีฬา");
             return;
         }
-
         try {
-
             setIsSaving(true);
             let stadiumId = currentStadium?.id;
-
             if (currentStadium) {
                 await updateStadium(currentStadium.id, form);
             } else {
                 const res = await createStadium(form);
                 stadiumId = res.stadium.id;
             }
-
-
-            // ถ้ามีการเลือกไฟล์ใหม่ ให้ทำการอัปโหลด
-            if (stadiumId &&
-                (imageFiles.length > 0 || externalImageUrls.length > 0)
-            ) {
-                await uploadStadiumImages(
-                    stadiumId,
-                    imageFiles,
-                    externalImageUrls
-                );
+            if (stadiumId && (imageFiles.length > 0 || externalImageUrls.length > 0)) {
+                await uploadStadiumImages(stadiumId, imageFiles, externalImageUrls);
             }
-
             toast.success("บันทึกข้อมูลเรียบร้อย");
-            fetchData();
             fetchData();
             closeModal();
         } catch (err) {
@@ -191,6 +159,8 @@ const StadiumPage = () => {
 
     return (
         <div className="p-6 font-kanit bg-gray-50 min-h-screen">
+            <ToastContainer position="top-right" autoClose={3000} hideProgressBar={false} newestOnTop={false} closeOnClick pauseOnHover draggable />
+
             {/* Header */}
             <div className="flex justify-between items-center mb-6">
                 <h2 className="text-2xl font-bold text-gray-800">จัดการสนามกีฬา</h2>
@@ -251,7 +221,7 @@ const StadiumPage = () => {
                                 <Table.Cell>{stadium.contactStadium}</Table.Cell>
                                 <Table.Cell>
                                     <span className={`px-4 py-1 rounded-full text-[12px] text-white font-medium ${stadium.statusStadium === "active" ? "bg-[#10b981]" :
-                                        stadium.statusStadium === "IsBooking" ? "bg-[#d97706]" : "bg-red-500"
+                                            stadium.statusStadium === "IsBooking" ? "bg-[#d97706]" : "bg-red-500"
                                         }`}>
                                         {stadium.statusStadium === "active" ? "เปิดใช้งาน" :
                                             stadium.statusStadium === "IsBooking" ? "กำลังใช้งาน" : "ปิดใช้งาน"}
@@ -263,9 +233,7 @@ const StadiumPage = () => {
                                             <Icon icon="lucide:more-vertical" className="text-gray-400" />
                                         </div>
                                     )} inline>
-                                        <Dropdown.Item onClick={() => {
-                                            openModal(stadium)
-                                        }}>แก้ไข</Dropdown.Item>
+                                        <Dropdown.Item onClick={() => openModal(stadium)}>แก้ไข</Dropdown.Item>
                                         <Dropdown.Item onClick={() => setConfirmModal({ isOpen: true, id: stadium.id })} className="text-red-600">ลบ</Dropdown.Item>
                                     </Dropdown>
                                 </Table.Cell>
@@ -298,21 +266,21 @@ const StadiumPage = () => {
                             placeholder="เบอร์ติดต่อ"
                         />
 
+                        {/* ประเภทกีฬา — แก้ไขได้ทั้ง 2 โหมด */}
                         <div>
                             <Label className="text-xs text-gray-500">ประเภทกีฬา</Label>
                             <select
                                 value={form.sportTypeId}
                                 onChange={(e) => setForm({ ...form, sportTypeId: e.target.value })}
-                                className="w-full rounded-xl border-gray-200 text-sm h-11 focus:ring-blue-500"
+                                className="w-full rounded-xl border border-gray-200 text-sm h-11 px-3 focus:ring-blue-500 bg-white"
                             >
-                                <option value=""></option>
+                                <option value="">-- เลือกประเภทกีฬา --</option>
                                 {sportTypes.map((type) => (
-                                    <option key={type.id} value={type.id}>
+                                    <option key={type.id} value={String(type.id)}>
                                         {type.name}
                                     </option>
                                 ))}
                             </select>
-
                         </div>
 
                         <div className="space-y-2">
@@ -322,11 +290,11 @@ const StadiumPage = () => {
                                     <label key={b.id} className="flex items-center gap-2 cursor-pointer">
                                         <input
                                             type="checkbox"
-                                            checked={form.buildingIds.includes(b.id)}
+                                            checked={form.buildingIds.includes(String(b.id))}
                                             onChange={(e) => {
                                                 const next = e.target.checked
-                                                    ? [...form.buildingIds, b.id]
-                                                    : form.buildingIds.filter((id) => id !== b.id);
+                                                    ? [...form.buildingIds, String(b.id)]
+                                                    : form.buildingIds.filter((id) => id !== String(b.id));
                                                 setForm({ ...form, buildingIds: next });
                                             }}
                                             className="rounded text-blue-600 focus:ring-blue-500"
@@ -346,25 +314,25 @@ const StadiumPage = () => {
                                 <div className="flex flex-col gap-1">
                                     <label className="bg-[#1e293b] text-white text-[11px] px-4 py-1.5 rounded-md cursor-pointer hover:bg-slate-700 font-medium">
                                         Choose File
-                                        <input type="file" className="hidden" onChange={(e) => {
-                                            const file = e.target.files?.[0];
-                                            if (file) {
-                                                setImageFiles([file]);
-                                                setImagePreview(URL.createObjectURL(file));
-                                            }
-                                        }} />
+                                        <input
+                                            type="file"
+                                            className="hidden"
+                                            onChange={(e) => {
+                                                const file = e.target.files?.[0];
+                                                if (file) {
+                                                    setImageFiles([file]);
+                                                    setImagePreview(URL.createObjectURL(file));
+                                                }
+                                            }}
+                                        />
                                     </label>
-
-                                    {/* ปรับปรุง Logic ปุ่มลบรูปใน Modal */}
                                     {imagePreview && (
                                         <button
                                             type="button"
                                             onClick={() => {
                                                 if (currentStadium && currentStadium.imageUrl?.length > 0 && imagePreview.includes(API_BASE)) {
-                                                    // ลบจาก Database จริง
                                                     handleDeleteImage(currentStadium.id, true);
                                                 } else {
-                                                    // แค่ล้างรูปที่เพิ่งเลือกมา (ยังไม่บันทึก)
                                                     setImagePreview("");
                                                     setImageFiles([]);
                                                 }
@@ -382,7 +350,7 @@ const StadiumPage = () => {
                             <select
                                 value={form.statusStadium}
                                 onChange={(e) => setForm({ ...form, statusStadium: e.target.value })}
-                                className="w-full rounded-xl border-gray-200 text-sm h-11 focus:ring-blue-500"
+                                className="w-full rounded-xl border border-gray-200 text-sm h-11 px-3 focus:ring-blue-500 bg-white"
                             >
                                 <option value="active">เปิดใช้งาน</option>
                                 <option value="inactive">ปิดปรับปรุง</option>
@@ -407,19 +375,27 @@ const StadiumPage = () => {
                     <Icon icon="solar:danger-triangle-bold" className="mx-auto text-red-500 text-5xl mb-4" />
                     <h3 className="text-lg font-bold mb-6">ยืนยันการลบสนามกีฬา?</h3>
                     <div className="flex gap-3">
-                        <Button color="failure" onClick={async () => {
-                            if (confirmModal.id) {
-                                try {
-                                    await deleteStadium(confirmModal.id);
-                                    toast.success("ลบข้อมูลสำเร็จ");
-                                    fetchData();
-                                } catch (err) {
-                                    toast.error("ไม่สามารถลบได้เนื่องจากสนามถูกใช้งานอยู่");
+                        <Button
+                            color="failure"
+                            onClick={async () => {
+                                if (confirmModal.id) {
+                                    try {
+                                        await deleteStadium(confirmModal.id);
+                                        toast.success("ลบข้อมูลสำเร็จ");
+                                        fetchData();
+                                    } catch (err) {
+                                        toast.error("ไม่สามารถลบได้เนื่องจากสนามถูกใช้งานอยู่");
+                                    }
                                 }
-                            }
-                            setConfirmModal({ isOpen: false, id: null });
-                        }} className="flex-1 rounded-xl">ลบ</Button>
-                        <Button color="gray" onClick={() => setConfirmModal({ isOpen: false, id: null })} className="flex-1 rounded-xl">ยกเลิก</Button>
+                                setConfirmModal({ isOpen: false, id: null });
+                            }}
+                            className="flex-1 rounded-xl"
+                        >
+                            ลบ
+                        </Button>
+                        <Button color="gray" onClick={() => setConfirmModal({ isOpen: false, id: null })} className="flex-1 rounded-xl">
+                            ยกเลิก
+                        </Button>
                     </div>
                 </Modal.Body>
             </Modal>
