@@ -67,23 +67,39 @@ const Booking = () => {
 
   const handleComingSoon = () => toast.info("🚀 ฟังก์ชันนี้กำลังอัปเดต");
 
-  const handleSelectStadium = (
-    stadiumId: string,
-    stadiumName: string,
-    stadiumImage: string,
-    sportTypeId: string
-  ) => {
-    if (!userId) {
-      toast.error("⛔ กรุณาเข้าสู่ระบบก่อนจองสนาม");
-      return;
-    }
+  // const handleSelectStadium = (
+  //   stadiumId: string,
+  //   stadiumName: string,
+  //   stadiumImage: string,
+  //   sportTypeId: string
+  // ) => {
+  //   if (!userId) {
+  //     toast.error("⛔ กรุณาเข้าสู่ระบบก่อนจองสนาม");
+  //     return;
+  //   }
 
-    router.push(
-      `/booking/selectDate?stadiumId=${stadiumId}&stadiumName=${encodeURIComponent(
-        stadiumName
-      )}&stadiumImage=${encodeURIComponent(stadiumImage)}&userId=${userId}&sportTypeId=${sportTypeId}`
-    );
-  };
+  //   router.push(
+  //     `/booking/selectDate?stadiumId=${stadiumId}&stadiumName=${encodeURIComponent(
+  //       stadiumName
+  //     )}&stadiumImage=${encodeURIComponent(stadiumImage)}&userId=${userId}&sportTypeId=${sportTypeId}`
+  //   );
+  // };
+
+const handleSelectStadium = (
+  stadiumId: string,
+  stadiumName: string,
+  stadiumImage: string,
+  stadiumImages: string[],  // เพิ่ม
+  sportTypeId: string
+) => {
+  router.push(
+    `/booking/selectDate?stadiumId=${stadiumId}&stadiumName=${encodeURIComponent(
+      stadiumName
+    )}&stadiumImage=${encodeURIComponent(stadiumImage)}&stadiumImages=${encodeURIComponent(
+      JSON.stringify(stadiumImages)  // ส่งเป็น JSON string
+    )}&userId=${userId}&sportTypeId=${sportTypeId}`
+  );
+};
 
   const menuItems = [
     {
@@ -159,9 +175,12 @@ const Booking = () => {
 
                     <button
                       className="w-full bg-orange-500 text-white py-2 rounded-md text-sm font-semibold hover:bg-orange-600 transition active:scale-95"
+                      // onClick={() =>
+                      //   handleSelectStadium(stadium.id, stadium.nameStadium, imgSrc, stadium.sportTypeId)
+                      // }
                       onClick={() =>
-                        handleSelectStadium(stadium.id, stadium.nameStadium, imgSrc, stadium.sportTypeId)
-                      }
+  handleSelectStadium(stadium.id, stadium.nameStadium, imgSrc, imagesArr, stadium.sportTypeId)
+}
                     >
                       จองสนามนี้
                     </button>
