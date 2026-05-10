@@ -120,10 +120,5 @@ const filterMenu = (menu: MenuItem[], role: string): MenuItem[] => {
     .filter((section) => section.children && section.children.length > 0);
 };
 
-// ─── Export ใช้งานได้เลย ───────────────
-const SidebarContent: MenuItem[] = filterMenu(
-  RAW_SIDEBAR,
-  getUserRole()
-);
-
-export default SidebarContent;
+export const getSidebarContent = (): MenuItem[] =>
+  filterMenu(RAW_SIDEBAR, getUserRole());
