@@ -30,13 +30,18 @@ export const createStadium = async (req, res) => {
   try {
     const payload = { ...req.body };
 
+    // ✅ map sportTypeId → sportType
+    if (payload.sportTypeId !== undefined) {
+      payload.sportType = payload.sportTypeId ? Number(payload.sportTypeId) : null;
+      delete payload.sportTypeId;
+    }
+
     if (payload.buildingIds && !Array.isArray(payload.buildingIds)) {
       payload.buildingIds = [payload.buildingIds];
     }
 
     const newStadium = await Stadium.create(payload);
 
-    // ✅ บันทึกรูปลงตาราง stadium_images
     const imagePaths = req.files?.map((file) => `/uploads/stadiums/${file.filename}`) || [];
     if (imagePaths.length > 0) {
       await StadiumImage.bulkCreate(
@@ -44,17 +49,16 @@ export const createStadium = async (req, res) => {
       );
     }
 
-    // ✅ สร้าง BuildingRelation
     const allBuilding = await Building.findAll({ attributes: ["id"] });
     const allBuildingIds = allBuilding.map((item) => item.id);
-    const newBuildingIds = (payload.buildingIds || []).map(Number); // normalize type
+    const newBuildingIds = (payload.buildingIds || []).map(Number);
 
     await Promise.all(
       allBuildingIds.map((buildingId) =>
         BuildingRelation.create({
           stadiumId: newStadium.id,
           buildingId,
-          active: newBuildingIds.includes(Number(buildingId)), // ✅ boolean ตรงกับ model
+          active: newBuildingIds.includes(Number(buildingId)),
         })
       )
     );
@@ -165,6 +169,12 @@ export const updateStadium = async (req, res) => {
     if (!stadium) return res.status(404).json({ message: "ไม่พบข้อมูลสนาม" });
 
     const payload = { ...req.body };
+
+    // ✅ map sportTypeId → sportType
+    if (payload.sportTypeId !== undefined) {
+      payload.sportType = payload.sportTypeId ? Number(payload.sportTypeId) : null;
+      delete payload.sportTypeId;
+    }
 
     if (payload.buildingIds) {
       payload.buildingIds = Array.isArray(payload.buildingIds)

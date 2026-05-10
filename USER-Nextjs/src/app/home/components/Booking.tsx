@@ -109,6 +109,10 @@ const handleSelectStadium = (
     },
   ];
 
+  useEffect(() => {
+  console.log(stadiums)  // มีอยู่แล้ว แต่ให้ดู field ชื่ออะไร
+}, [stadiums])
+
   return (
     <div className="p-1 pt-20 font-kanit mb-20 max-w-[670px] mx-auto">
       {/* เมนูตัวเลือก */}
@@ -176,10 +180,10 @@ const handleSelectStadium = (
                     <button
                       className="w-full bg-orange-500 text-white py-2 rounded-md text-sm font-semibold hover:bg-orange-600 transition active:scale-95"
                       // onClick={() =>
-                      //   handleSelectStadium(stadium.id, stadium.nameStadium, imgSrc, stadium.sportTypeId)
+                      //   handleSelectStadium(stadium.id, stadium.nameStadium, imgSrc, stadium.sportType)
                       // }
                       onClick={() =>
-  handleSelectStadium(stadium.id, stadium.nameStadium, imgSrc, imagesArr, stadium.sportTypeId)
+  handleSelectStadium(stadium.id, stadium.nameStadium, imgSrc, imagesArr, stadium.sportType)
 }
                     >
                       จองสนามนี้
