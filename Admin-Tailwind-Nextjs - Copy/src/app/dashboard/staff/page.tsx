@@ -7,6 +7,13 @@ import { Icon } from "@iconify/react";
 import { getAllStaff, deleteStaff, createStaff, updateStaff } from "@/utils/api";
 import UploadAvatar from "@/app/components/dashboard/UploadAvatar";
 
+interface ExecutiveHistory {
+  id: string;
+  staffId: string;
+  startDate: string;
+  endDate?: string;
+}
+
 interface Staff {
   id: string;
   fullname: string;
@@ -14,8 +21,7 @@ interface Staff {
   role: string;
   password?: string;
   avatarUrl?: string;
-  startDate?: string;  // ✅ เพิ่มวันที่เริ่มต้น
-  endDate?: string;    // ✅ เพิ่มวันที่สิ้นสุด
+  executiveHistories?: ExecutiveHistory[]; // ✅ เพิ่ม
 }
 
 const StaffPage = () => {
@@ -28,8 +34,8 @@ const StaffPage = () => {
     email: "",
     role: "",
     password: "",
-    startDate: "",  // ✅ เพิ่ม
-    endDate: "",    // ✅ เพิ่ม
+    startDate: "",
+    endDate: "",
   });
 
   const [confirmModal, setConfirmModal] = useState<{ isOpen: boolean; id: string | null }>({
@@ -76,18 +82,30 @@ const StaffPage = () => {
 
   const openModal = (staff: Staff | null = null) => {
     setCurrentStaff(staff);
-    setForm(
-      staff
-        ? {
-          fullname: staff.fullname,
-          email: staff.email,
-          role: staff.role,
-          password: "",
-          startDate: staff.startDate || "",  // ✅ โหลดค่าเดิม
-          endDate: staff.endDate || "",      // ✅ โหลดค่าเดิม
-        }
-        : { fullname: "", email: "", role: "staff", password: "", startDate: "", endDate: "" }
-    );
+
+    if (staff) {
+      // ✅ ดึง startDate/endDate จาก executiveHistories อันล่าสุด (ถ้ามี)
+      const latestHistory = staff.executiveHistories?.[0];
+
+      setForm({
+        fullname: staff.fullname,
+        email: staff.email,
+        role: staff.role,
+        password: "",
+        startDate: latestHistory?.startDate || "",
+        endDate: latestHistory?.endDate || "",
+      });
+    } else {
+      setForm({
+        fullname: "",
+        email: "",
+        role: "staff",
+        password: "",
+        startDate: "",
+        endDate: "",
+      });
+    }
+
     setIsModalOpen(true);
   };
 
@@ -168,10 +186,10 @@ const StaffPage = () => {
         <Modal.Header>ยืนยันการลบ</Modal.Header>
         <Modal.Body>คุณต้องการลบพนักงานนี้จริงหรือไม่?</Modal.Body>
         <Modal.Footer>
-          <Button color="failure" onClick={handleDeleteConfirmed} className="bg-blue-500 hover:bg-blue-700 text-white">
+          <Button color="failure" onClick={handleDeleteConfirmed}>
             ลบ
           </Button>
-          <Button onClick={closeConfirmModal} className="bg-gray-200 hover:bg-gray-300 text-black">
+          <Button color="gray" onClick={closeConfirmModal}>
             ยกเลิก
           </Button>
         </Modal.Footer>
@@ -181,22 +199,19 @@ const StaffPage = () => {
       <Modal className="font-kanit" show={isModalOpen} onClose={closeModal}>
         <Modal.Header>{currentStaff ? "แก้ไขพนักงาน" : "สร้างพนักงานใหม่"}</Modal.Header>
         <Modal.Body>
-          <form>
-            <div className="mb-4">
-              <TextInput
-                placeholder="ชื่อเต็ม"
-                value={form.fullname}
-                onChange={(e) => setForm({ ...form, fullname: e.target.value })}
-              />
-            </div>
-            <div className="mb-4">
-              <TextInput
-                placeholder="อีเมล"
-                value={form.email}
-                onChange={(e) => setForm({ ...form, email: e.target.value })}
-              />
-            </div>
-            <div className="mb-4">
+          <div className="flex flex-col gap-4">
+            <TextInput
+              placeholder="ชื่อเต็ม"
+              value={form.fullname}
+              onChange={(e) => setForm({ ...form, fullname: e.target.value })}
+            />
+            <TextInput
+              placeholder="อีเมล"
+              value={form.email}
+              onChange={(e) => setForm({ ...form, email: e.target.value })}
+            />
+
+            <div>
               <label className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">
                 บทบาท
               </label>
@@ -206,7 +221,6 @@ const StaffPage = () => {
                   setForm({
                     ...form,
                     role: e.target.value,
-                    // ✅ เคลียร์วันที่เมื่อเปลี่ยน role ออกจาก superadmin
                     startDate: e.target.value !== "superadmin" ? "" : form.startDate,
                     endDate: e.target.value !== "superadmin" ? "" : form.endDate,
                   })
@@ -219,9 +233,9 @@ const StaffPage = () => {
               </select>
             </div>
 
-            {/* ✅ แสดงช่องวันที่เฉพาะเมื่อเลือก superadmin */}
+            {/* ✅ แสดงช่องวันที่เฉพาะ superadmin */}
             {form.role === "superadmin" && (
-              <div className="mb-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+              <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
                 <p className="text-sm font-medium text-blue-700 dark:text-blue-300 mb-3">
                   ระยะเวลาดำรงตำแหน่ง SuperAdmin
                 </p>
@@ -243,7 +257,7 @@ const StaffPage = () => {
                     <TextInput
                       type="date"
                       value={form.endDate}
-                      min={form.startDate} // ✅ ป้องกันเลือกวันสิ้นสุดก่อนวันเริ่มต้น
+                      min={form.startDate}
                       onChange={(e) => setForm({ ...form, endDate: e.target.value })}
                     />
                   </div>
@@ -252,29 +266,21 @@ const StaffPage = () => {
             )}
 
             {!currentStaff && (
-              <div className="mb-4">
-                <TextInput
-                  placeholder="รหัสผ่าน"
-                  value={form.password}
-                  onChange={(e) => setForm({ ...form, password: e.target.value })}
-                />
-              </div>
+              <TextInput
+                placeholder="รหัสผ่าน"
+                type="password"
+                value={form.password}
+                onChange={(e) => setForm({ ...form, password: e.target.value })}
+              />
             )}
-          </form>
+          </div>
         </Modal.Body>
 
         <Modal.Footer>
-          <Button
-            onClick={handleSave}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg"
-          >
+          <Button onClick={handleSave} className="bg-blue-600 hover:bg-blue-700 text-white">
             {currentStaff ? "บันทึกการแก้ไข" : "เพิ่มพนักงาน"}
           </Button>
-          <Button
-            color="failure"
-            onClick={closeModal}
-            className="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg"
-          >
+          <Button color="failure" onClick={closeModal}>
             ยกเลิก
           </Button>
         </Modal.Footer>

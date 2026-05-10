@@ -8,7 +8,7 @@ export const loginStaff = async (req, res) => {
 
     const staff = await Staff.findOne({ where: { email } });
     if (!staff) return res.status(400).json({ message: "Invalid email or password" });
-
+เ
     if (password !== staff.password) {
       return res.status(400).json({ message: "Invalid email or password" });
     }
@@ -122,7 +122,16 @@ export const updateStaff = async (req, res) => {
 // ✅ ดูข้อมูลพนักงานทั้งหมด
 export const getAllStaff = async (req, res) => {
   try {
-    const staffList = await Staff.findAll();
+    const staffList = await Staff.findAll({
+      include: [
+        {
+          model: ExecutiveHistory,
+          as: "executiveHistories",
+          order: [["createdAt", "DESC"]],
+          limit: 1, // เอาแค่อันล่าสุด
+        },
+      ],
+    });
     res.status(200).json(staffList);
   } catch (error) {
     res.status(500).json({ message: "Server error", error });
