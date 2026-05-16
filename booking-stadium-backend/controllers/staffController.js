@@ -31,28 +31,14 @@ export const loginStaff = async (req, res) => {
 // ✅ สร้างพนักงานใหม่
 export const createStaff = async (req, res) => {
   try {
-    const { fullname, email, role, password, startDate, endDate } = req.body;
+    const { fullname, email, role, password } = req.body; // ตัด startDate, endDate ออก
 
-    // ตรวจสอบอีเมลซ้ำ
     const existingStaff = await Staff.findOne({ where: { email } });
     if (existingStaff) return res.status(400).json({ message: "Email already exists" });
 
-    // ตรวจสอบว่าถ้าเป็น superadmin ต้องมีวันที่
-    if (role === "superadmin" && !startDate) {
-      return res.status(400).json({ message: "กรุณาระบุวันที่เริ่มดำรงตำแหน่ง" });
-    }
-
-    // สร้างพนักงาน
     const newStaff = await Staff.create({ fullname, email, role, password });
 
-    // ✅ ถ้าเป็น superadmin -> บันทึกประวัติผู้บริหารด้วย
-    if (role === "superadmin") {
-      await ExecutiveHistory.create({
-        staffId: newStaff.id,
-        startDate,
-        endDate: endDate || null,
-      });
-    }
+    // ลบ block ที่สร้าง ExecutiveHistory ออกทั้งหมด
 
     res.status(201).json({ message: "Staff created successfully", newStaff });
   } catch (error) {

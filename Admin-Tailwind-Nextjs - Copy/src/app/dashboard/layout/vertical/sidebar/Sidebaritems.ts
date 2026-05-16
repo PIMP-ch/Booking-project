@@ -11,7 +11,7 @@ export interface ChildItem {
   item?: any;
   url?: any;
   color?: string;
-  roles?: string[]; // ✅ เพิ่ม
+  roles?: string[];
 }
 
 export interface MenuItem {
@@ -23,7 +23,7 @@ export interface MenuItem {
   items?: MenuItem[];
   children?: ChildItem[];
   url?: any;
-  roles?: string[]; // ✅ เพิ่ม
+  roles?: string[];
 }
 
 // ─── Raw Menu ──────────────────────────
@@ -84,6 +84,14 @@ const RAW_SIDEBAR: MenuItem[] = [
         id: uniqueId(),
         url: "/dashboard/staff",
         roles: ["admin"],
+      },
+      // ✅ เพิ่มเมนูผู้บริหาร
+      {
+        name: "ผู้บริหาร",
+        icon: "solar:user-id-bold-duotone",
+        id: uniqueId(),
+        url: "/dashboard/executive",
+        roles: ["superadmin", "admin"],
       },
       {
         name: "ผู้ใช้งาน",

@@ -23,7 +23,8 @@
     "react-hot-toast": "^2.6.0",
     "react-toastify": "^11.0.5",
     "sharp": "0.32.6",
-    "simplebar-react": "3.2.5"
+    "simplebar-react": "3.2.5",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@types/node": "20",

@@ -21,7 +21,7 @@ interface Staff {
   role: string;
   password?: string;
   avatarUrl?: string;
-  executiveHistories?: ExecutiveHistory[]; // ✅ เพิ่ม
+  executiveHistories?: ExecutiveHistory[];
 }
 
 const StaffPage = () => {
@@ -32,16 +32,17 @@ const StaffPage = () => {
   const [form, setForm] = useState({
     fullname: "",
     email: "",
-    role: "",
+    role: "staff",
     password: "",
-    startDate: "",
-    endDate: "",
   });
 
   const [confirmModal, setConfirmModal] = useState<{ isOpen: boolean; id: string | null }>({
     isOpen: false,
     id: null,
   });
+
+  // ── ไม่แสดง superadmin ในตาราง ──
+  const filteredStaff = staffList.filter((s) => s.role !== "superadmin");
 
   const openConfirmModal = (id: string) => setConfirmModal({ isOpen: true, id });
   const closeConfirmModal = () => setConfirmModal({ isOpen: false, id: null });
@@ -82,18 +83,12 @@ const StaffPage = () => {
 
   const openModal = (staff: Staff | null = null) => {
     setCurrentStaff(staff);
-
     if (staff) {
-      // ✅ ดึง startDate/endDate จาก executiveHistories อันล่าสุด (ถ้ามี)
-      const latestHistory = staff.executiveHistories?.[0];
-
       setForm({
         fullname: staff.fullname,
         email: staff.email,
         role: staff.role,
         password: "",
-        startDate: latestHistory?.startDate || "",
-        endDate: latestHistory?.endDate || "",
       });
     } else {
       setForm({
@@ -101,11 +96,8 @@ const StaffPage = () => {
         email: "",
         role: "staff",
         password: "",
-        startDate: "",
-        endDate: "",
       });
     }
-
     setIsModalOpen(true);
   };
 
@@ -138,7 +130,7 @@ const StaffPage = () => {
               <Table.HeadCell></Table.HeadCell>
             </Table.Head>
             <Table.Body>
-              {staffList.map((staff) => (
+              {filteredStaff.map((staff) => (
                 <Table.Row key={staff.id}>
                   <Table.Cell>
                     <UploadAvatar
@@ -186,12 +178,8 @@ const StaffPage = () => {
         <Modal.Header>ยืนยันการลบ</Modal.Header>
         <Modal.Body>คุณต้องการลบพนักงานนี้จริงหรือไม่?</Modal.Body>
         <Modal.Footer>
-          <Button color="failure" onClick={handleDeleteConfirmed}>
-            ลบ
-          </Button>
-          <Button color="gray" onClick={closeConfirmModal}>
-            ยกเลิก
-          </Button>
+          <Button color="failure" onClick={handleDeleteConfirmed}>ลบ</Button>
+          <Button color="gray" onClick={closeConfirmModal}>ยกเลิก</Button>
         </Modal.Footer>
       </Modal>
 
@@ -217,53 +205,13 @@ const StaffPage = () => {
               </label>
               <select
                 value={form.role}
-                onChange={(e) =>
-                  setForm({
-                    ...form,
-                    role: e.target.value,
-                    startDate: e.target.value !== "superadmin" ? "" : form.startDate,
-                    endDate: e.target.value !== "superadmin" ? "" : form.endDate,
-                  })
-                }
+                onChange={(e) => setForm({ ...form, role: e.target.value })}
                 className="w-full p-2.5 text-sm text-gray-900 border border-gray-300 rounded-lg bg-gray-50 dark:bg-gray-700 dark:text-white dark:border-gray-600"
               >
-                <option value="superadmin">SuperAdmin</option>
                 <option value="admin">Admin</option>
                 <option value="staff">Staff</option>
               </select>
             </div>
-
-            {/* ✅ แสดงช่องวันที่เฉพาะ superadmin */}
-            {form.role === "superadmin" && (
-              <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-                <p className="text-sm font-medium text-blue-700 dark:text-blue-300 mb-3">
-                  ระยะเวลาดำรงตำแหน่ง SuperAdmin
-                </p>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block mb-1 text-xs font-medium text-gray-600 dark:text-gray-400">
-                      วันที่เริ่มดำรงตำแหน่ง
-                    </label>
-                    <TextInput
-                      type="date"
-                      value={form.startDate}
-                      onChange={(e) => setForm({ ...form, startDate: e.target.value })}
-                    />
-                  </div>
-                  <div>
-                    <label className="block mb-1 text-xs font-medium text-gray-600 dark:text-gray-400">
-                      วันที่สิ้นสุดตำแหน่ง
-                    </label>
-                    <TextInput
-                      type="date"
-                      value={form.endDate}
-                      min={form.startDate}
-                      onChange={(e) => setForm({ ...form, endDate: e.target.value })}
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
 
             {!currentStaff && (
               <TextInput
@@ -280,9 +228,7 @@ const StaffPage = () => {
           <Button onClick={handleSave} className="bg-blue-600 hover:bg-blue-700 text-white">
             {currentStaff ? "บันทึกการแก้ไข" : "เพิ่มพนักงาน"}
           </Button>
-          <Button color="failure" onClick={closeModal}>
-            ยกเลิก
-          </Button>
+          <Button color="failure" onClick={closeModal}>ยกเลิก</Button>
         </Modal.Footer>
       </Modal>
     </div>

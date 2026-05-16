@@ -29,6 +29,7 @@ import equipmentRoutes from "./routes/equipmentRoutes.js";
 import statsRoutes from "./routes/statsRoutes.js";
 import staffRoutes from "./routes/staffRoutes.js";
 import buildingRoutes from "./routes/buildingRoutes.js";
+import ExecutiveRoutes from "./routes/executiveRoutes.js"
 import StadiumImage from "./models/StadiumImage.js";
 import EquipmentAdjustmentTransaction from "./models/EquipmentAdjustmentTransaction.js";
 
@@ -67,6 +68,7 @@ app.use("/api/bookings", bookingRoutes);
 app.use("/api/equipments", equipmentRoutes);
 app.use("/api/stats", statsRoutes);
 app.use("/api/staff", staffRoutes);
+app.use("/api/executives",ExecutiveRoutes );
 
 // ✅ Start server
 const PORT = process.env.PORT || 5008;
