@@ -41,9 +41,9 @@ export const checkBuildingAvaliable = async (req, res) => {
         const conflict = await Booking.findOne({
             where: {
                 buildingId: String(buildingId),
-                // status: {
-                //     [Op.in]: ["pending", "confirmed"],
-                // },
+                status: {
+            [Op.notIn]: ["canceled", "Return Success"],
+        },
                 startDate: {
                     [Op.lt]: newEnd, // มี booking ที่เริ่มก่อนเวลาจบใหม่
                 },

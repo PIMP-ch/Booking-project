@@ -326,7 +326,6 @@ const SelectDate = () => {
     };
 
     const response = await checkBuilding(checkData);
-
     if (response && response.available === false) {
       toast.error(response.message || "❌ อาคารนี้ถูกจองแล้ว");
       return;

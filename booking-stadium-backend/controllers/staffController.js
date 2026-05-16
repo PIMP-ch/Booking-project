@@ -8,7 +8,7 @@ export const loginStaff = async (req, res) => {
 
     const staff = await Staff.findOne({ where: { email } });
     if (!staff) return res.status(400).json({ message: "Invalid email or password" });
-เ
+
     if (password !== staff.password) {
       return res.status(400).json({ message: "Invalid email or password" });
     }

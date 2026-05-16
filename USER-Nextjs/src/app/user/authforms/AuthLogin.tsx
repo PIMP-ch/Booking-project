@@ -21,7 +21,6 @@ const AuthLogin = () => {
       // Call API to login
       const response = await loginUser(email, password);
 
-      // console.log("Login Successful:", response);
 
       // Access fullname from the response and save it to localStorage
       if (response.staff?.fullname) {
