@@ -406,7 +406,6 @@ const ExecutivePage = () => {
                         ชื่อ-นามสกุล <span className="text-red-500">*</span>
                       </label>
                       <TextInput
-                        placeholder="เช่น สมชาย ใจดี"
                         value={createForm.fullname}
                         onChange={(e) => setCreateForm({ ...createForm, fullname: e.target.value })}
                       />
@@ -417,7 +416,6 @@ const ExecutivePage = () => {
                       </label>
                       <TextInput
                         type="email"
-                        placeholder="example@email.com"
                         value={createForm.email}
                         onChange={(e) => setCreateForm({ ...createForm, email: e.target.value })}
                       />
@@ -428,7 +426,6 @@ const ExecutivePage = () => {
                       </label>
                       <TextInput
                         type="password"
-                        placeholder="รหัสผ่าน"
                         value={createForm.password}
                         onChange={(e) => setCreateForm({ ...createForm, password: e.target.value })}
                       />
