@@ -19,6 +19,27 @@ const Booking = sequelize.define("Booking", {
         allowNull: true,
     },
     buildingId: { type: DataTypes.INTEGER, allowNull: false },
+
+    // ─── เพิ่มใหม่ ───────────────────────────────────────────────────────────
+    // บอกว่าเป็นการจองแบบปกติ หรือ ตารางเรียน
+    // ของเก่าทั้งหมดจะได้ค่า default "normal" อัตโนมัติ ไม่กระทบข้อมูลเดิม
+    bookingType: {
+        type: DataTypes.ENUM("normal", "class_schedule"),
+        allowNull: false,
+        defaultValue: "normal",
+    },
+
+    // เก็บข้อมูลภาค/ปีการศึกษา (ใช้เฉพาะ class_schedule)
+    academicYear: {
+        type: DataTypes.INTEGER,
+        allowNull: true,   // null สำหรับการจองปกติ
+    },
+    academicTerm: {
+        type: DataTypes.INTEGER,
+        allowNull: true,   // null สำหรับการจองปกติ
+    },
+    // ─────────────────────────────────────────────────────────────────────────
+
 }, { timestamps: true });
 
 export default Booking;

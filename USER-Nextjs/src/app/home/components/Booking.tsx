@@ -4,12 +4,11 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { getAllStadiums, API_BASE } from "@/utils/api";
 import { toast } from "react-toastify";
-import { Volleyball, BookOpen } from "lucide-react"; // ✅ เพิ่ม BookOpen
+import { Volleyball, BookOpen } from "lucide-react";
 import { ImageCarousel } from "./ImageCarousel";
 import Image from "next/image";
-import ClassSchedule from "./ClassSchedule"; // ✅ import หน้าตารางเรียน
+import ClassSchedule from "./ClassSchedule";
 
-// ✅ Component แสดงรูปพร้อม fallback กรณีรูปโหลดไม่ได้
 export function SafeImage({ src, alt }: { src: string; alt: string }) {
   const [img, setImg] = useState(src);
 
@@ -35,6 +34,7 @@ const Booking = () => {
   const [activeTab, setActiveTab] = useState("stadiums");
   const [stadiums, setStadiums] = useState<any[]>([]);
   const [userId, setUserId] = useState<string | null>(null);
+  const [userType, setUserType] = useState<string>("");   // ← เพิ่ม
 
   useEffect(() => {
     const fetchStadiums = async () => {
@@ -52,12 +52,15 @@ const Booking = () => {
       try {
         const parsedUser = JSON.parse(storedUser);
         setUserId(parsedUser.id);
+        setUserType(parsedUser.userType ?? "");   // ← อ่าน userType
       } catch (error) {
         console.error("❌ Error parsing user JSON:", error);
         localStorage.removeItem("user");
       }
     }
   }, []);
+
+  const isStaff = userType === "staff";   // ← เช็คสิทธิ์
 
   const handleSelectStadium = (
     stadiumId: string,
@@ -75,36 +78,40 @@ const Booking = () => {
     );
   };
 
-  // ✅ เพิ่ม menu item "ตารางเรียน"
+  // ซ่อนปุ่ม "ตารางเรียน" ถ้าไม่ใช่ staff
   const menuItems = [
     {
       id: "stadiums",
       label: "จองสนาม",
       icon: <Volleyball size={24} className="text-orange-500" />,
+      show: true,
     },
-    // {
-    //   id: "schedule",
-    //   label: "ตารางเรียน",
-    //   icon: <BookOpen size={24} className="text-blue-500" />,
-    // },
+    {
+      id: "schedule",
+      label: "ตารางเรียน",
+      icon: <BookOpen size={24} className="text-blue-500" />,
+      show: isStaff,   // ← แสดงเฉพาะ staff
+    },
   ];
 
   return (
     <div className="p-1 pt-20 font-kanit mb-20 max-w-[670px] mx-auto">
       {/* เมนูตัวเลือก */}
       <div className="grid grid-cols-3 gap-3 mb-4">
-        {menuItems.map((item) => (
-          <button
-            key={item.id}
-            onClick={() => setActiveTab(item.id)}
-            className={`flex flex-col items-center justify-center p-3 rounded-sm shadow-md transition-all
-              ${activeTab === item.id ? "border-2 border-orange-500 bg-white" : "bg-white"}
-            `}
-          >
-            {item.icon}
-            <span className="text-sm font-semibold text-gray-700">{item.label}</span>
-          </button>
-        ))}
+        {menuItems
+          .filter((item) => item.show)   // ← กรองเฉพาะที่มีสิทธิ์
+          .map((item) => (
+            <button
+              key={item.id}
+              onClick={() => setActiveTab(item.id)}
+              className={`flex flex-col items-center justify-center p-3 rounded-sm shadow-md transition-all
+                ${activeTab === item.id ? "border-2 border-orange-500 bg-white" : "bg-white"}
+              `}
+            >
+              {item.icon}
+              <span className="text-sm font-semibold text-gray-700">{item.label}</span>
+            </button>
+          ))}
       </div>
 
       {/* ===== แสดงสนาม ===== */}
@@ -171,13 +178,13 @@ const Booking = () => {
         </div>
       )}
 
-      {/* ===== แสดงตารางเรียน ===== */}
-      {/* {activeTab === "schedule" && (
+      {/* ===== แสดงตารางเรียน (staff เท่านั้น) ===== */}
+      {activeTab === "schedule" && isStaff && (
         <div>
           <h1 className="text-base mb-4 text-start text-gray-800">ตารางเรียน</h1>
           <ClassSchedule />
         </div>
-      )} */}
+      )}
     </div>
   );
 };

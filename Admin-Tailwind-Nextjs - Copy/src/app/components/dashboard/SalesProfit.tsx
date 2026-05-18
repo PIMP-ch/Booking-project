@@ -1,14 +1,14 @@
 "use client";
 import React, { useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
-import { Select, Tooltip } from "flowbite-react";
+import { Select } from "flowbite-react";
 import { getMonthlyBookingStats, getDailyBookingStats } from "@/utils/api";
 
 const Chart = dynamic(() => import("react-apexcharts"), { ssr: false });
 
 interface ChartDataPoint {
-  x: string; // Month
-  y: number; // Count of bookings
+  x: string;
+  y: number;
 }
 
 interface ChartSeries {
@@ -18,18 +18,8 @@ interface ChartSeries {
 }
 
 const THAI_MONTHS = [
-  "มกราคม",
-  "กุมภาพันธ์",
-  "มีนาคม",
-  "เมษายน",
-  "พฤษภาคม",
-  "มิถุนายน",
-  "กรกฎาคม",
-  "สิงหาคม",
-  "กันยายน",
-  "ตุลาคม",
-  "พฤศจิกายน",
-  "ธันวาคม",
+  "มกราคม","กุมภาพันธ์","มีนาคม","เมษายน","พฤษภาคม","มิถุนายน",
+  "กรกฎาคม","สิงหาคม","กันยายน","ตุลาคม","พฤศจิกายน","ธันวาคม",
 ];
 
 const monthNameToIndex = (name: string): number | null => {
@@ -52,13 +42,11 @@ const SalesProfit = () => {
       try {
         if (selectedMonth === "ทั้งปี") {
           const stats: { month: number; count: number }[] = await getMonthlyBookingStats();
-
           const monthly: ChartDataPoint[] = THAI_MONTHS.map((label) => ({ x: label, y: 0 }));
           stats.forEach(({ month, count }) => {
             const i = month - 1;
-            if (i >= 0 && i < monthly.length) monthly[i].y = count ?? 0;
+            if (i >= 0 && i < monthly.length) monthly[i].y = Math.round(count ?? 0);
           });
-
           setSeries({ name: "การจอง", type: "bar", data: monthly });
         } else {
           const monthLabel = selectedMonth === "เดือนนี้" ? getCurrentThaiMonthName() : selectedMonth;
@@ -67,7 +55,6 @@ const SalesProfit = () => {
 
           const year = new Date().getFullYear();
           const month1Based = mIdx + 1;
-
           const stats: { day: number; count: number }[] = await getDailyBookingStats(month1Based, year);
 
           const daysInMonth = new Date(year, month1Based, 0).getDate();
@@ -75,15 +62,13 @@ const SalesProfit = () => {
             x: String(i + 1),
             y: 0,
           }));
-
           stats.forEach(({ day, count }) => {
-            if (day >= 1 && day <= daysInMonth) daily[day - 1].y = count ?? 0;
+            if (day >= 1 && day <= daysInMonth) daily[day - 1].y = Math.round(count ?? 0);
           });
-
           setSeries({ name: "การจอง", type: "bar", data: daily });
         }
       } catch (err) {
-        console.error("Error fetching  booking stats:", err);
+        console.error("Error fetching booking stats:", err);
         setSeries({ name: "การจอง", type: "bar", data: [] });
       }
     };
@@ -93,8 +78,9 @@ const SalesProfit = () => {
 
   const yMax = useMemo(() => {
     const maxY = series.data.reduce((m, p) => Math.max(m, p.y ?? 0), 0);
-    const padded = Math.max(5, Math.ceil(maxY * 1.25));
-    return padded;
+    // ปัดขึ้นเป็นเลขเต็มเสมอ แล้วบวก padding
+    // เพิ่ม 50% padding เพื่อให้ label position:top มีพื้นที่เหนือแท่ง
+    return Math.max(5, Math.ceil(maxY * 1.5));
   }, [series]);
 
   const chartOptions: any = useMemo(
@@ -108,32 +94,70 @@ const SalesProfit = () => {
         toolbar: { show: false },
       },
       colors: ["var(--color-primary)", "#adb0bb35"],
-      dataLabels: { enabled: false },
-      fill: {
-        type: "gradient",
-        gradient: { shadeIntensity: 0, opacityFrom: 0.1, opacityTo: 0.255, stops: [100] },
+
+      // ── Label เหนือแท่ง: offsetY ลบ = ดันขึ้นไปนอกแท่ง ──────
+      dataLabels: {
+        enabled: true,
+        formatter: (val: number) => (val === 0 ? "" : String(Math.round(val))),
+        offsetY: -20,
+        style: {
+          fontSize: "12px",
+          fontFamily: "Kanit",
+          fontWeight: "700",
+          colors: ["#111827"],
+        },
+        background: { enabled: false },
+        dropShadow: { enabled: false },
       },
+      plotOptions: {
+        bar: {
+          dataLabels: {
+            position: "top",   // ApexCharts bar-specific: วาง label ที่ top ของแท่ง
+          },
+        },
+      },
+
+      fill: { type: "solid", opacity: 0.85 },
       grid: { show: true, strokeDashArray: 3, borderColor: "#E0E0E0" },
-      stroke: { curve: "smooth", width: 2 },
+      stroke: { show: false },
       xaxis: {
         axisBorder: { show: false },
         axisTicks: { show: false },
+        labels: { rotate: 0, hideOverlappingLabels: true },
+      },
+
+      // ── Y-axis เลขหลักหน่วย เฉลี่ยเท่ากัน ──────────────────
+      yaxis: {
+        min: 0,
+        max: yMax,
+        // tickAmount = จำนวน interval ที่หาร yMax ลงตัว ไม่เกิน 5
+        // เช่น yMax=10 → tickAmount=5 (ช่องละ 2), yMax=6 → tickAmount=3 (ช่องละ 2)
+        tickAmount: (() => {
+          if (yMax <= 5) return yMax;          // 1 ต่อ 1
+          for (const t of [5, 4, 2]) {
+            if (yMax % t === 0) return t;      // หาร yMax ลงตัว
+          }
+          return 5;                            // fallback
+        })(),
         labels: {
-          rotate: 0,
-          hideOverlappingLabels: true,
+          formatter: (val: number) => String(Math.round(val)),
         },
       },
-      yaxis: { min: 0, max: yMax, tickAmount: 5 },
+
       legend: { show: false },
-      tooltip: { theme: "dark" },
+      tooltip: {
+        theme: "dark",
+        y: {
+          formatter: (val: number) => `${Math.round(val)} คน`,   // tooltip บอกหน่วย
+        },
+      },
     }),
     [yMax]
   );
 
   const titleText = useMemo(() => {
     if (selectedMonth === "ทั้งปี") return "ยอดการจองรายเดือน (ทั้งปี)";
-    if (selectedMonth === "เดือนนี้") return 'ยอดการจองรายวัน';
-    return 'ยอดการจองรายวัน';
+    return "ยอดการจองรายวัน";
   }, [selectedMonth]);
 
   return (
@@ -159,13 +183,13 @@ const SalesProfit = () => {
         <Chart
           options={chartOptions}
           series={[series]}
-          type="area"
+          type="bar"
           height="315px"
           width="100%"
-        ></Chart>
+        />
       </div>
-
     </div>
   );
 };
+
 export default SalesProfit;
