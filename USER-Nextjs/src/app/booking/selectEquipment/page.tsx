@@ -6,19 +6,18 @@ import { getAllEquipment, API_BASE } from "@/utils/api";
 import { toast } from "react-toastify";
 import { PlusCircle, MinusCircle, Package, ArrowLeft, XCircle } from "lucide-react";
 import Image from "next/image";
-import { set } from "lodash";
 
 type EquipmentItem = {
   id: string;
   name: string;
-  quantity: number; // จำนวนคงเหลือในสต็อก
+  quantity: number;
   imageUrl?: string;
 };
 
 type SelectedItem = {
   equipmentId: string;
   name: string;
-  quantity: number; // จำนวนที่ผู้ใช้เลือก
+  quantity: number;
   imageUrl?: string;
 };
 
@@ -33,11 +32,7 @@ const resolveImageSrc = (imageUrl?: string) => {
 
 const EquipmentImage = ({ imageUrl, name }: { imageUrl?: string; name: string }) => {
   const [src, setSrc] = useState(resolveImageSrc(imageUrl));
-
-  useEffect(() => {
-    setSrc(resolveImageSrc(imageUrl));
-  }, [imageUrl]);
-
+  useEffect(() => { setSrc(resolveImageSrc(imageUrl)); }, [imageUrl]);
   return (
     <div className="relative w-full h-24 mb-3 overflow-hidden rounded-sm bg-gray-100">
       <Image
@@ -69,39 +64,34 @@ const Thumb = ({ imageUrl, name }: { imageUrl?: string; name: string }) => {
   );
 };
 
-const SelectEquipmentPage = () => {
-  return (
-    <Suspense fallback={<p className="text-center text-gray-500 py-10 font-kanit">กำลังโหลด...</p>}>
-      <SelectEquipment />
-    </Suspense>
-  );
-};
+const SelectEquipmentPage = () => (
+  <Suspense fallback={<p className="text-center text-gray-500 py-10 font-kanit">กำลังโหลด...</p>}>
+    <SelectEquipment />
+  </Suspense>
+);
 
 const SelectEquipment = () => {
   const searchParams = useSearchParams();
-  const router = useRouter();
+  const router       = useRouter();
 
-  // ✅ ดึง Parameter รวมถึง building + activityName เพิ่มเติม
-  const stadiumId = searchParams?.get("stadiumId") ?? "";
-  const stadiumName = searchParams?.get("stadiumName") ?? "ไม่พบชื่อสนาม";
-  const building = searchParams?.get("building") ?? "";
-  const buildingName = searchParams?.get("buildingName") ?? "";
-  const activityNameParam = searchParams?.get("activityName") ?? ""; // ✅ เพิ่มชื่อกิจกรรม
-  const userId = searchParams?.get("userId") ?? "";
-  const startDate = searchParams?.get("startDate") ?? "";
-  const endDate = searchParams?.get("endDate") ?? "";
-  const startTime = searchParams?.get("startTime") ?? "";
-  const endTime = searchParams?.get("endTime") ?? "";
-  const stadiumImage = searchParams?.get("stadiumImage") ?? "";
-  const equipmentParam = searchParams?.get("equipment");
+  const stadiumId        = searchParams?.get("stadiumId")      ?? "";
+  const stadiumName      = searchParams?.get("stadiumName")    ?? "ไม่พบชื่อสนาม";
+  const building         = searchParams?.get("building")       ?? "";
+  const buildingName     = searchParams?.get("buildingName")   ?? "";
+  const activityNameParam = searchParams?.get("activityName") ?? "";
+  const userId           = searchParams?.get("userId")         ?? "";
+  const startDate        = searchParams?.get("startDate")      ?? "";
+  const endDate          = searchParams?.get("endDate")        ?? "";
+  const startTime        = searchParams?.get("startTime")      ?? "";
+  const endTime          = searchParams?.get("endTime")        ?? "";
+  const equipmentParam   = searchParams?.get("equipment");
+  const sportTypeId      = searchParams?.get("sportTypeId");
 
-  // ✅ state สำหรับชื่อกิจกรรม (ให้ผู้ใช้กรอก/แก้ไขได้)
+  // ✅ รับภาพพื้นหลังที่ผู้ใช้เลือกจากหน้า selectDate
+  const stadiumImage = searchParams?.get("stadiumImage") ?? "/images/stadium-placeholder.jpg";
+
   const [activityName, setActivityName] = useState(activityNameParam);
-
-  useEffect(() => {
-    // เผื่อเข้าหน้านี้แบบมี query มาทีหลัง/รีเฟรช
-    setActivityName(activityNameParam);
-  }, [activityNameParam]);
+  useEffect(() => { setActivityName(activityNameParam); }, [activityNameParam]);
 
   const initialSelectedEquipment = useMemo<SelectedItem[]>(() => {
     if (!equipmentParam) return [];
@@ -112,9 +102,9 @@ const SelectEquipment = () => {
         .filter((item) => item && item.equipmentId && item.quantity)
         .map((item) => ({
           equipmentId: String(item.equipmentId),
-          name: String(item.name || ""),
-          quantity: Number(item.quantity) || 0,
-          imageUrl: item.imageUrl ? String(item.imageUrl) : undefined,
+          name:        String(item.name || ""),
+          quantity:    Number(item.quantity) || 0,
+          imageUrl:    item.imageUrl ? String(item.imageUrl) : undefined,
         }));
     } catch (error) {
       console.error("❌ Failed to parse equipment param", error);
@@ -122,29 +112,27 @@ const SelectEquipment = () => {
     }
   }, [equipmentParam]);
 
-  const [equipmentList, setEquipmentList] = useState<EquipmentItem[]>([]);
+  const [equipmentList, setEquipmentList]         = useState<EquipmentItem[]>([]);
   const [selectedEquipment, setSelectedEquipment] = useState<SelectedItem[]>(initialSelectedEquipment);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading]                     = useState(true);
 
   useEffect(() => {
-    if (initialSelectedEquipment.length > 0) {
-      setSelectedEquipment(initialSelectedEquipment);
-    }
+    if (initialSelectedEquipment.length > 0) setSelectedEquipment(initialSelectedEquipment);
   }, [initialSelectedEquipment]);
-
-  const sportTypeId = searchParams?.get("sportTypeId");
 
   useEffect(() => {
     const fetchEquipment = async () => {
       try {
         const data = await getAllEquipment();
-        if (sportTypeId == 1) {
-          setEquipmentList(data)
+        if (sportTypeId == "1") {
+          setEquipmentList(data);
         } else {
-          const filtered = data.filter((item) => item.sportTypeId == sportTypeId || item.sportTypeId == 2);
+          const filtered = data.filter(
+            (item: any) => item.sportTypeId == sportTypeId || item.sportTypeId == 2
+          );
           setEquipmentList(Array.isArray(filtered) ? filtered : []);
         }
-      } catch (error) {
+      } catch {
         toast.error("โหลดข้อมูลอุปกรณ์ไม่สำเร็จ");
       } finally {
         setLoading(false);
@@ -173,61 +161,60 @@ const SelectEquipment = () => {
     setSelectedEquipment((prev) => {
       const existing = prev.find((item) => item.equipmentId === equipmentId);
       if (!existing) return prev;
-
       const newQuantity = existing.quantity - 1;
       if (newQuantity <= 0) return prev.filter((item) => item.equipmentId !== equipmentId);
-
-      return prev.map((item) => (item.equipmentId === equipmentId ? { ...item, quantity: newQuantity } : item));
+      return prev.map((item) =>
+        item.equipmentId === equipmentId ? { ...item, quantity: newQuantity } : item
+      );
     });
   };
 
-  const handleRemove = (equipmentId: string) => {
+  const handleRemove = (equipmentId: string) =>
     setSelectedEquipment((prev) => prev.filter((i) => i.equipmentId !== equipmentId));
-  };
 
   const handleBack = () => {
-    const params = new URLSearchParams({
-      stadiumId,
-      stadiumName,
-      building,
-      activityName: activityName.trim(), // ✅ ส่งกลับด้วย
-      userId,
-      startDate,
-      endDate,
-      startTime,
-      endTime,
-      ...(stadiumImage ? { stadiumImage } : {}),
-    });
-
     if (typeof window !== "undefined" && window.history.length > 1) {
       router.back();
     } else {
+      const params = new URLSearchParams({
+        stadiumId,
+        stadiumName,
+        building,
+        activityName: activityName.trim(),
+        userId,
+        startDate,
+        endDate,
+        startTime,
+        endTime,
+        stadiumImage, // ✅ ส่งภาพกลับด้วย
+      });
       router.push(`/booking/selectDate?${params.toString()}`);
     }
   };
 
   const handleNext = () => {
-    // ✅ บังคับกรอกชื่อกิจกรรมก่อน
     if (!activityName.trim()) {
       toast.error("กรุณากรอกชื่อกิจกรรมก่อนกดถัดไป");
       return;
     }
 
     const equipmentQuery =
-      selectedEquipment.length > 0 ? `&equipment=${encodeURIComponent(JSON.stringify(selectedEquipment))}` : "";
+      selectedEquipment.length > 0
+        ? `&equipment=${encodeURIComponent(JSON.stringify(selectedEquipment))}`
+        : "";
 
     const baseParams = new URLSearchParams({
       stadiumId,
       stadiumName,
       building,
       buildingName,
-      activityName: activityName.trim(), // ✅ ส่งชื่อกิจกรรมไปหน้า book-detail
+      activityName: activityName.trim(),
       userId,
       startDate,
       endDate,
       startTime,
       endTime,
-      ...(stadiumImage ? { stadiumImage } : {}),
+      stadiumImage, // ✅ ส่งภาพต่อไปหน้า book-detail ด้วย
     });
 
     router.push(`/booking/book-detail?${baseParams.toString()}${equipmentQuery}`);
@@ -235,15 +222,16 @@ const SelectEquipment = () => {
 
   return (
     <div className="relative min-h-screen font-kanit">
-      {/* 🔹 พื้นหลัง */}
+      {/* ✅ พื้นหลังใช้ภาพที่รับมาจาก selectDate */}
       <div className="absolute inset-0">
         <Image
-          src={stadiumImage || "/images/stadium-placeholder.jpg"}
+          src={stadiumImage}
           alt={stadiumName}
           fill
           priority
           className="object-cover"
           sizes="100vw"
+          unoptimized
         />
         <div className="absolute inset-0 bg-black/55" />
       </div>
@@ -261,7 +249,9 @@ const SelectEquipment = () => {
           <Package size={24} className="text-orange-300" /> เลือกอุปกรณ์
         </h1>
 
-        <p className="text-center text-gray-200 mb-4">เลือกจำนวนอุปกรณ์ที่ต้องการใช้สำหรับ {stadiumName}</p>
+        <p className="text-center text-gray-200 mb-4">
+          เลือกจำนวนอุปกรณ์ที่ต้องการใช้สำหรับ {stadiumName}
+        </p>
 
         {/* 🧺 อุปกรณ์ที่เลือก (live) */}
         <div className="mb-5">
@@ -286,7 +276,6 @@ const SelectEquipment = () => {
                         <p className="text-xs text-orange-600 font-bold">จำนวน: {item.quantity}</p>
                       </div>
                     </div>
-
                     <div className="flex items-center gap-2">
                       <button
                         onClick={() => handleDecrease(item.equipmentId)}
@@ -318,10 +307,9 @@ const SelectEquipment = () => {
         </div>
 
         {/* 📋 รายการอุปกรณ์ทั้งหมด */}
-
         {loading ? (
           <div className="flex flex-col items-center py-10">
-            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-orange-500 mb-3"></div>
+            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-orange-500 mb-3" />
             <p className="text-center text-gray-200">กำลังโหลดข้อมูลอุปกรณ์...</p>
           </div>
         ) : equipmentList.length === 0 ? (
@@ -329,7 +317,7 @@ const SelectEquipment = () => {
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 pb-32">
             {equipmentList.map((item) => {
-              const selectedItem = selectedEquipment.find((eq) => eq.equipmentId === item.id);
+              const selectedItem  = selectedEquipment.find((eq) => eq.equipmentId === item.id);
               const selectedCount = selectedItem ? selectedItem.quantity : 0;
               const isMax = selectedCount >= item.quantity;
               const isMin = selectedCount <= 0;
@@ -373,7 +361,8 @@ const SelectEquipment = () => {
             <div>
               <p className="text-xs text-gray-500 uppercase font-bold tracking-wider">รายการที่เลือก</p>
               <p className="text-orange-600 text-2xl font-extrabold">
-                {selectedEquipment.length} <span className="text-sm font-medium text-gray-600">รายการ</span>
+                {selectedEquipment.length}{" "}
+                <span className="text-sm font-medium text-gray-600">รายการ</span>
               </p>
             </div>
             <button

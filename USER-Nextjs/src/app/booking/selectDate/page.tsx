@@ -59,15 +59,14 @@ const SelectDate = () => {
   const searchParams = useSearchParams();
   const router = useRouter();
 
-  const stadiumId   = searchParams?.get("stadiumId")   ?? "";
-  const stadiumName = searchParams?.get("stadiumName") ?? "ไม่พบชื่อสนาม";
-  const userId      = searchParams?.get("userId")      ?? "";
+  const stadiumId    = searchParams?.get("stadiumId")    ?? "";
+  const stadiumName  = searchParams?.get("stadiumName")  ?? "ไม่พบชื่อสนาม";
+  const userId       = searchParams?.get("userId")       ?? "";
   const stadiumImage = searchParams?.get("stadiumImage") ?? "";
 
-  // ✅ รับ stadiumImages array จาก URL params ที่ Booking.tsx ส่งมา
   const stadiumImages: string[] = (() => {
     try {
-      const raw = searchParams?.get("stadiumImages") ?? "[]";
+      const raw    = searchParams?.get("stadiumImages") ?? "[]";
       const parsed = JSON.parse(decodeURIComponent(raw));
       return Array.isArray(parsed) ? parsed : [];
     } catch {
@@ -76,26 +75,25 @@ const SelectDate = () => {
   })();
 
   // ─── State ────────────────────────────────────────────────────────────────────
-  const [building, setBuilding]               = useState<string>("");
-  const [buildingName, setBuildingName]       = useState<string>("");
-  const [availableBuildings, setAvailbleBuildings] = useState<Building[]>([]);
-  const [activityName, setActivityName]       = useState<string>("");
+  const [building, setBuilding]                     = useState<string>("");
+  const [buildingName, setBuildingName]             = useState<string>("");
+  const [availableBuildings, setAvailbleBuildings]  = useState<Building[]>([]);
+  const [activityName, setActivityName]             = useState<string>("");
 
-  const [backgroundImage, setBackgroundImage] = useState<string>(
-    stadiumImages[0] || stadiumImage || "/images/stadium-placeholder.jpg"
-  );
+  const defaultBg = stadiumImages[0] || stadiumImage || "/images/stadium-placeholder.jpg";
+  const [backgroundImage, setBackgroundImage]       = useState<string>(defaultBg);
 
-  const [dateStatusList, setDateStatusList]   = useState<{ date: string; status: string }[]>([]);
-  const [selectedStartDate, setSelectedStartDate] = useState<string | null>(null);
-  const [selectedEndDate, setSelectedEndDate]     = useState<string | null>(null);
+  const [dateStatusList, setDateStatusList]         = useState<{ date: string; status: string }[]>([]);
+  const [selectedStartDate, setSelectedStartDate]   = useState<string | null>(null);
+  const [selectedEndDate, setSelectedEndDate]       = useState<string | null>(null);
 
-  const [dayTimes, setDayTimes]               = useState<DayTimeMap>({});
-  const [isTimeActive, setIsTimeActive]       = useState(false);
+  const [dayTimes, setDayTimes]     = useState<DayTimeMap>({});
+  const [isTimeActive, setIsTimeActive] = useState(false);
 
   const [currentYear, setCurrentYear]   = useState(dayjs().year());
   const [currentMonth, setCurrentMonth] = useState(dayjs().month() + 1);
-  const [stadiumBookings, setStadiumBookings]   = useState<StadiumBooking[]>([]);
-  const [bookingInfoLoading, setBookingInfoLoading] = useState<boolean>(false);
+  const [stadiumBookings, setStadiumBookings]         = useState<StadiumBooking[]>([]);
+  const [bookingInfoLoading, setBookingInfoLoading]   = useState<boolean>(false);
 
   // ─── Fetch available dates ────────────────────────────────────────────────────
   useEffect(() => {
@@ -113,7 +111,7 @@ const SelectDate = () => {
           normalized
             .filter((x: any) => x && x.date)
             .map((x: any) => ({
-              date: dayjs(x.date).format("YYYY-MM-DD"),
+              date:   dayjs(x.date).format("YYYY-MM-DD"),
               status: x.status === "ไม่ว่าง" ? "ไม่ว่าง" : "ว่าง",
             }))
         );
@@ -148,19 +146,15 @@ const SelectDate = () => {
   // ─── Fetch buildings ──────────────────────────────────────────────────────────
   useEffect(() => {
     if (!stadiumId?.trim()) return;
-
     const fetchBuildingsByStadium = async () => {
       try {
         const stadium = await getStadiumById(stadiumId);
-        setAvailbleBuildings(
-          Array.isArray(stadium?.buildings) ? stadium.buildings : []
-        );
+        setAvailbleBuildings(Array.isArray(stadium?.buildings) ? stadium.buildings : []);
       } catch (err) {
         console.error("❌ โหลดอาคารไม่สำเร็จ", err);
         setAvailbleBuildings([]);
       }
     };
-
     setBuilding("");
     setBuildingName("");
     fetchBuildingsByStadium();
@@ -177,10 +171,10 @@ const SelectDate = () => {
     () => dayjs(`${currentYear}-${String(currentMonth).padStart(2, "0")}-01`),
     [currentYear, currentMonth]
   );
-  const monthEnd     = useMemo(() => monthStart.endOf("month"), [monthStart]);
-  const daysInMonth  = monthEnd.date();
+  const monthEnd      = useMemo(() => monthStart.endOf("month"), [monthStart]);
+  const daysInMonth   = monthEnd.date();
   const firstDayIndex = monthStart.day();
-  const todayStr     = dayjs().format("YYYY-MM-DD");
+  const todayStr      = dayjs().format("YYYY-MM-DD");
 
   const monthDates = useMemo(() => {
     const arr: string[] = [];
@@ -192,11 +186,11 @@ const SelectDate = () => {
 
   const selectedDates = useMemo(() => {
     if (!selectedStartDate) return [];
-    if (!selectedEndDate) return [selectedStartDate];
-    const start = dayjs(selectedStartDate);
-    const end   = dayjs(selectedEndDate);
+    if (!selectedEndDate)   return [selectedStartDate];
+    const start  = dayjs(selectedStartDate);
+    const end    = dayjs(selectedEndDate);
     const result: string[] = [];
-    let cursor = start.clone();
+    let cursor   = start.clone();
     while (cursor.isBefore(end, "day") || cursor.isSame(end, "day")) {
       result.push(cursor.format("YYYY-MM-DD"));
       cursor = cursor.add(1, "day");
@@ -205,18 +199,13 @@ const SelectDate = () => {
   }, [selectedStartDate, selectedEndDate]);
 
   useEffect(() => {
-    if (!selectedDates.length) {
-      setDayTimes({});
-      return;
-    }
+    if (!selectedDates.length) { setDayTimes({}); return; }
     setDayTimes((prev) => {
       const next: DayTimeMap = { ...prev };
       for (const d of selectedDates) {
         if (!next[d]) next[d] = { startTime: DEFAULT_START, endTime: DEFAULT_END };
       }
-      Object.keys(next).forEach((k) => {
-        if (!selectedDates.includes(k)) delete next[k];
-      });
+      Object.keys(next).forEach((k) => { if (!selectedDates.includes(k)) delete next[k]; });
       return next;
     });
   }, [selectedDates]);
@@ -237,18 +226,12 @@ const SelectDate = () => {
 
   // ─── Handlers ─────────────────────────────────────────────────────────────────
   const handleBack = () => {
-    if (typeof window !== "undefined" && window.history.length > 1) {
-      router.back();
-    } else {
-      router.push("/home");
-    }
+    if (typeof window !== "undefined" && window.history.length > 1) router.back();
+    else router.push("/home");
   };
 
   const handleDateSelect = (date: string, status: string) => {
-    if (status !== "ว่าง") {
-      toast.error("⛔ กรุณาเลือกวันที่ว่างเท่านั้น");
-      return;
-    }
+    if (status !== "ว่าง") { toast.error("⛔ กรุณาเลือกวันที่ว่างเท่านั้น"); return; }
     if (dayjs(date).isBefore(dayjs(todayStr), "day")) return;
 
     if (!selectedStartDate || (selectedStartDate && selectedEndDate)) {
@@ -288,31 +271,17 @@ const SelectDate = () => {
   };
 
   const handleGoToEquipment = async () => {
-    if (!building) {
-      toast.error("⛔ กรุณาเลือกอาคารที่ต้องการเข้าใช้งาน");
-      return;
-    }
-    if (!activityName.trim()) {
-      toast.error("⛔ กรุณากรอกชื่อกิจกรรมที่ใช้งาน");
-      return;
-    }
-    if (!selectedStartDate) {
-      toast.error("กรุณาเลือกวันที่");
-      return;
-    }
-    if (!userId) {
-      toast.error("⛔ ต้องเข้าสู่ระบบก่อนจอง");
-      return;
-    }
+    if (!building)           { toast.error("⛔ กรุณาเลือกอาคารที่ต้องการเข้าใช้งาน"); return; }
+    if (!activityName.trim()) { toast.error("⛔ กรุณากรอกชื่อกิจกรรมที่ใช้งาน"); return; }
+    if (!selectedStartDate)   { toast.error("กรุณาเลือกวันที่"); return; }
+    if (!userId)              { toast.error("⛔ ต้องเข้าสู่ระบบก่อนจอง"); return; }
 
     for (const d of selectedDates) {
       const t = dayTimes[d];
       const s = t?.startTime ?? DEFAULT_START;
       const e = t?.endTime   ?? DEFAULT_END;
       if (s >= e) {
-        toast.error(
-          `⛔ เวลาไม่ถูกต้องในวันที่ ${dayjs(d).format("DD MMMM YYYY")} (สิ้นสุดต้องมากกว่าเริ่มต้น)`
-        );
+        toast.error(`⛔ เวลาไม่ถูกต้องในวันที่ ${dayjs(d).format("DD MMMM YYYY")} (สิ้นสุดต้องมากกว่าเริ่มต้น)`);
         return;
       }
     }
@@ -322,7 +291,7 @@ const SelectDate = () => {
       stadiumId,
       buildingId: building,
       startDate: selectedStartDate,
-      endDate: selectedEndDate ?? selectedStartDate,
+      endDate:   selectedEndDate ?? selectedStartDate,
     };
 
     const response = await checkBuilding(checkData);
@@ -341,14 +310,16 @@ const SelectDate = () => {
       stadiumName,
       building,
       buildingName,
-      activityName: activityName.trim(),
+      activityName:  activityName.trim(),
       userId,
-      startDate: selectedStartDate,
-      endDate: end,
-      startTime: firstTimes.startTime,
-      endTime: firstTimes.endTime,
-      dayTimes: JSON.stringify(dayTimes),
-      sportTypeId: sportTypeId || "",
+      startDate:     selectedStartDate,
+      endDate:       end,
+      startTime:     firstTimes.startTime,
+      endTime:       firstTimes.endTime,
+      dayTimes:      JSON.stringify(dayTimes),
+      sportTypeId:   sportTypeId || "",
+      // ✅ ส่ง backgroundImage ที่เลือกล่าสุดไปหน้าถัดไป
+      stadiumImage:  backgroundImage,
     });
 
     router.push(`/booking/selectEquipment?${params.toString()}`);
@@ -357,7 +328,7 @@ const SelectDate = () => {
   const handleMonthChange = (direction: "prev" | "next") => {
     setCurrentMonth((prev) => {
       let m = direction === "prev" ? prev - 1 : prev + 1;
-      if (m < 1) { setCurrentYear((y) => y - 1); m = 12; }
+      if (m < 1)  { setCurrentYear((y) => y - 1); m = 12; }
       if (m > 12) { setCurrentYear((y) => y + 1); m = 1; }
       return m;
     });
@@ -421,6 +392,7 @@ const SelectDate = () => {
               const selectedBuilding = availableBuildings.find((b) => b.id == selectedId);
               setBuildingName(selectedBuilding?.name || "");
 
+              // ✅ สลับ background ตาม index ของ building ที่เลือก
               const buildingIndex = availableBuildings.findIndex((b) => b.id == selectedId);
               if (stadiumImages.length > 0 && buildingIndex !== -1) {
                 setBackgroundImage(stadiumImages[buildingIndex % stadiumImages.length]);
@@ -428,13 +400,9 @@ const SelectDate = () => {
             }}
             className="w-full p-3.5 rounded-xl bg-white text-gray-800 font-semibold focus:ring-4 focus:ring-orange-500/50 outline-none transition-all shadow-inner"
           >
-            <option value="" disabled>
-              กรุณาเลือกอาคารที่ต้องการเข้าใช้งาน...
-            </option>
+            <option value="" disabled>กรุณาเลือกอาคารที่ต้องการเข้าใช้งาน...</option>
             {availableBuildings.map((b) => (
-              <option key={b.id} value={b.id}>
-                {b.name}
-              </option>
+              <option key={b.id} value={b.id}>{b.name}</option>
             ))}
           </select>
         </div>
@@ -453,20 +421,14 @@ const SelectDate = () => {
         {/* ปฏิทิน */}
         <div className="bg-white/90 rounded-3xl p-5 shadow-2xl">
           <div className="flex justify-between items-center mb-6">
-            <button
-              onClick={() => handleMonthChange("prev")}
-              className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-            >
+            <button onClick={() => handleMonthChange("prev")} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
               <CircleChevronLeft size={28} className="text-orange-600" />
             </button>
             <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
               <Calendar size={20} className="text-orange-600" />
               {monthStart.format("MMMM YYYY")}
             </h2>
-            <button
-              onClick={() => handleMonthChange("next")}
-              className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-            >
+            <button onClick={() => handleMonthChange("next")} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
               <CircleChevronRight size={28} className="text-orange-600" />
             </button>
           </div>
@@ -481,10 +443,10 @@ const SelectDate = () => {
             ))}
 
             {monthDates.map((d) => {
-              const status  = statusMap.get(d) ?? "ว่าง";
-              const isPast  = dayjs(d).isBefore(dayjs(todayStr), "day");
+              const status   = statusMap.get(d) ?? "ว่าง";
+              const isPast   = dayjs(d).isBefore(dayjs(todayStr), "day");
               const disabled = status !== "ว่าง" || isPast;
-              const active  = isSelected(d);
+              const active   = isSelected(d);
 
               return (
                 <button
@@ -516,45 +478,42 @@ const SelectDate = () => {
               🕒 ช่วงเวลาเข้าใช้งาน {isMultiDay && "(แยกตามวัน)"}
             </h2>
 
-            {selectedDates
-              .slice()
-              .sort()
-              .map((d) => {
-                const t = dayTimes[d] || { startTime: DEFAULT_START, endTime: DEFAULT_END };
-                return (
-                  <div
-                    key={d}
-                    className="bg-white/15 backdrop-blur-sm rounded-2xl p-4 border border-white/10 animate-in fade-in slide-in-from-bottom-2"
-                  >
-                    <div className="text-orange-300 font-bold mb-3 border-b border-white/10 pb-2">
-                      {dayjs(d).format("DD MMMM YYYY")}
+            {selectedDates.slice().sort().map((d) => {
+              const t = dayTimes[d] || { startTime: DEFAULT_START, endTime: DEFAULT_END };
+              return (
+                <div
+                  key={d}
+                  className="bg-white/15 backdrop-blur-sm rounded-2xl p-4 border border-white/10 animate-in fade-in slide-in-from-bottom-2"
+                >
+                  <div className="text-orange-300 font-bold mb-3 border-b border-white/10 pb-2">
+                    {dayjs(d).format("DD MMMM YYYY")}
+                  </div>
+                  <div className="flex gap-4 items-center">
+                    <div className="flex-1">
+                      <label className="block text-xs text-gray-300 mb-1">เวลาเริ่ม</label>
+                      <input
+                        type="time"
+                        value={t.startTime}
+                        onChange={(e) => setStartTimeForDay(d, e.target.value)}
+                        className="w-full p-2.5 rounded-lg bg-white border-none text-gray-800 font-semibold"
+                        disabled={!isTimeActive}
+                      />
                     </div>
-                    <div className="flex gap-4 items-center">
-                      <div className="flex-1">
-                        <label className="block text-xs text-gray-300 mb-1">เวลาเริ่ม</label>
-                        <input
-                          type="time"
-                          value={t.startTime}
-                          onChange={(e) => setStartTimeForDay(d, e.target.value)}
-                          className="w-full p-2.5 rounded-lg bg-white border-none text-gray-800 font-semibold"
-                          disabled={!isTimeActive}
-                        />
-                      </div>
-                      <div className="text-white pt-5">ถึง</div>
-                      <div className="flex-1">
-                        <label className="block text-xs text-gray-300 mb-1">เวลาสิ้นสุด</label>
-                        <input
-                          type="time"
-                          value={t.endTime}
-                          onChange={(e) => setEndTimeForDay(d, e.target.value)}
-                          className="w-full p-2.5 rounded-lg bg-white border-none text-gray-800 font-semibold"
-                          disabled={!isTimeActive}
-                        />
-                      </div>
+                    <div className="text-white pt-5">ถึง</div>
+                    <div className="flex-1">
+                      <label className="block text-xs text-gray-300 mb-1">เวลาสิ้นสุด</label>
+                      <input
+                        type="time"
+                        value={t.endTime}
+                        onChange={(e) => setEndTimeForDay(d, e.target.value)}
+                        className="w-full p-2.5 rounded-lg bg-white border-none text-gray-800 font-semibold"
+                        disabled={!isTimeActive}
+                      />
                     </div>
                   </div>
-                );
-              })}
+                </div>
+              );
+            })}
           </div>
         )}
 
