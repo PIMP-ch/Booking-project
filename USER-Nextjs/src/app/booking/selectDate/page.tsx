@@ -81,7 +81,6 @@ const SelectDate = () => {
   const [availableBuildings, setAvailbleBuildings] = useState<Building[]>([]);
   const [activityName, setActivityName]       = useState<string>("");
 
-  // ✅ background เริ่มต้น = รูปแรกของสนาม (หรือ stadiumImage จาก params)
   const [backgroundImage, setBackgroundImage] = useState<string>(
     stadiumImages[0] || stadiumImage || "/images/stadium-placeholder.jpg"
   );
@@ -146,7 +145,7 @@ const SelectDate = () => {
     })();
   }, [stadiumId]);
 
-  // ─── Fetch buildings (ไม่ต้องดึงรูปเพิ่ม เพราะมาจาก params แล้ว) ────────────
+  // ─── Fetch buildings ──────────────────────────────────────────────────────────
   useEffect(() => {
     if (!stadiumId?.trim()) return;
 
@@ -318,11 +317,12 @@ const SelectDate = () => {
       }
     }
 
+    // ✅ ส่ง startDate/endDate เป็น string ไม่ใช่ array
     const checkData = {
       stadiumId,
       buildingId: building,
-      startDate: selectedDates,
-      endDate: selectedEndDate,
+      startDate: selectedStartDate,
+      endDate: selectedEndDate ?? selectedStartDate,
     };
 
     const response = await checkBuilding(checkData);
@@ -369,7 +369,6 @@ const SelectDate = () => {
   return (
     <div className="relative min-h-screen font-kanit">
       <div className="absolute inset-0">
-        {/* ✅ Background เปลี่ยนตาม building ที่เลือก (smooth transition) */}
         <Image
           key={backgroundImage}
           src={backgroundImage}
@@ -422,7 +421,6 @@ const SelectDate = () => {
               const selectedBuilding = availableBuildings.find((b) => b.id == selectedId);
               setBuildingName(selectedBuilding?.name || "");
 
-              // ✅ สลับ background ตาม index ของ building ที่เลือก
               const buildingIndex = availableBuildings.findIndex((b) => b.id == selectedId);
               if (stadiumImages.length > 0 && buildingIndex !== -1) {
                 setBackgroundImage(stadiumImages[buildingIndex % stadiumImages.length]);

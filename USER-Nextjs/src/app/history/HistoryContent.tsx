@@ -171,10 +171,12 @@ const BookingHistory = () => {
             className="bg-white p-4 rounded-lg shadow-md mb-4 border border-gray-300"
           >
             <h2 className="text-lg font-bold mb-2 flex items-center gap-2">
-              <Calendar className="text-orange-500" size={20} />
-              {dayjs(booking.startDate).format("DD/MM/YY")} -{" "}
-              {dayjs(booking.endDate).format("DD/MM/YY")}
-            </h2>
+  <Calendar className="text-orange-500" size={20} />
+  {dayjs(booking.startDate).format("DD/MM/YY")}
+  {!dayjs(booking.startDate).isSame(dayjs(booking.endDate), "day") && (
+    <> - {dayjs(booking.endDate).format("DD/MM/YY")}</>
+  )}
+</h2>
 
             <p className="text-gray-700">
               สนาม: {booking.Stadium?.nameStadium || "ไม่พบข้อมูลสนาม"}

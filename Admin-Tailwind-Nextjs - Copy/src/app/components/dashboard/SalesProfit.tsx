@@ -78,10 +78,10 @@ const SalesProfit = () => {
 
   const yMax = useMemo(() => {
     const maxY = series.data.reduce((m, p) => Math.max(m, p.y ?? 0), 0);
-    // ปัดขึ้นเป็นเลขเต็มเสมอ แล้วบวก padding
-    // เพิ่ม 50% padding เพื่อให้ label position:top มีพื้นที่เหนือแท่ง
     return Math.max(5, Math.ceil(maxY * 1.5));
   }, [series]);
+
+  const isYearView = selectedMonth === "ทั้งปี";
 
   const chartOptions: any = useMemo(
     () => ({
@@ -95,7 +95,6 @@ const SalesProfit = () => {
       },
       colors: ["var(--color-primary)", "#adb0bb35"],
 
-      // ── Label เหนือแท่ง: offsetY ลบ = ดันขึ้นไปนอกแท่ง ──────
       dataLabels: {
         enabled: true,
         formatter: (val: number) => (val === 0 ? "" : String(Math.round(val))),
@@ -112,7 +111,7 @@ const SalesProfit = () => {
       plotOptions: {
         bar: {
           dataLabels: {
-            position: "top",   // ApexCharts bar-specific: วาง label ที่ top ของแท่ง
+            position: "top",
           },
         },
       },
@@ -120,27 +119,60 @@ const SalesProfit = () => {
       fill: { type: "solid", opacity: 0.85 },
       grid: { show: true, strokeDashArray: 3, borderColor: "#E0E0E0" },
       stroke: { show: false },
+
+      // X-axis ล่าง — label วันที่/เดือนแนวนอน ใต้เส้นแนวตั้งแต่ละแท่ง
       xaxis: {
         axisBorder: { show: false },
         axisTicks: { show: false },
-        labels: { rotate: 0, hideOverlappingLabels: true },
+        labels: {
+          rotate: 0,
+          hideOverlappingLabels: true,
+          style: {
+            fontFamily: "Kanit",
+            fontSize: "12px",
+            colors: "#adb0bb",
+          },
+        },
+        title: {
+          text: isYearView ? "เดือน" : "วันที่",
+          style: {
+            fontFamily: "Kanit",
+            fontSize: "12px",
+            color: "#adb0bb",
+            fontWeight: 400,
+          },
+          offsetY: 4,
+        },
       },
 
-      // ── Y-axis เลขหลักหน่วย เฉลี่ยเท่ากัน ──────────────────
+      // Y-axis ซ้าย — จำนวนการจอง
       yaxis: {
+        opposite: false,
         min: 0,
         max: yMax,
-        // tickAmount = จำนวน interval ที่หาร yMax ลงตัว ไม่เกิน 5
-        // เช่น yMax=10 → tickAmount=5 (ช่องละ 2), yMax=6 → tickAmount=3 (ช่องละ 2)
         tickAmount: (() => {
-          if (yMax <= 5) return yMax;          // 1 ต่อ 1
+          if (yMax <= 5) return yMax;
           for (const t of [5, 4, 2]) {
-            if (yMax % t === 0) return t;      // หาร yMax ลงตัว
+            if (yMax % t === 0) return t;
           }
-          return 5;                            // fallback
+          return 5;
         })(),
         labels: {
           formatter: (val: number) => String(Math.round(val)),
+          style: {
+            fontFamily: "Kanit",
+            fontSize: "12px",
+            colors: ["#adb0bb"],
+          },
+        },
+        title: {
+          text: "จำนวนการจอง",
+          style: {
+            fontFamily: "Kanit",
+            fontSize: "12px",
+            color: "#adb0bb",
+            fontWeight: 400,
+          },
         },
       },
 
@@ -148,11 +180,11 @@ const SalesProfit = () => {
       tooltip: {
         theme: "dark",
         y: {
-          formatter: (val: number) => `${Math.round(val)} คน`,   // tooltip บอกหน่วย
+          formatter: (val: number) => `${Math.round(val)} คน`,
         },
       },
     }),
-    [yMax]
+    [yMax, isYearView]
   );
 
   const titleText = useMemo(() => {
