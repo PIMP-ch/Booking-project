@@ -37,6 +37,11 @@ const ExecutiveHistory = sequelize.define("ExecutiveHistory", {
     allowNull: false,
     defaultValue: "active",
   },
+  pdfPath: {
+    type: DataTypes.STRING,
+    allowNull: true,
+    defaultValue: null,
+  },
 }, {
   timestamps: true,
 });

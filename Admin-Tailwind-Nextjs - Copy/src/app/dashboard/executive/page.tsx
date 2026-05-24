@@ -25,6 +25,7 @@ interface Executive {
   status: "active" | "inactive";
   startDate: string;
   endDate?: string;
+  pdfPath?: string;
 }
 
 // ─── Axios instance ───────────────────────────────────────
@@ -91,6 +92,7 @@ const ExecutivePage = () => {
 
   const [createForm, setCreateForm] = useState(EMPTY_CREATE_FORM);
   const [editForm, setEditForm] = useState(EMPTY_EDIT_FORM);
+  const [pdfFile, setPdfFile] = useState<File | null>(null);
 
   // ─── Fetch ────────────────────────────────────────────
   const fetchExecutives = useCallback(async () => {
@@ -146,6 +148,7 @@ const ExecutivePage = () => {
   // ─── Modal ─────────────────────────────────────────────
   const openModal = (exec: Executive | null = null) => {
     setCurrentExec(exec);
+    setPdfFile(null);
     if (exec) {
       setEditForm({
         position: exec.position,
@@ -186,7 +189,7 @@ const ExecutivePage = () => {
         const newStaff = staffList.find((s) => s.email === createForm.email);
 
         if (newStaff) {
-          await api.post("/executives", {
+          const { data: execData } = await api.post("/executives", {
             staffId: newStaff.id,
             position: createForm.position,
             phone: createForm.phone || "",
@@ -194,6 +197,16 @@ const ExecutivePage = () => {
             startDate: createForm.startDate,
             endDate: createForm.endDate || null,
           });
+
+          if (pdfFile && execData?.executive?.id) {
+            const formData = new FormData();
+            formData.append("pdf", pdfFile);
+            await axios.post(
+              `http://localhost:5008/api/executives/${execData.executive.id}/pdf`,
+              formData,
+              { headers: { "Content-Type": "multipart/form-data" } }
+            );
+          }
         }
 
         await fetchExecutives();
@@ -220,6 +233,17 @@ const ExecutivePage = () => {
         startDate: editForm.startDate,
         endDate: editForm.endDate || null,
       });
+
+      if (pdfFile) {
+        const formData = new FormData();
+        formData.append("pdf", pdfFile);
+        await axios.post(
+          `http://localhost:5008/api/executives/${currentExec.id}/pdf`,
+          formData,
+          { headers: { "Content-Type": "multipart/form-data" } }
+        );
+      }
+
       await fetchExecutives();
       closeModal();
     } catch (err) {
@@ -305,19 +329,20 @@ const ExecutivePage = () => {
             <Table.HeadCell>ตำแหน่ง</Table.HeadCell>
             <Table.HeadCell>เบอร์โทรศัพท์</Table.HeadCell>
             <Table.HeadCell>สถานะ</Table.HeadCell>
+            <Table.HeadCell>เอกสาร PDF</Table.HeadCell>
             <Table.HeadCell>จัดการ</Table.HeadCell>
           </Table.Head>
           <Table.Body>
             {loading ? (
               <Table.Row>
-                <Table.Cell colSpan={6} className="text-center py-10">
+                <Table.Cell colSpan={7} className="text-center py-10">
                   <Spinner size="lg" />
                   <p className="mt-2 text-gray-400 text-sm">กำลังโหลด...</p>
                 </Table.Cell>
               </Table.Row>
             ) : filtered.length === 0 ? (
               <Table.Row>
-                <Table.Cell colSpan={6} className="text-center py-10 text-gray-400">
+                <Table.Cell colSpan={7} className="text-center py-10 text-gray-400">
                   <Icon icon="solar:users-group-two-rounded-linear" height={40} className="mx-auto mb-2 opacity-30" />
                   <p>ไม่พบข้อมูลผู้บริหาร</p>
                 </Table.Cell>
@@ -344,6 +369,21 @@ const ExecutivePage = () => {
                       <Badge color="success" className="w-fit">ดำรงตำแหน่ง</Badge>
                     ) : (
                       <Badge color="gray" className="w-fit">พ้นจากตำแหน่ง</Badge>
+                    )}
+                  </Table.Cell>
+                  <Table.Cell>
+                    {exec.pdfPath ? (
+                      <a
+                        href={`http://localhost:5008${exec.pdfPath}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 hover:underline"
+                      >
+                        <Icon icon="solar:file-text-bold" height={16} />
+                        ดูเอกสาร
+                      </a>
+                    ) : (
+                      <span className="text-xs text-gray-400">ไม่มีเอกสาร</span>
                     )}
                   </Table.Cell>
                   <Table.Cell>
@@ -500,6 +540,38 @@ const ExecutivePage = () => {
                     </div>
                   </div>
                 </div>
+
+                <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+                  <p className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-3 flex items-center gap-2">
+                    <Icon icon="solar:file-text-bold" height={16} />
+                    อัปโหลดเอกสาร PDF
+                  </p>
+                  <label className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg cursor-pointer bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors">
+                    <div className="flex flex-col items-center justify-center gap-1">
+                      <Icon icon="solar:upload-bold" height={24} className="text-gray-400" />
+                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                        {pdfFile ? pdfFile.name : "คลิกเพื่อเลือกไฟล์ PDF"}
+                      </p>
+                      {!pdfFile && <p className="text-xs text-gray-400">PDF ขนาดไม่เกิน 10MB</p>}
+                    </div>
+                    <input
+                      type="file"
+                      accept="application/pdf"
+                      className="hidden"
+                      onChange={(e) => setPdfFile(e.target.files?.[0] ?? null)}
+                    />
+                  </label>
+                  {pdfFile && (
+                    <button
+                      type="button"
+                      onClick={() => setPdfFile(null)}
+                      className="mt-2 text-xs text-red-500 hover:text-red-700 flex items-center gap-1"
+                    >
+                      <Icon icon="solar:trash-bin-minimalistic-outline" height={14} />
+                      ลบไฟล์ที่เลือก
+                    </button>
+                  )}
+                </div>
               </>
             )}
 
@@ -577,6 +649,52 @@ const ExecutivePage = () => {
                       />
                     </div>
                   </div>
+                </div>
+
+                <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+                  <p className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-3 flex items-center gap-2">
+                    <Icon icon="solar:file-text-bold" height={16} />
+                    เอกสาร PDF
+                  </p>
+                  {currentExec?.pdfPath && !pdfFile && (
+                    <div className="flex items-center gap-2 mb-3 p-2 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+                      <Icon icon="solar:file-text-bold" height={16} className="text-green-600" />
+                      <a
+                        href={`http://localhost:5008${currentExec.pdfPath}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm text-green-700 dark:text-green-400 hover:underline flex-1 truncate"
+                      >
+                        {currentExec.pdfPath.split("/").pop()}
+                      </a>
+                      <span className="text-xs text-gray-400">ไฟล์ปัจจุบัน</span>
+                    </div>
+                  )}
+                  <label className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg cursor-pointer bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors">
+                    <div className="flex flex-col items-center justify-center gap-1">
+                      <Icon icon="solar:upload-bold" height={24} className="text-gray-400" />
+                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                        {pdfFile ? pdfFile.name : currentExec?.pdfPath ? "คลิกเพื่อเปลี่ยนไฟล์ PDF" : "คลิกเพื่อเลือกไฟล์ PDF"}
+                      </p>
+                      {!pdfFile && <p className="text-xs text-gray-400">PDF ขนาดไม่เกิน 10MB</p>}
+                    </div>
+                    <input
+                      type="file"
+                      accept="application/pdf"
+                      className="hidden"
+                      onChange={(e) => setPdfFile(e.target.files?.[0] ?? null)}
+                    />
+                  </label>
+                  {pdfFile && (
+                    <button
+                      type="button"
+                      onClick={() => setPdfFile(null)}
+                      className="mt-2 text-xs text-red-500 hover:text-red-700 flex items-center gap-1"
+                    >
+                      <Icon icon="solar:trash-bin-minimalistic-outline" height={14} />
+                      ลบไฟล์ที่เลือก
+                    </button>
+                  )}
                 </div>
               </>
             )}
