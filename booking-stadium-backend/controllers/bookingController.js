@@ -16,7 +16,6 @@ import multer from "multer";
 import path from "path";
 import fs from "fs";
 
-
 dayjs.extend(isBetween);
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -35,13 +34,8 @@ const storage = multer.diskStorage({
   },
 });
 
+const upload = multer({ storage, limits: { fileSize: 5 * 1024 * 1024 } });
 
-const upload = multer({
-  storage,
-  limits: { fileSize: 5 * 1024 * 1024 },
-});
-
-// helper: รวมวัน+เวลาเป็น Date (เก็บเป็น Date ให้ตรง schema)
 function toDateTime(dateLike, hhmm = "00:00") {
   const d = new Date(dateLike);
   const [hh = "00", mm = "00"] = (hhmm || "00:00").split(":");
@@ -49,7 +43,6 @@ function toDateTime(dateLike, hhmm = "00:00") {
   return d;
 }
 
-// helper: normalize อุปกรณ์ให้เป็นรูปแบบที่ backend ใช้จริง
 function normalizeEquipment(input) {
   if (!Array.isArray(input)) return [];
   return input
@@ -70,9 +63,7 @@ function normalizeEquipment(input) {
 // =================== CREATE (กันทับเวลา) ===================
 export const bookStadium = async (req, res) => {
   upload.single("file")(req, res, async (err) => {
-    if (err) {
-      return res.status(400).json({ message: err.message });
-    }
+    if (err) return res.status(400).json({ message: err.message });
 
     try {
       const parseJSON = (value, defaultValue = null) => {
@@ -90,15 +81,7 @@ export const bookStadium = async (req, res) => {
         return [parsed];
       };
 
-      const {
-        userId,
-        stadiumId,
-        activityName,
-        startDate,
-        endDate,
-        startTime,
-        endTime,
-      } = req.body;
+      const { userId, stadiumId, activityName, startDate, endDate, startTime, endTime } = req.body;
 
       const filePath = req.file ? `/uploads/files/${req.file.filename}` : null;
       const rawBuilding = req.body.buildingIds ?? req.body.buildingId ?? req.body.building;
@@ -106,22 +89,17 @@ export const bookStadium = async (req, res) => {
       const rawEquipment = parseJSON(req.body.equipment, []);
       const normalizedEquipment = normalizeEquipment(rawEquipment);
 
-      if (!userId || !stadiumId || !startDate || !endDate || !startTime || !endTime) {
+      if (!userId || !stadiumId || !startDate || !endDate || !startTime || !endTime)
         return res.status(400).json({ message: "กรุณากรอกข้อมูลให้ครบถ้วน" });
-      }
-      if (normalizedBuildingIds.length === 0) {
+      if (normalizedBuildingIds.length === 0)
         return res.status(400).json({ message: "กรุณาเลือกอาคารก่อนทำการจอง" });
-      }
-      if (startTime >= endTime) {
+      if (startTime >= endTime)
         return res.status(400).json({ message: "เวลาเริ่มต้องน้อยกว่าเวลาสิ้นสุด" });
-      }
 
       const newStart = toDateTime(startDate, startTime);
       const newEnd = toDateTime(endDate, endTime);
-
-      if (!(newStart < newEnd)) {
+      if (!(newStart < newEnd))
         return res.status(400).json({ message: "เวลาเริ่มต้องน้อยกว่าเวลาสิ้นสุด" });
-      }
 
       const stadium = await Stadium.findByPk(stadiumId);
       if (!stadium) return res.status(404).json({ message: "Stadium not found" });
@@ -134,40 +112,27 @@ export const bookStadium = async (req, res) => {
           endDate: { [Op.gt]: newStart },
         },
       });
-      if (conflict) {
+      if (conflict)
         return res.status(409).json({ message: "ช่วงเวลานี้ถูกจองแล้ว กรุณาเลือกเวลาอื่น" });
-      }
 
-      for (const item of normalizedEquipment) {
+      for (const item of normalizedEquipment)
         await Equipment.decrement({ quantity: item.quantity }, { where: { id: item.equipmentId } });
-      }
 
       const bId = normalizedBuildingIds[0];
-
       const booking = await Booking.create({
-        userId,
-        stadiumId,
+        userId, stadiumId,
         name: activityName?.trim() || "การจองสนาม",
         activityName: activityName?.trim() || "",
-        startDate: newStart,
-        endDate: newEnd,
-        startTime,
-        endTime,
-        status: "pending",
-        filePath,
-        buildingId: bId,
-        bookingType: "normal",   // ← การจองปกติ
+        startDate: newStart, endDate: newEnd, startTime, endTime,
+        status: "pending", filePath, buildingId: bId,
+        bookingType: "normal",
+        // note ไม่ถูกบันทึกสำหรับการจองปกติ (null)
       });
 
       await booking.addBuildings(normalizedBuildingIds);
 
-      for (const item of normalizedEquipment) {
-        await BookingEquipment.create({
-          bookingId: booking.id,
-          equipmentId: item.equipmentId,
-          quantity: item.quantity,
-        });
-      }
+      for (const item of normalizedEquipment)
+        await BookingEquipment.create({ bookingId: booking.id, equipmentId: item.equipmentId, quantity: item.quantity });
 
       const activeCount = await Booking.count({
         where: { stadiumId, status: { [Op.in]: ["pending", "confirmed"] } },
@@ -184,12 +149,7 @@ export const bookStadium = async (req, res) => {
         ],
       });
 
-      return res.status(201).json({
-        success: true,
-        message: "Stadium booked successfully",
-        booking,
-        populatedBooking: populated,
-      });
+      return res.status(201).json({ success: true, message: "Stadium booked successfully", booking, populatedBooking: populated });
 
     } catch (error) {
       console.error("Error booking stadium:", error);
@@ -201,16 +161,12 @@ export const bookStadium = async (req, res) => {
 // =================== CREATE: ตารางเรียน ===================
 export const bookClassSchedule = async (req, res) => {
   try {
-    // frontend ส่ง blocks ที่ expand วันจริงทุกวันในช่วงมาแล้ว
-    // shape ของแต่ละ block: { date, dayRow, startHour, endHour, subject, room }
     const { year, term, rangeStart, rangeEnd, blocks, userId, stadiumId, buildingId } = req.body;
 
-    if (!Array.isArray(blocks) || blocks.length === 0) {
+    if (!Array.isArray(blocks) || blocks.length === 0)
       return res.status(400).json({ message: "กรุณาเพิ่มรายวิชาอย่างน้อย 1 รายการ" });
-    }
-    if (!rangeStart || !rangeEnd) {
+    if (!rangeStart || !rangeEnd)
       return res.status(400).json({ message: "กรุณาระบุช่วงวันที่" });
-    }
     if (!userId)     return res.status(400).json({ message: "กรุณาระบุ userId" });
     if (!stadiumId)  return res.status(400).json({ message: "กรุณาเลือกสนาม" });
     if (!buildingId) return res.status(400).json({ message: "กรุณาเลือกอาคาร" });
@@ -219,16 +175,15 @@ export const bookClassSchedule = async (req, res) => {
     const skipped = [];
 
     for (const block of blocks) {
-      const { date, startHour, endHour, subject, room } = block;
+      // ── รับ note แยกออกจาก activityName ──────────────────────────────────
+      const { date, startHour, endHour, subject, note } = block;
 
       const startHH = String(startHour).padStart(2, "0") + ":00";
       const endHH   = String(endHour).padStart(2, "0")   + ":00";
 
-      // สร้าง Date object จากวันที่จริงที่ frontend ส่งมา
       const newStart = dayjs(date).hour(startHour).minute(0).second(0).toDate();
       const newEnd   = dayjs(date).hour(endHour).minute(0).second(0).toDate();
 
-      // ตรวจ conflict เฉพาะ class_schedule (ไม่กระทบ booking ปกติ)
       const conflict = await Booking.findOne({
         where: {
           bookingType: "class_schedule",
@@ -247,7 +202,10 @@ export const bookClassSchedule = async (req, res) => {
 
       const booking = await Booking.create({
         name: subject?.trim() || "ตารางเรียน",
-        activityName: `${subject?.trim() || "ตารางเรียน"} | ห้อง ${room || "-"}`,
+        // ── activityName เก็บแค่ชื่อวิชา ไม่ยัด "| ห้อง" อีกต่อไป ───────────
+        activityName: subject?.trim() || "ตารางเรียน",
+        // ── note เก็บแยก null ถ้าไม่ได้ใส่ ────────────────────────────────────
+        note: note?.trim() || null,
         startDate: newStart,
         endDate:   newEnd,
         startTime: startHH,
@@ -256,9 +214,9 @@ export const bookClassSchedule = async (req, res) => {
         bookingType: "class_schedule",
         academicYear: year ?? null,
         academicTerm: term ?? null,
-        userId:     Number(userId),      // ← ผู้ใช้จริงจาก frontend
-        stadiumId:  Number(stadiumId),   // ← สนามที่เลือก
-        buildingId: Number(buildingId),  // ← อาคารที่เลือก
+        userId:     Number(userId),
+        stadiumId:  Number(stadiumId),
+        buildingId: Number(buildingId),
       });
 
       createdBookings.push(booking);
@@ -285,22 +243,13 @@ export const getClassScheduleBookings = async (req, res) => {
 
     const where = { bookingType: "class_schedule" };
 
-    // filter ตามสัปดาห์
     if (weekStart) {
       const start = dayjs(weekStart).startOf("day").toDate();
       const end   = dayjs(weekStart).add(6, "day").endOf("day").toDate();
       where.startDate = { [Op.between]: [start, end] };
     }
-
-    // filter ตามปีการศึกษา (แยกเก็บใน field academicYear)
-    if (year) {
-      where.academicYear = Number(year);
-    }
-
-    // filter ตามภาคการศึกษา (แยกเก็บใน field academicTerm)
-    if (term) {
-      where.academicTerm = Number(term);
-    }
+    if (year)  where.academicYear = Number(year);
+    if (term)  where.academicTerm = Number(term);
 
     const bookings = await Booking.findAll({
       where,
@@ -308,7 +257,8 @@ export const getClassScheduleBookings = async (req, res) => {
         "id", "name", "activityName",
         "startDate", "endDate", "startTime", "endTime",
         "status", "bookingType",
-        "academicYear", "academicTerm",   // ← ส่งกลับไปด้วย
+        "academicYear", "academicTerm",
+        "note",   // ── ส่ง note กลับไปด้วย ──────────────────────────────────
       ],
       order: [["startDate", "ASC"]],
     });
@@ -324,9 +274,8 @@ export const getClassScheduleBookings = async (req, res) => {
 export const getAvailableDates = async (req, res) => {
   try {
     const { stadiumId, year, month } = req.query;
-    if (!stadiumId || !year || !month) {
+    if (!stadiumId || !year || !month)
       return res.status(400).json({ message: "stadiumId, year, and month จำเป็นต้องระบุ" });
-    }
 
     const today = dayjs().format("YYYY-MM-DD");
     const startOfMonth = dayjs(`${year}-${month}-01`).startOf("month");
@@ -363,9 +312,8 @@ export const getAvailableDates = async (req, res) => {
       let cur = dayjs(b.startDate).startOf("day");
       const end = dayjs(b.endDate).startOf("day");
       while (cur.isBefore(end, "day") || cur.isSame(end, "day")) {
-        if (cur.isBetween(startOfMonth, endOfMonth, "day", "[]")) {
+        if (cur.isBetween(startOfMonth, endOfMonth, "day", "[]"))
           bookedSet.add(cur.format("YYYY-MM-DD"));
-        }
         cur = cur.add(1, "day");
       }
     });
@@ -466,24 +414,16 @@ export const cancelBooking = async (req, res) => {
     const { cancelReason } = req.body;
     const { id } = req.params;
 
-    if (!Number.isInteger(Number(id))) {
+    if (!Number.isInteger(Number(id)))
       return res.status(400).json({ message: "invalid booking id" });
-    }
 
     const booking = await Booking.findByPk(id, {
-      include: [
-        {
-          model: Equipment,
-          attributes: ["id", "name", "quantity"],
-          through: { attributes: ["quantity"] },
-        },
-      ],
+      include: [{ model: Equipment, attributes: ["id", "name", "quantity"], through: { attributes: ["quantity"] } }],
     });
     if (!booking) return res.status(404).json({ message: "Booking not found" });
 
-    if (booking.status === "canceled") {
+    if (booking.status === "canceled")
       return res.status(200).json({ message: "Booking is already canceled", booking });
-    }
 
     if (Array.isArray(booking.Equipment) && booking.Equipment.length > 0) {
       for (const item of booking.Equipment) {
@@ -495,10 +435,7 @@ export const cancelBooking = async (req, res) => {
       }
     }
 
-    await Booking.update(
-      { status: "canceled", cancelReason: cancelReason || "" },
-      { where: { id } }
-    );
+    await Booking.update({ status: "canceled", cancelReason: cancelReason || "" }, { where: { id } });
 
     const updatedBooking = await Booking.findByPk(id);
 
@@ -513,12 +450,7 @@ export const cancelBooking = async (req, res) => {
 
     return res.status(200).json({ message: "Booking canceled successfully", booking: updatedBooking });
   } catch (error) {
-    console.error("=== Error canceling booking ===");
-    console.error("name:", error?.name);
-    console.error("message:", error?.message);
-    console.error("stack:", error?.stack);
-    if (error?.errors) console.error("mongoose errors:", error.errors);
-    if (error?.code) console.error("mongo code:", error.code);
+    console.error("=== Error canceling booking ===", error);
     return res.status(500).json({ message: "Server error", error: error?.message || "unknown" });
   }
 };
@@ -565,13 +497,7 @@ export const resetBookingStatus = async (req, res) => {
   try {
     const { id } = req.params;
     const booking = await Booking.findByPk(id, {
-      include: [
-        {
-          model: Equipment,
-          attributes: ["id", "name", "quantity"],
-          through: { model: BookingEquipment, attributes: ["quantity"] },
-        },
-      ],
+      include: [{ model: Equipment, attributes: ["id", "name", "quantity"], through: { model: BookingEquipment, attributes: ["quantity"] } }],
     });
 
     if (!booking) return res.status(404).json({ message: "Booking not found" });
@@ -580,9 +506,7 @@ export const resetBookingStatus = async (req, res) => {
     for (const item of booking.Equipment ?? []) {
       const qty = item.BookingEquipment?.quantity ?? 0;
       const eq = await Equipment.findByPk(item.id);
-      if (eq) {
-        await eq.update({ status: "available", quantity: eq.quantity + qty });
-      }
+      if (eq) await eq.update({ status: "available", quantity: eq.quantity + qty });
     }
 
     booking.status = "Return Success";
@@ -638,9 +562,8 @@ export const bookMonthlyStadium = async (req, res) => {
     const startTime = "08:00";
     const endTime = "18:00";
 
-    if (!userId || !stadiumId || !buildingId) {
+    if (!userId || !stadiumId || !buildingId)
       return res.status(400).json({ message: "ข้อมูลไม่ครบ" });
-    }
 
     const start = dayjs(`${startYear}-${startMonth + 1}-01`);
     const end = dayjs(`${endYear}-${endMonth + 1}-01`).endOf("month");
@@ -671,17 +594,10 @@ export const bookMonthlyStadium = async (req, res) => {
         if (conflict) { skippedDates.push(date.format("YYYY-MM-DD")); continue; }
 
         const booking = await Booking.create({
-          userId: 1,
-          stadiumId,
-          buildingId,
-          name: "ตารางเรียน",
-          activityName: "ตารางเรียน",
-          startDate: newStart,
-          endDate: newEnd,
-          startTime,
-          endTime,
-          status: "pending",
-          bookingType: "normal",   // monthly booking ถือเป็นปกติ
+          userId: 1, stadiumId, buildingId,
+          name: "ตารางเรียน", activityName: "ตารางเรียน",
+          startDate: newStart, endDate: newEnd, startTime, endTime,
+          status: "pending", bookingType: "normal",
         });
 
         createdBookings.push(booking);
