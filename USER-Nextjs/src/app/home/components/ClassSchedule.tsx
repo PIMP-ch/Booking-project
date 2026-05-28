@@ -112,15 +112,18 @@ function getDatesInRange(rangeStart: string, rangeEnd: string, dow: number): str
 
 // ── mapDBBooking: อ่าน note จาก field แยก ไม่ parse activityName อีกต่อไป ──
 function mapDBBooking(b: DBBooking): SubjectBlock {
-  const dow       = new Date(b.startDate).getDay();
-  const dayRow    = DOW_TO_ROW[dow] ?? 2;
-  const startHour = Number(b.startTime.split(":")[0]);
-  const endHour   = Number(b.endTime.split(":")[0]);
+  const dow            = new Date(b.startDate).getDay();
+  const dayRow         = DOW_TO_ROW[dow] ?? 2;
+  const day            = DAYS.find(d => d.row === dayRow);
+  const confirmedColor = day?.accent ?? "#28a745";
+  const startHour      = Number(b.startTime.split(":")[0]);
+  const endHour        = Number(b.endTime.split(":")[0]);
   return {
     id: b.id, dayRow, startHour, endHour,
     subject: b.name,
-    note: b.note ?? "",   // ── ใช้ note field โดยตรง ──────────────────────────
-    color: b.status === "confirmed" ? "#28a745" : "#6c757d",
+    note: b.note ?? "",
+    // pending → เทาอ่อน, confirmed → accent color ของวันนั้น
+    color: b.status === "confirmed" ? confirmedColor : "#9ca3af",
     fromDB: true, dbStatus: b.status,
   };
 }
@@ -289,20 +292,6 @@ export default function ClassScheduleForm() {
 
   return (
     <div className="min-h-screen bg-[#f0f2f5] font-['Sarabun',sans-serif]">
-
-      <header className="bg-white shadow-sm px-6 py-3 flex justify-between items-center">
-        <span className="font-semibold text-base text-gray-800">ระบบสารสนเทศเพื่องานทะเบียนนักศึกษา</span>
-        {currentUser ? (
-          <span className="text-sm text-gray-500 flex items-center gap-2">
-            👤 {currentUser.name}
-            <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${isStaff ? "bg-blue-100 text-blue-700" : "bg-gray-100 text-gray-500"}`}>
-              {currentUser.userType}
-            </span>
-          </span>
-        ) : (
-          <span className="text-xs text-red-400">⚠️ ไม่พบข้อมูลผู้ใช้</span>
-        )}
-      </header>
 
       {currentUser && !isStaff && (
         <div className="bg-red-50 border-b border-red-200 px-6 py-3 flex items-center gap-3 text-sm text-red-700">
@@ -504,8 +493,8 @@ export default function ClassScheduleForm() {
           )}
 
           <div className="mt-3 flex gap-4 text-xs text-gray-400">
-            <span className="flex items-center gap-1"><span className="inline-block w-3 h-3 rounded-full bg-[#6c757d]" /> รอยืนยัน</span>
-            <span className="flex items-center gap-1"><span className="inline-block w-3 h-3 rounded-full bg-[#28a745]" /> ยืนยันแล้ว</span>
+            <span className="flex items-center gap-1"><span className="inline-block w-3 h-3 rounded-full bg-[#9ca3af]" /> รอยืนยัน</span>
+            <span className="flex items-center gap-1"><span className="inline-block w-3 h-3 rounded-full" style={{ background: "linear-gradient(90deg,#ffc107,#e83e8c,#28a745,#fd7e14)" }} /> ยืนยันแล้ว (ตามสีวัน)</span>
           </div>
         </div>
 
@@ -601,17 +590,19 @@ function TimetableGrid({
 
               {/* Subject blocks */}
               {dayBlocks.map(block => {
-                const leftPct  = ((block.startHour - START_HOUR) / NUM_HOURS) * 100;
-                const widthPct = ((block.endHour - block.startHour) / NUM_HOURS) * 100;
+                const leftPct     = ((block.startHour - START_HOUR) / NUM_HOURS) * 100;
+                const widthPct    = ((block.endHour - block.startHour) / NUM_HOURS) * 100;
+                const isPending   = !block.fromDB || block.dbStatus !== "confirmed";
+                const displayColor = isPending ? "#9ca3af" : block.color;
                 return (
                   <div key={block.id}
                     className="absolute top-2 bottom-2 rounded px-2 py-1 overflow-hidden group cursor-default"
                     style={{
                       left:  `calc(${leftPct}% + 3px)`,
                       width: `calc(${widthPct}% - 6px)`,
-                      backgroundColor: block.color + "28",
-                      border: `1px solid ${block.color}`,
-                      borderLeft: `5px solid ${block.color}`,
+                      backgroundColor: displayColor + "28",
+                      border: `1px solid ${displayColor}`,
+                      borderLeft: `5px solid ${displayColor}`,
                     }}>
                     {!block.fromDB && (
                       <button onClick={() => onDelete(block.id)}
@@ -620,11 +611,11 @@ function TimetableGrid({
                     )}
                     {block.fromDB && (
                       <span className="absolute top-0.5 right-1 text-[8px] px-1 py-0.5 rounded text-white leading-none"
-                        style={{ backgroundColor: block.color }}>
+                        style={{ backgroundColor: displayColor }}>
                         {block.dbStatus === "confirmed" ? "ยืนยันแล้ว" : "รอยืนยัน"}
                       </span>
                     )}
-                    <p className="text-[11px] font-semibold leading-tight truncate" style={{ color: block.color }}>
+                    <p className="text-[11px] font-semibold leading-tight truncate" style={{ color: displayColor }}>
                       {block.subject}
                     </p>
                     {block.note && (
