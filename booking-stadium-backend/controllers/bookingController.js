@@ -104,21 +104,29 @@ export const bookStadium = async (req, res) => {
       const stadium = await Stadium.findByPk(stadiumId);
       if (!stadium) return res.status(404).json({ message: "Stadium not found" });
 
-      const conflict = await Booking.findOne({
-        where: {
-          stadiumId,
-          status: { [Op.in]: ["pending", "confirmed"] },
-          startDate: { [Op.lt]: newEnd },
-          endDate: { [Op.gt]: newStart },
-        },
-      });
+      const bId = normalizedBuildingIds[0];
+      const firstBuilding = await Building.findByPk(bId);
+      const isOutdoorStadium = firstBuilding?.name === "สนามกีฬากลางแจ้ง";
+
+      const conflictWhere = {
+        buildingId: bId,
+        status: { [Op.in]: ["pending", "confirmed"] },
+        startDate: { [Op.lt]: newEnd },
+        endDate: { [Op.gt]: newStart },
+      };
+
+      // สนามกีฬากลางแจ้งอนุญาตให้จองซ้ำข้าม stadium ได้ — เช็ค conflict เฉพาะ stadium เดิม
+      if (isOutdoorStadium) {
+        conflictWhere.stadiumId = stadiumId;
+      }
+
+      const conflict = await Booking.findOne({ where: conflictWhere });
       if (conflict)
         return res.status(409).json({ message: "ช่วงเวลานี้ถูกจองแล้ว กรุณาเลือกเวลาอื่น" });
 
       for (const item of normalizedEquipment)
         await Equipment.decrement({ quantity: item.quantity }, { where: { id: item.equipmentId } });
 
-      const bId = normalizedBuildingIds[0];
       const booking = await Booking.create({
         userId, stadiumId,
         name: activityName?.trim() || "การจองสนาม",

@@ -36,22 +36,30 @@ export const checkBuildingAvaliable = async (req, res) => {
         const newStart = new Date(`${startStr}T01:00:00.000Z`);
         const newEnd = new Date(`${endStr}T11:00:00.000Z`);
 
+        // ================= ตรวจสอบชื่ออาคาร =================
+        const building = await Building.findByPk(buildingId);
+        const isOutdoorStadium = building?.name === "สนามกีฬากลางแจ้ง";
 
         // ================= CHECK CONFLICT =================
-        const conflict = await Booking.findOne({
-            where: {
-                buildingId: String(buildingId),
-                status: {
-            [Op.notIn]: ["canceled", "Return Success"],
-        },
-                startDate: {
-                    [Op.lt]: newEnd, // มี booking ที่เริ่มก่อนเวลาจบใหม่
-                },
-                endDate: {
-                    [Op.gt]: newStart, // และจบหลังเวลาเริ่มใหม่
-                },
+        const conflictWhere = {
+            buildingId: String(buildingId),
+            status: {
+                [Op.notIn]: ["canceled", "Return Success"],
             },
-        });
+            startDate: {
+                [Op.lt]: newEnd,
+            },
+            endDate: {
+                [Op.gt]: newStart,
+            },
+        };
+
+        // สนามกีฬากลางแจ้งอนุญาตให้จองซ้ำข้าม stadium ได้ — เช็ค conflict เฉพาะ stadium เดิม
+        if (isOutdoorStadium) {
+            conflictWhere.stadiumId = stadiumId;
+        }
+
+        const conflict = await Booking.findOne({ where: conflictWhere });
 
         // ================= RESPONSE =================
         if (conflict) {
