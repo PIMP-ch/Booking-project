@@ -1,6 +1,11 @@
 import Building from "../models/Buildingg.js";
 import { Op } from "sequelize";
 import Booking from "../models/Bookingg.js";
+import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc.js";
+import timezone from "dayjs/plugin/timezone.js";
+dayjs.extend(utc);
+dayjs.extend(timezone);
 
 export const getBuildings = async (_req, res) => {
     try {
@@ -15,8 +20,8 @@ export const getBuildings = async (_req, res) => {
 
 export const checkBuildingAvaliable = async (req, res) => {
     try {
-        let { stadiumId, buildingId, startDate, endDate } = req.body;
-        console.log({ stadiumId, buildingId, startDate, endDate })
+        let { stadiumId, buildingId, startDate, endDate, startTime, endTime } = req.body;
+        console.log({ stadiumId, buildingId, startDate, endDate, startTime, endTime })
 
         // ================= VALIDATION =================
         if (!stadiumId || !buildingId || !startDate) {
@@ -25,16 +30,14 @@ export const checkBuildingAvaliable = async (req, res) => {
             });
         }
 
-        if (!endDate) {
-            endDate = startDate
-        }
+        if (!endDate) endDate = startDate;
 
-        const startStr = new Date(startDate).toISOString().split('T')[0];
-        const endStr = new Date(endDate).toISOString().split('T')[0];
+        const startStr = dayjs(startDate).format("YYYY-MM-DD");
+        const endStr   = dayjs(endDate).format("YYYY-MM-DD");
 
-        // สร้าง Date Object และบังคับเวลาเป็น 01:00:00.000 UTC
-        const newStart = new Date(`${startStr}T01:00:00.000Z`);
-        const newEnd = new Date(`${endStr}T11:00:00.000Z`);
+        // สร้าง datetime ใน timezone Bangkok เสมอ ไม่ depend on server timezone
+        const newStart = dayjs.tz(`${startStr} ${startTime || "00:00"}`, "Asia/Bangkok").toDate();
+        const newEnd   = dayjs.tz(`${endStr}   ${endTime   || "23:59"}`, "Asia/Bangkok").toDate();
 
         // ================= ตรวจสอบชื่ออาคาร =================
         const building = await Building.findByPk(buildingId);

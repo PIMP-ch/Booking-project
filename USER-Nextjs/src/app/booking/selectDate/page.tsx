@@ -231,7 +231,6 @@ const SelectDate = () => {
   };
 
   const handleDateSelect = (date: string, status: string) => {
-    if (status !== "ว่าง") { toast.error("⛔ กรุณาเลือกวันที่ว่างเท่านั้น"); return; }
     if (dayjs(date).isBefore(dayjs(todayStr), "day")) return;
 
     if (!selectedStartDate || (selectedStartDate && selectedEndDate)) {
@@ -286,24 +285,26 @@ const SelectDate = () => {
       }
     }
 
-    // ✅ ส่ง startDate/endDate เป็น string ไม่ใช่ array
+    const firstDay   = selectedDates[0];
+    const firstTimes = dayTimes[firstDay] || { startTime: DEFAULT_START, endTime: DEFAULT_END };
+
     const checkData = {
       stadiumId,
       buildingId: building,
-      startDate: selectedStartDate,
-      endDate:   selectedEndDate ?? selectedStartDate,
+      startDate:  selectedStartDate,
+      endDate:    selectedEndDate ?? selectedStartDate,
+      startTime:  firstTimes.startTime,
+      endTime:    firstTimes.endTime,
     };
 
     const response = await checkBuilding(checkData);
     if (response && response.available === false) {
-      toast.error(response.message || "❌ อาคารนี้ถูกจองแล้ว");
+      toast.error(response.message || "❌ ช่วงเวลานี้ถูกจองแล้ว กรุณาเลือกเวลาอื่น");
       return;
     }
 
     const sportTypeId = searchParams?.get("sportTypeId");
     const end         = selectedEndDate ?? selectedStartDate;
-    const firstDay    = selectedDates[0];
-    const firstTimes  = dayTimes[firstDay] || { startTime: DEFAULT_START, endTime: DEFAULT_END };
 
     const params = new URLSearchParams({
       stadiumId,
@@ -445,25 +446,27 @@ const SelectDate = () => {
             {monthDates.map((d) => {
               const status   = statusMap.get(d) ?? "ว่าง";
               const isPast   = dayjs(d).isBefore(dayjs(todayStr), "day");
-              const disabled = status !== "ว่าง" || isPast;
               const active   = isSelected(d);
+              const hasBooking = status === "ไม่ว่าง";
 
               return (
                 <button
                   key={d}
                   onClick={() => handleDateSelect(d, status)}
-                  disabled={disabled}
+                  disabled={isPast}
                   className={`relative h-14 flex flex-col items-center justify-center rounded-xl text-sm font-bold transition-all
                     ${active
                       ? "bg-orange-600 text-white shadow-lg scale-105 z-10"
-                      : disabled
+                      : isPast
                         ? "bg-gray-100 text-gray-400 cursor-not-allowed opacity-50"
-                        : "bg-orange-50 text-orange-700 hover:bg-orange-100 hover:scale-105"
+                        : hasBooking
+                          ? "bg-yellow-50 text-yellow-700 border border-yellow-300 hover:bg-yellow-100 hover:scale-105"
+                          : "bg-orange-50 text-orange-700 hover:bg-orange-100 hover:scale-105"
                     }`}
                 >
                   <span>{dayjs(d).date()}</span>
-                  <span className={`text-[9px] mt-0.5 ${active ? "text-orange-100" : "text-gray-500"}`}>
-                    {isPast ? "ปิด" : status}
+                  <span className={`text-[9px] mt-0.5 ${active ? "text-orange-100" : isPast ? "text-gray-400" : hasBooking ? "text-yellow-600" : "text-gray-500"}`}>
+                    {isPast ? "ปิด" : hasBooking ? "มีจอง" : "ว่าง"}
                   </span>
                 </button>
               );

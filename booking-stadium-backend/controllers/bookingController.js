@@ -37,10 +37,8 @@ const storage = multer.diskStorage({
 const upload = multer({ storage, limits: { fileSize: 5 * 1024 * 1024 } });
 
 function toDateTime(dateLike, hhmm = "00:00") {
-  const d = new Date(dateLike);
-  const [hh = "00", mm = "00"] = (hhmm || "00:00").split(":");
-  d.setHours(Number(hh), Number(mm), 0, 0);
-  return d;
+  const dateStr = dayjs(dateLike).format("YYYY-MM-DD");
+  return dayjs.tz(`${dateStr} ${hhmm || "00:00"}`, "Asia/Bangkok").toDate();
 }
 
 function normalizeEquipment(input) {
@@ -189,8 +187,8 @@ export const bookClassSchedule = async (req, res) => {
       const startHH = String(startHour).padStart(2, "0") + ":00";
       const endHH   = String(endHour).padStart(2, "0")   + ":00";
 
-      const newStart = dayjs(date).hour(startHour).minute(0).second(0).toDate();
-      const newEnd   = dayjs(date).hour(endHour).minute(0).second(0).toDate();
+      const newStart = dayjs.tz(date, "Asia/Bangkok").hour(startHour).minute(0).second(0).millisecond(0).toDate();
+      const newEnd   = dayjs.tz(date, "Asia/Bangkok").hour(endHour).minute(0).second(0).millisecond(0).toDate();
 
       const conflict = await Booking.findOne({
         where: {
