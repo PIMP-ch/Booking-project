@@ -293,6 +293,15 @@ export const getDailyBookingStats = async (month, year = new Date().getFullYear(
   } catch (error) { handleError(error, "Failed to fetch daily booking stats"); }
 };
 
+export const getBookingsByDate = async ({ date, year, month } = {}) => {
+  try {
+    const response = await axios.get(`${API_URL}/bookings/by-date`, {
+      params: { date, year, month },
+    });
+    return response.data;
+  } catch (error) { handleError(error, "Failed to fetch bookings by date"); }
+};
+
 export const getBuildings = async () => {
   try {
     const response = await axios.get(`${API_URL}/buildings`);

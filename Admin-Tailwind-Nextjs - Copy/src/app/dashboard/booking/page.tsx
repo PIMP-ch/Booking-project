@@ -11,6 +11,8 @@ import "react-toastify/dist/ReactToastify.css";
 interface Booking {
     id: string;
     activityName?: string;
+    cancelReason?: string;
+    filePath?: string;
     userId: number | null;
     User: {
         fullname: string;
@@ -19,18 +21,15 @@ interface Booking {
         fieldOfStudy: string;
         year: number;
     } | null;
-    // ✅ เปลี่ยนจาก stadiumId -> Stadium
     Stadium: {
         id: string;
         nameStadium: string;
         descriptionStadium: string;
     } | null;
-    // ✅ เปลี่ยนจาก buildingIds -> Buildings
     Buildings?: {
         id: string;
         name: string;
     }[];
-    // ✅ เปลี่ยนจาก equipment -> Equipment และโครงสร้างใหม่
     Equipment: {
         id: string;
         name: string;
@@ -59,6 +58,7 @@ const BookingPage = () => {
         isOpen: false,
         id: null,
     });
+    const [detailBooking, setDetailBooking] = useState<Booking | null>(null);
 
     const fetchBookings = async () => {
         try {
@@ -122,6 +122,9 @@ const BookingPage = () => {
     const openReturnModal = (id: string) => setReturnModal({ isOpen: true, id });
     const closeReturnModal = () => setReturnModal({ isOpen: false, id: null });
 
+    const openDetail = (booking: Booking) => setDetailBooking(booking);
+    const closeDetail = () => setDetailBooking(null);
+
     useEffect(() => {
         fetchBookings();
     }, []);
@@ -160,11 +163,11 @@ const BookingPage = () => {
             {/* Booking Tables */}
             <div className="overflow-x-auto">
                 {activeTab === "pending" ? (
-                    <BookingTable bookings={filteredBookings} onConfirm={openConfirmModal} onCancel={openCancelModal} />
+                    <BookingTable bookings={filteredBookings} onConfirm={openConfirmModal} onCancel={openCancelModal} onDetail={openDetail} />
                 ) : activeTab === "confirmed" ? (
-                    <BookingTableConfirmed bookings={filteredBookings} onReset={openReturnModal} />
+                    <BookingTableConfirmed bookings={filteredBookings} onReset={openReturnModal} onDetail={openDetail} />
                 ) : (
-                    <BookingTableCanceled bookings={filteredBookings} />
+                    <BookingTableCanceled bookings={filteredBookings} onDetail={openDetail} />
                 )}
             </div>
 
@@ -246,13 +249,23 @@ const BookingPage = () => {
                 </Modal.Footer>
             </Modal>
 
+            {/* ── Detail Modal ── */}
+            {detailBooking && (
+                <BookingDetailModal
+                    booking={detailBooking}
+                    onClose={closeDetail}
+                    onConfirm={(id) => { openConfirmModal(id); closeDetail(); }}
+                    onCancel={(id) => { openCancelModal(id); closeDetail(); }}
+                    onReset={(id) => { openReturnModal(id); closeDetail(); }}
+                />
+            )}
         </div>
     );
 };
 
 // --- Sub Components ---
 
-const BookingTable: React.FC<{ bookings: Booking[]; onConfirm: (id: string) => void; onCancel: (id: string) => void }> = ({ bookings, onConfirm, onCancel }) => (
+const BookingTable: React.FC<{ bookings: Booking[]; onConfirm: (id: string) => void; onCancel: (id: string) => void; onDetail: (b: Booking) => void }> = ({ bookings, onConfirm, onCancel, onDetail }) => (
     <Table hoverable>
         <Table.Head>
             <Table.HeadCell>ลำดับ</Table.HeadCell>
@@ -324,6 +337,9 @@ const BookingTable: React.FC<{ bookings: Booking[]; onConfirm: (id: string) => v
                                     </button>
                                 )}
                             >
+                                <Dropdown.Item onClick={() => onDetail(booking)} className="text-blue-600 gap-2">
+                                    <Icon icon="solar:eye-bold" /> ดูรายละเอียด
+                                </Dropdown.Item>
                                 <Dropdown.Item onClick={() => onConfirm(booking.id)} className="text-green-600 gap-2">
                                     <Icon icon="solar:check-circle-bold" /> ยืนยัน
                                 </Dropdown.Item>
@@ -339,7 +355,7 @@ const BookingTable: React.FC<{ bookings: Booking[]; onConfirm: (id: string) => v
     </Table>
 );
 
-const BookingTableConfirmed: React.FC<{ bookings: Booking[]; onReset: (id: string) => void }> = ({ bookings, onReset }) => (
+const BookingTableConfirmed: React.FC<{ bookings: Booking[]; onReset: (id: string) => void; onDetail: (b: Booking) => void }> = ({ bookings, onReset, onDetail }) => (
     <Table hoverable>
         <Table.Head>
             <Table.HeadCell>ลำดับ</Table.HeadCell>
@@ -387,7 +403,10 @@ const BookingTableConfirmed: React.FC<{ bookings: Booking[]; onReset: (id: strin
                                     </button>
                                 )}
                             >
-                                <Dropdown.Item onClick={() => onReset(booking.id)} className="text-blue-600 gap-2">
+                                <Dropdown.Item onClick={() => onDetail(booking)} className="text-blue-600 gap-2">
+                                    <Icon icon="solar:eye-bold" /> ดูรายละเอียด
+                                </Dropdown.Item>
+                                <Dropdown.Item onClick={() => onReset(booking.id)} className="text-indigo-600 gap-2">
                                     <Icon icon="solar:refresh-outline" /> ส่งคืนสนาม
                                 </Dropdown.Item>
                             </Dropdown>
@@ -399,7 +418,7 @@ const BookingTableConfirmed: React.FC<{ bookings: Booking[]; onReset: (id: strin
     </Table>
 );
 
-const BookingTableCanceled: React.FC<{ bookings: Booking[] }> = ({ bookings }) => (
+const BookingTableCanceled: React.FC<{ bookings: Booking[]; onDetail: (b: Booking) => void }> = ({ bookings, onDetail }) => (
     <Table hoverable>
         <Table.Head>
             <Table.HeadCell>ลำดับ</Table.HeadCell>
@@ -407,6 +426,7 @@ const BookingTableCanceled: React.FC<{ bookings: Booking[] }> = ({ bookings }) =
             <Table.HeadCell>สนามกีฬา</Table.HeadCell>
             <Table.HeadCell>วันที่</Table.HeadCell>
             <Table.HeadCell>สถานะ</Table.HeadCell>
+            <Table.HeadCell className="text-center">รายละเอียด</Table.HeadCell>
         </Table.Head>
         <Table.Body className="divide-y">
             {bookings.map((booking, index) => (
@@ -416,10 +436,175 @@ const BookingTableCanceled: React.FC<{ bookings: Booking[] }> = ({ bookings }) =
                     <Table.Cell>{booking.Stadium?.nameStadium}</Table.Cell>
                     <Table.Cell className="text-xs">{new Date(booking.startDate).toLocaleDateString("th-TH")}</Table.Cell>
                     <Table.Cell><span className="text-red-500 font-bold uppercase text-[10px]">Canceled</span></Table.Cell>
+                    <Table.Cell className="text-center">
+                        <button
+                            onClick={() => onDetail(booking)}
+                            className="text-blue-600 hover:text-blue-800 transition-colors"
+                            title="ดูรายละเอียด"
+                        >
+                            <Icon icon="solar:eye-bold" className="w-5 h-5" />
+                        </button>
+                    </Table.Cell>
                 </Table.Row>
             ))}
         </Table.Body>
     </Table>
 );
+
+// ─── Booking Detail Modal ─────────────────────────────────────────────────────
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:5008";
+
+const STATUS_LABEL: Record<string, { label: string; cls: string }> = {
+    pending:          { label: "รอการยืนยัน",    cls: "bg-yellow-100 text-yellow-700" },
+    confirmed:        { label: "ยืนยันแล้ว",       cls: "bg-green-100 text-green-700" },
+    canceled:         { label: "ยกเลิกแล้ว",       cls: "bg-red-100 text-red-600" },
+    "Return Success": { label: "คืนสนามเรียบร้อย", cls: "bg-blue-100 text-blue-700" },
+};
+
+const BookingDetailModal: React.FC<{
+    booking: Booking;
+    onClose: () => void;
+    onConfirm: (id: string) => void;
+    onCancel: (id: string) => void;
+    onReset: (id: string) => void;
+}> = ({ booking, onClose, onConfirm, onCancel, onReset }) => {
+    const statusInfo = STATUS_LABEL[booking.status] ?? { label: booking.status, cls: "bg-gray-100 text-gray-600" };
+
+    const Row = ({ label, value }: { label: string; value?: React.ReactNode }) => (
+        <div className="flex gap-3 py-2 border-b border-gray-50 last:border-0">
+            <span className="w-36 shrink-0 text-xs text-gray-400 pt-0.5">{label}</span>
+            <span className="text-sm text-gray-800 flex-1">{value || "-"}</span>
+        </div>
+    );
+
+    return (
+        <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 font-kanit"
+            onClick={onClose}
+        >
+            <div
+                className="bg-white rounded-2xl shadow-2xl w-full max-w-xl max-h-[90vh] flex flex-col mx-4"
+                onClick={(e) => e.stopPropagation()}
+            >
+                {/* Header */}
+                <div className="flex items-center justify-between px-6 py-4 border-b">
+                    <div className="flex items-center gap-3">
+                        <h2 className="text-lg font-bold text-gray-800">รายละเอียดการจอง</h2>
+                        <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${statusInfo.cls}`}>
+                            {statusInfo.label}
+                        </span>
+                    </div>
+                    <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-2xl leading-none">×</button>
+                </div>
+
+                {/* Body */}
+                <div className="overflow-y-auto flex-1 px-6 py-4 space-y-5">
+
+                    {/* ผู้จอง */}
+                    <section>
+                        <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">ข้อมูลผู้จอง</p>
+                        <div className="bg-gray-50 rounded-xl px-4 py-1">
+                            <Row label="ชื่อ-นามสกุล"  value={booking.User?.fullname} />
+                            <Row label="อีเมล"          value={booking.User?.email} />
+                            <Row label="เบอร์โทร"       value={booking.User?.phoneNumber} />
+                            <Row label="สาขาวิชา"       value={booking.User?.fieldOfStudy} />
+                            <Row label="ปีการศึกษา"     value={booking.User?.year} />
+                        </div>
+                    </section>
+
+                    {/* สนาม */}
+                    <section>
+                        <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">ข้อมูลการจอง</p>
+                        <div className="bg-gray-50 rounded-xl px-4 py-1">
+                            <Row label="สนามกีฬา"    value={booking.Stadium?.nameStadium} />
+                            <Row label="อาคาร/สถานที่" value={booking.Buildings?.map((b) => b.name).join(", ")} />
+                            <Row label="กิจกรรม"     value={booking.activityName} />
+                            <Row label="วันที่เริ่ม"  value={new Date(booking.startDate).toLocaleDateString("th-TH", { year: "numeric", month: "long", day: "numeric" })} />
+                            <Row label="วันที่สิ้นสุด" value={new Date(booking.endDate).toLocaleDateString("th-TH", { year: "numeric", month: "long", day: "numeric" })} />
+                            <Row label="เวลา"        value={`${booking.startTime} – ${booking.endTime}`} />
+                        </div>
+                    </section>
+
+                    {/* อุปกรณ์ */}
+                    {booking.Equipment?.length > 0 && (
+                        <section>
+                            <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">อุปกรณ์ที่จอง</p>
+                            <div className="bg-gray-50 rounded-xl px-4 py-2 space-y-1">
+                                {booking.Equipment.map((eq, i) => (
+                                    <div key={i} className="flex justify-between text-sm text-gray-700">
+                                        <span>{eq.name}</span>
+                                        <span className="text-gray-500">{eq.BookingEquipment?.quantity ?? 0} ชิ้น</span>
+                                    </div>
+                                ))}
+                            </div>
+                        </section>
+                    )}
+
+                    {/* ไฟล์แนบ */}
+                    {booking.filePath && (
+                        <section>
+                            <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">ไฟล์แนบ</p>
+                            <a
+                                href={`${API_BASE}${booking.filePath}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-600 rounded-lg text-sm hover:bg-blue-100 transition"
+                            >
+                                <Icon icon="solar:file-download-bold" className="w-4 h-4" />
+                                ดูไฟล์แนบ
+                            </a>
+                        </section>
+                    )}
+
+                    {/* เหตุผลยกเลิก */}
+                    {booking.status === "canceled" && booking.cancelReason && (
+                        <section>
+                            <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">เหตุผลการยกเลิก</p>
+                            <div className="bg-red-50 rounded-xl px-4 py-3 text-sm text-red-700">
+                                {booking.cancelReason}
+                            </div>
+                        </section>
+                    )}
+                </div>
+
+                {/* Footer — action buttons ตาม status */}
+                <div className="px-6 py-4 border-t flex justify-between items-center gap-3">
+                    <div className="flex gap-2">
+                        {booking.status === "pending" && (
+                            <>
+                                <button
+                                    onClick={() => onConfirm(booking.id)}
+                                    className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-lg transition"
+                                >
+                                    ✓ ยืนยันการจอง
+                                </button>
+                                <button
+                                    onClick={() => onCancel(booking.id)}
+                                    className="px-4 py-2 bg-red-100 hover:bg-red-200 text-red-600 text-sm font-medium rounded-lg transition"
+                                >
+                                    ✕ ยกเลิก
+                                </button>
+                            </>
+                        )}
+                        {booking.status === "confirmed" && (
+                            <button
+                                onClick={() => onReset(booking.id)}
+                                className="px-4 py-2 bg-indigo-100 hover:bg-indigo-200 text-indigo-700 text-sm font-medium rounded-lg transition"
+                            >
+                                ↩ ส่งคืนสนาม
+                            </button>
+                        )}
+                    </div>
+                    <button
+                        onClick={onClose}
+                        className="px-5 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium rounded-lg transition"
+                    >
+                        ปิด
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
 
 export default BookingPage;

@@ -11,8 +11,9 @@ import {
   cancelBooking,
   getDailyBookingStats,
   getUserBookings,
-  bookClassSchedule,           // ← ใหม่
-  getClassScheduleBookings,    // ← ใหม่
+  bookClassSchedule,
+  getClassScheduleBookings,
+  getBookingsByDate,
 } from "../controllers/bookingController.js";
 
 const router = express.Router();
@@ -34,6 +35,7 @@ router.put("/:id/reset", resetBookingStatus);
 
 router.get("/stats/monthly", getMonthlyBookingStats);
 router.get("/stats/daily", getDailyBookingStats);
+router.get("/by-date", getBookingsByDate);
 
 router.get("/history/returned", getReturnedBookings);
 router.get("/bookings/user/:userId", getUserBookings);

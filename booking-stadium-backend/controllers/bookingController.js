@@ -381,6 +381,47 @@ export const getUserBookings = async (req, res) => {
   }
 };
 
+// =================== READ: จองตามวัน/เดือน (สำหรับ dashboard) ===================
+// filter ด้วย createdAt ให้ตรงกับกราฟ (กราฟนับจาก createdAt เช่นกัน)
+export const getBookingsByDate = async (req, res) => {
+  try {
+    const { date, year, month } = req.query;
+
+    let startRange, endRange;
+
+    if (date) {
+      startRange = dayjs.tz(date, "Asia/Bangkok").startOf("day").toDate();
+      endRange   = dayjs.tz(date, "Asia/Bangkok").endOf("day").toDate();
+    } else if (year && month) {
+      const y = Number(year);
+      const m = Number(month);
+      const base = `${y}-${String(m).padStart(2, "0")}-01`;
+      startRange = dayjs.tz(base, "Asia/Bangkok").startOf("month").toDate();
+      endRange   = dayjs.tz(base, "Asia/Bangkok").endOf("month").toDate();
+    } else {
+      return res.status(400).json({ message: "กรุณาระบุ date หรือ year+month" });
+    }
+
+    const bookings = await Booking.findAll({
+      where: {
+        // ใช้ createdAt ให้ตรงกับที่กราฟนับ
+        createdAt: { [Op.between]: [startRange, endRange] },
+      },
+      include: [
+        { model: Userr,    attributes: ["fullname", "phoneNumber", "email"] },
+        { model: Stadium,  attributes: ["nameStadium"] },
+        { model: Building, attributes: ["name"], through: { attributes: [] } },
+      ],
+      order: [["createdAt", "ASC"]],
+    });
+
+    return res.status(200).json(bookings);
+  } catch (error) {
+    console.error("getBookingsByDate error:", error);
+    return res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
 // =================== READ: ทั้งหมด ===================
 export const getAllBookings = async (req, res) => {
   try {
