@@ -78,7 +78,8 @@ const START_OPTIONS = HOURS.slice(0, HOURS.length - 1);
 const END_OPTIONS   = HOURS.slice(1);
 
 const COLOR_PRESETS = ["#ffc107","#e83e8c","#28a745","#fd7e14","#00bcd4","#6f42c1","#dc3545","#007bff"];
-const YEAR_OPTIONS  = [2568, 2567, 2566];
+const CURRENT_YEAR_TH = new Date().getFullYear() + 543;
+const YEAR_OPTIONS  = Array.from({ length: 5 }, (_, i) => CURRENT_YEAR_TH + 1 - i);
 const TERM_OPTIONS  = [1, 2, 3];
 
 const LABEL_W    = 120;
@@ -134,8 +135,8 @@ export default function ClassScheduleForm() {
   const [currentUser, setCurrentUser] = useState<{ id: number; name: string; userType: string } | null>(null);
   const isStaff = currentUser?.userType === "staff";
 
-  const [selectedYear, setSelectedYear] = useState(2568);
-  const [selectedTerm, setSelectedTerm] = useState(2);
+  const [selectedYear, setSelectedYear] = useState(CURRENT_YEAR_TH);
+  const [selectedTerm, setSelectedTerm] = useState(1);
 
   const today = new Date();
   const [rangeStart, setRangeStart] = useState(toYMD(getMondayOf(today)));
@@ -524,6 +525,25 @@ export default function ClassScheduleForm() {
   );
 }
 
+// ─── Lane assignment helper ───────────────────────────────────────────────────
+
+function assignLanes(blocks: SubjectBlock[]): Map<number, number> {
+  const sorted = [...blocks].sort((a, b) => a.startHour - b.startHour);
+  const laneEndHours: number[] = [];
+  const result = new Map<number, number>();
+  for (const block of sorted) {
+    let lane = laneEndHours.findIndex(endHour => endHour <= block.startHour);
+    if (lane === -1) {
+      lane = laneEndHours.length;
+      laneEndHours.push(block.endHour);
+    } else {
+      laneEndHours[lane] = block.endHour;
+    }
+    result.set(block.id, lane);
+  }
+  return result;
+}
+
 // ─── Timetable sub-component ─────────────────────────────────────────────────
 
 function TimetableGrid({
@@ -537,6 +557,13 @@ function TimetableGrid({
 }) {
   const NUM_HOURS = HOURS.length;
   const gridCols  = `${LABEL_W}px repeat(${NUM_HOURS}, 1fr)`;
+
+  const dayData = DAYS.map(day => {
+    const dayBlocks = blocks.filter(b => b.dayRow === day.row);
+    const laneMap   = assignLanes(dayBlocks);
+    const numLanes  = dayBlocks.length === 0 ? 1 : Math.max(...dayBlocks.map(b => (laneMap.get(b.id) ?? 0) + 1));
+    return { day, dayBlocks, laneMap, numLanes };
+  });
 
   return (
     <div className="relative w-full" style={{ overflowX: "hidden" }}>
@@ -570,36 +597,47 @@ function TimetableGrid({
       )}
 
       {/* Day rows */}
-      {DAYS.map(day => {
-        const dayBlocks = blocks.filter(b => b.dayRow === day.row);
+      {dayData.map(({ day, dayBlocks, laneMap, numLanes }) => {
+        const rowH = ROW_HEIGHT * numLanes;
         return (
           <div key={day.row} className="grid border-b border-gray-100 last:border-b-0"
-            style={{ gridTemplateColumns: gridCols, minHeight: ROW_HEIGHT }}>
+            style={{ gridTemplateColumns: gridCols, minHeight: rowH }}>
 
             <div className="border-r border-gray-200 bg-gray-50 flex items-center px-3 text-sm font-semibold text-gray-700"
-              style={{ borderLeft: `4px solid ${day.accent}` }}>
+              style={{ borderLeft: `4px solid ${day.accent}`, minHeight: rowH }}>
               {day.label}
             </div>
 
-            <div className="relative" style={{ gridColumn: `2 / ${NUM_HOURS + 2}`, minHeight: ROW_HEIGHT }}>
+            <div className="relative" style={{ gridColumn: `2 / ${NUM_HOURS + 2}`, minHeight: rowH }}>
               {/* Grid lines */}
               <div className="absolute inset-0 grid pointer-events-none"
                 style={{ gridTemplateColumns: `repeat(${NUM_HOURS}, 1fr)` }}>
                 {HOURS.map((_, i) => <div key={i} className="border-r border-gray-100 last:border-r-0" />)}
               </div>
 
+              {/* Lane separator lines */}
+              {numLanes > 1 && Array.from({ length: numLanes - 1 }, (_, i) => (
+                <div key={i} className="absolute left-0 right-0 border-t border-dashed border-gray-200 pointer-events-none"
+                  style={{ top: (i + 1) * ROW_HEIGHT }} />
+              ))}
+
               {/* Subject blocks */}
               {dayBlocks.map(block => {
+                const lane        = laneMap.get(block.id) ?? 0;
                 const leftPct     = ((block.startHour - START_HOUR) / NUM_HOURS) * 100;
                 const widthPct    = ((block.endHour - block.startHour) / NUM_HOURS) * 100;
                 const isPending   = !block.fromDB || block.dbStatus !== "confirmed";
                 const displayColor = isPending ? "#9ca3af" : block.color;
+                const blockTop    = lane * ROW_HEIGHT + 4;
+                const blockHeight = ROW_HEIGHT - 8;
                 return (
                   <div key={block.id}
-                    className="absolute top-2 bottom-2 rounded px-2 py-1 overflow-hidden group cursor-default"
+                    className="absolute rounded px-2 py-1 overflow-hidden group cursor-default"
                     style={{
-                      left:  `calc(${leftPct}% + 3px)`,
-                      width: `calc(${widthPct}% - 6px)`,
+                      top:    blockTop,
+                      height: blockHeight,
+                      left:   `calc(${leftPct}% + 3px)`,
+                      width:  `calc(${widthPct}% - 6px)`,
                       backgroundColor: displayColor + "28",
                       border: `1px solid ${displayColor}`,
                       borderLeft: `5px solid ${displayColor}`,

@@ -42,9 +42,12 @@ interface Booking {
     status: string;
 }
 
+const PAGE_SIZE = 10;
+
 const BookingPage = () => {
     const [bookings, setBookings] = useState<Booking[]>([]);
     const [activeTab, setActiveTab] = useState("pending");
+    const [currentPage, setCurrentPage] = useState(1);
     const [confirmModal, setConfirmModal] = useState<{ isOpen: boolean; id: string | null }>({
         isOpen: false,
         id: null,
@@ -137,21 +140,37 @@ const BookingPage = () => {
                 : booking.status?.toLowerCase() === "canceled"
     );
 
+    const totalPages = Math.max(1, Math.ceil(filteredBookings.length / PAGE_SIZE));
+    const paginatedBookings = filteredBookings.slice(
+        (currentPage - 1) * PAGE_SIZE,
+        currentPage * PAGE_SIZE
+    );
+
+    const handleTabChange = (tab: string) => {
+        setActiveTab(tab);
+        setCurrentPage(1);
+    };
+
     return (
         <div className="p-6 bg-white rounded-lg shadow-md font-kanit">
             <ToastContainer position="top-right" autoClose={2500} />
             {/* Tabs */}
             <div className="flex space-x-4 mb-6">
-                {["pending", "confirmed", "canceled"].map((tab) => (
-                    <button
-                        key={tab}
-                        className={`px-4 py-2 rounded-lg transition-colors ${activeTab === tab ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                            }`}
-                        onClick={() => setActiveTab(tab)}
-                    >
-                        {tab === "pending" ? "รอการยืนยัน" : tab === "confirmed" ? "ยืนยันแล้ว" : "ยกเลิกแล้ว"}
-                    </button>
-                ))}
+                {["pending", "confirmed", "canceled"].map((tab) => {
+                    const count = bookings.filter(b => b.status?.toLowerCase() === tab).length;
+                    return (
+                        <button
+                            key={tab}
+                            className={`px-4 py-2 rounded-lg transition-colors flex items-center gap-2 ${activeTab === tab ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}
+                            onClick={() => handleTabChange(tab)}
+                        >
+                            {tab === "pending" ? "รอการยืนยัน" : tab === "confirmed" ? "ยืนยันแล้ว" : "ยกเลิกแล้ว"}
+                            <span className={`text-xs font-bold px-1.5 py-0.5 rounded-full ${activeTab === tab ? "bg-white/20 text-white" : "bg-gray-300 text-gray-600"}`}>
+                                {count}
+                            </span>
+                        </button>
+                    );
+                })}
             </div>
 
             <div className="flex justify-between items-center mb-6">
@@ -163,13 +182,72 @@ const BookingPage = () => {
             {/* Booking Tables */}
             <div className="overflow-x-auto">
                 {activeTab === "pending" ? (
-                    <BookingTable bookings={filteredBookings} onConfirm={openConfirmModal} onCancel={openCancelModal} onDetail={openDetail} />
+                    <BookingTable bookings={paginatedBookings} onConfirm={openConfirmModal} onCancel={openCancelModal} onDetail={openDetail} />
                 ) : activeTab === "confirmed" ? (
-                    <BookingTableConfirmed bookings={filteredBookings} onReset={openReturnModal} onDetail={openDetail} />
+                    <BookingTableConfirmed bookings={paginatedBookings} onReset={openReturnModal} onDetail={openDetail} />
                 ) : (
-                    <BookingTableCanceled bookings={filteredBookings} onDetail={openDetail} />
+                    <BookingTableCanceled bookings={paginatedBookings} onDetail={openDetail} />
                 )}
             </div>
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+                <div className="flex items-center justify-between mt-4 px-1">
+                    <p className="text-sm text-gray-500">
+                        แสดง {(currentPage - 1) * PAGE_SIZE + 1}–{Math.min(currentPage * PAGE_SIZE, filteredBookings.length)} จาก {filteredBookings.length} รายการ
+                    </p>
+                    <div className="flex items-center gap-1">
+                        <button
+                            onClick={() => setCurrentPage(1)}
+                            disabled={currentPage === 1}
+                            className="px-2 py-1 rounded text-sm text-gray-500 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed"
+                        >
+                            «
+                        </button>
+                        <button
+                            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                            disabled={currentPage === 1}
+                            className="px-3 py-1 rounded text-sm text-gray-500 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed"
+                        >
+                            ‹
+                        </button>
+                        {Array.from({ length: totalPages }, (_, i) => i + 1)
+                            .filter(p => p === 1 || p === totalPages || Math.abs(p - currentPage) <= 2)
+                            .reduce<(number | "...")[]>((acc, p, idx, arr) => {
+                                if (idx > 0 && (p as number) - (arr[idx - 1] as number) > 1) acc.push("...");
+                                acc.push(p);
+                                return acc;
+                            }, [])
+                            .map((item, idx) =>
+                                item === "..." ? (
+                                    <span key={`ellipsis-${idx}`} className="px-2 py-1 text-sm text-gray-400">…</span>
+                                ) : (
+                                    <button
+                                        key={item}
+                                        onClick={() => setCurrentPage(item as number)}
+                                        className={`px-3 py-1 rounded text-sm font-medium transition-colors ${currentPage === item ? "bg-blue-600 text-white" : "text-gray-600 hover:bg-gray-100"}`}
+                                    >
+                                        {item}
+                                    </button>
+                                )
+                            )}
+                        <button
+                            onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                            disabled={currentPage === totalPages}
+                            className="px-3 py-1 rounded text-sm text-gray-500 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed"
+                        >
+                            ›
+                        </button>
+                        <button
+                            onClick={() => setCurrentPage(totalPages)}
+                            disabled={currentPage === totalPages}
+                            className="px-2 py-1 rounded text-sm text-gray-500 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed"
+                        >
+                            »
+                        </button>
+                    </div>
+                </div>
+            )}
 
             {/* Modals (รวมไว้ที่เดียวเพื่อความสะอาด) */}
             <Modal show={confirmModal.isOpen} onClose={closeConfirmModal} className="font-kanit">

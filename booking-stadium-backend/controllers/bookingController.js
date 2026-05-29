@@ -193,6 +193,7 @@ export const bookClassSchedule = async (req, res) => {
       const conflict = await Booking.findOne({
         where: {
           bookingType: "class_schedule",
+          buildingId: Number(buildingId),
           academicYear: year ?? null,
           academicTerm: term ?? null,
           status: { [Op.in]: ["pending", "confirmed"] },
@@ -247,7 +248,10 @@ export const getClassScheduleBookings = async (req, res) => {
   try {
     const { weekStart, year, term } = req.query;
 
-    const where = { bookingType: "class_schedule" };
+    const where = {
+      bookingType: "class_schedule",
+      status: { [Op.in]: ["pending", "confirmed"] },
+    };
 
     if (weekStart) {
       const start = dayjs(weekStart).startOf("day").toDate();
