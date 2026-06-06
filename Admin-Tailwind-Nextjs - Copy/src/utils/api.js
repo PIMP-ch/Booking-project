@@ -220,6 +220,13 @@ export const deleteUser = async (id) => {
   } catch (error) { handleError(error, "Failed to delete user"); }
 };
 
+export const updateUserStatus = async (id, status) => {
+  try {
+    const response = await axios.put(`${API_URL}/auth/update-status/${id}`, { status });
+    return response.data;
+  } catch (error) { handleError(error, "Failed to update user status"); }
+};
+
 // ==========================================
 // 5. BOOKINGS
 // ==========================================

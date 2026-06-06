@@ -108,13 +108,14 @@ const BoxedRegister = () => {
       const response = await RegisterUser(payload);
 
       if (response && response.user) {
-        localStorage.setItem("user", JSON.stringify(response.user));
-        login(response.user);
-        toast.success("✅ สมัครสมาชิกสำเร็จ!", { position: "top-center", autoClose: 2000 });
+        toast.success("✅ สมัครสมาชิกสำเร็จ! กรุณารอเจ้าหน้าที่อนุมัติบัญชีของคุณ", {
+          position: "top-center",
+          autoClose: 3000,
+        });
 
         setTimeout(() => {
-          router.push("/home");
-        }, 2000);
+          router.push("/user/pending-approval?status=NEW");
+        }, 3000);
       }
     } catch (err: any) {
       // ดึงข้อความ error จาก Backend (ที่เซ็ตไว้ใน catch ของ api.js)

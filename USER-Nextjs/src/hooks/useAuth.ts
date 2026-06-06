@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from "react";
 
+type UserStatus = "NEW" | "Pending" | "Active" | "Inactive" | "Suspended" | "Expired" | "Cancelled" | "Rejected" | "Deleted";
+
 interface User {
     id: string;
     fullname: string;
@@ -10,6 +12,7 @@ interface User {
     fieldOfStudy: string;
     year: number;
     token: string;
+    status: UserStatus;
 }
 
 export default function useAuth() {

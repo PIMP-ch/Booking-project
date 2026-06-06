@@ -104,13 +104,21 @@ export const deleteUser = async (id) => {
   }
 };
 
-// ❗ แก้ endpoint ให้ถูก: PUT /auth/:id (ของเดิมเป็น /auth/update/:id)
 export const updateUser = async (id, payload) => {
   try {
     const response = await axios.put(`${API_URL}/auth/${id}`, payload);
     return response.data;
   } catch (error) {
     throw error.response?.data || { message: "Failed to update user" };
+  }
+};
+
+export const updateUserStatus = async (id, status) => {
+  try {
+    const response = await axios.put(`${API_URL}/auth/update-status/${id}`, { status });
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { message: "Failed to update user status" };
   }
 };
 

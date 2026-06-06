@@ -93,7 +93,7 @@ export const requestPasswordReset = async (req, res) => {
         res.status(200).json({ message: "รหัสยืนยันถูกส่งไปยังอีเมลของคุณแล้ว" });
 
     } catch (error) {
-        res.status(500).json({ message: "เกิดข้อผิดพลาดในเซิร์ฟเวอร์", error });
+        res.status(500).json({ message: "เกิดข้อผิดพลาดในเซิร์ฟเวอร์", error: error.message || String(error) });
     }
 };
 
@@ -143,7 +143,7 @@ export const resetPassword = async (req, res) => {
         res.status(200).json({ message: "เปลี่ยนรหัสผ่านเรียบร้อยแล้ว" });
 
     } catch (error) {
-        res.status(500).json({ message: "เกิดข้อผิดพลาดในเซิร์ฟเวอร์", error });
+        res.status(500).json({ message: "เกิดข้อผิดพลาดในเซิร์ฟเวอร์", error: error.message || String(error) });
     }
 };
 
@@ -183,7 +183,7 @@ export const blockUser = async (req, res) => {
         });
 
     } catch (error) {
-        res.status(500).json({ message: "เกิดข้อผิดพลาดในเซิร์ฟเวอร์", error });
+        res.status(500).json({ message: "เกิดข้อผิดพลาดในเซิร์ฟเวอร์", error: error.message || String(error) });
     }
 };
 
@@ -205,7 +205,7 @@ export const unblockUser = async (req, res) => {
         res.status(200).json({ message: "ปลดบล็อกผู้ใช้เรียบร้อยแล้ว" });
 
     } catch (error) {
-        res.status(500).json({ message: "เกิดข้อผิดพลาดในเซิร์ฟเวอร์", error });
+        res.status(500).json({ message: "เกิดข้อผิดพลาดในเซิร์ฟเวอร์", error: error.message || String(error) });
     }
 };
 
@@ -215,9 +215,8 @@ export const register = async (req, res) => {
     try {
         const { fullname, email, phoneNumber, userType, fieldOfStudy, year, department } = req.body;
 
-
         if (!fullname || !email || !phoneNumber) {
-            return res.stsatus(400).json({ message: "กรุณากรอกชื่อ อีเมล์ เบอร์โทร และรหัสผ่านให้ครบ" });
+            return res.status(400).json({ message: "กรุณากรอกชื่อ อีเมล์ เบอร์โทร ให้ครบ" });
         }
 
         if (!["student", "staff"].includes(userType)) {
@@ -230,27 +229,23 @@ export const register = async (req, res) => {
             }
         }
 
-        if (userType == "staff") {
+        if (userType === "staff") {
             if (!department) {
                 return res.status(400).json({ message: "กรุณากรอกหน่วยงาน" });
             }
         }
 
-        // ตรวจสอบว่าอีเมลหรือเบอร์โทรถูกใช้ไปแล้วหรือไม่
-        // const existingUser = await User.findOne({ $or: [{ email }, { phoneNumber }] });
-        // if (existingUser) {
-        //     return res.status(400).json({ message: "Email or phone number already exists" });
-        // }
+        // ตรวจสอบอีเมลหรือเบอร์โทรซ้ำ (รวมถึง soft-deleted users)
         const existingUser = await Userr.findOne({
             where: {
                 [Op.or]: [{ email }, { phoneNumber }]
-            }
+            },
+            paranoid: false,
         });
         if (existingUser) {
             return res.status(400).json({ message: "Email or phone number already exists" });
         }
 
-        // ✅ สร้างข้อมูลใหม่และบันทึกลงฐานข้อมูล
         const newUser = await Userr.create({
             fullname,
             email,
@@ -259,20 +254,20 @@ export const register = async (req, res) => {
             fieldOfStudy: userType === "student" ? fieldOfStudy : null,
             year: userType === "student" ? year : null,
             department: userType === "staff" ? department : null,
-            blockUntil: null
+            status: "NEW",
+            blockUntil: null,
         });
 
-        // ✅ Sequelize ใช้ .dataValues แทน .toObject()
         const userResponse = { ...newUser.dataValues };
         delete userResponse.password;
 
         res.status(201).json({
             success: true,
-            message: "สมัครสมาชิกสำเร็จ",
+            message: "สมัครสมาชิกสำเร็จ กรุณารอเจ้าหน้าที่อนุมัติบัญชีของคุณ",
             user: userResponse,
         });
     } catch (error) {
-        res.status(500).json({ message: "Server error", error });
+        res.status(500).json({ message: "Server error", error: error.message || String(error) });
     }
 };
 
@@ -281,43 +276,71 @@ export const register = async (req, res) => {
 export const login = async (req, res) => {
     try {
         const { email, name, sub } = req.body;
-        // const user = await User.findOne({ email });
-        const user = await Userr.findOne({
-            where: {
-                email: email
-            }
-        });
+        const user = await Userr.findOne({ where: { email } });
 
-        // ✅ กรณีไม่มีอีเมลในระบบ
         if (!user) {
             return res.status(200).json({
-                message: "ไม่พบอีเมลนี้ในระบบ", user,
-                isNewUser: true
+                message: "ไม่พบอีเมลนี้ในระบบ",
+                user: null,
+                isNewUser: true,
             });
         }
 
-        // ✅ กรณีผู้ใช้ถูกบล็อก
+        // ตรวจสอบ status ก่อนอนุญาตให้เข้าสู่ระบบ
+        const statusMessages = {
+            NEW:       "บัญชีของคุณสมัครแล้ว กรุณารอเจ้าหน้าที่ตรวจสอบและอนุมัติสิทธิ์การใช้งาน",
+            Pending:   "บัญชีของคุณอยู่ระหว่างการตรวจสอบข้อมูล กรุณารอการอนุมัติจากเจ้าหน้าที่",
+            Suspended: "บัญชีของคุณถูกระงับการใช้งานชั่วคราว กรุณาติดต่อเจ้าหน้าที่",
+            Expired:   "บัญชีของคุณหมดอายุแล้ว ไม่สามารถเข้าใช้งานได้",
+            Cancelled: "บัญชีของคุณอยู่ระหว่างกระบวนการยกเลิก กรุณาติดต่อเจ้าหน้าที่",
+            Rejected:  "คำขอสมัครสมาชิกของคุณไม่ผ่านการตรวจสอบ กรุณาติดต่อเจ้าหน้าที่",
+            Deleted:   "บัญชีนี้ถูกลบออกจากระบบแล้ว",
+        };
+
+        // Inactive → auto-restore เป็น Active เมื่อ user กลับมา login
+        if (user.status === "Inactive") {
+            await Userr.update(
+                { status: "Active", lastLoginAt: new Date() },
+                { where: { id: user.id }, validate: false }
+            );
+            const restoredUser = await Userr.findByPk(user.id);
+            return res.status(200).json({
+                message: "ยินดีต้อนรับกลับ! บัญชีของคุณถูกเปิดใช้งานอีกครั้งแล้ว",
+                user: restoredUser,
+                isNewUser: false,
+                wasInactive: true,
+            });
+        }
+
+        if (user.status !== "Active") {
+            return res.status(403).json({
+                message: statusMessages[user.status] || "ไม่สามารถเข้าสู่ระบบได้",
+                status: user.status,
+            });
+        }
+
         if (user.blockUntil && user.blockUntil > new Date()) {
             return res.status(403).json({
-                message: `บัญชีของคุณถูกบล็อกจนถึง ${user.blockUntil.toLocaleString()}`
+                message: `บัญชีของคุณถูกบล็อกจนถึง ${user.blockUntil.toLocaleString()}`,
+                status: user.status,
             });
         }
 
-        // ✅ รหัสผ่านผิด
-        // if (password !== user.password) {
-        //     return res.status(400).json({ message: "รหัสผ่านไม่ถูกต้อง" });
-        // }
+        // บันทึกเวลา login ล่าสุด
+        await Userr.update(
+            { lastLoginAt: new Date() },
+            { where: { id: user.id }, validate: false }
+        );
+        const freshUser = await Userr.findByPk(user.id);
 
         return res.status(200).json({
             message: "เข้าสู่ระบบสำเร็จ",
-            user,
-            isNewUser: false
-        })
-
-        // res.status(200).json({ message: "เข้าสู่ระบบสำเร็จ", user });
+            user: freshUser,
+            isNewUser: false,
+        });
 
     } catch (error) {
-        res.status(500).json({ message: "เกิดข้อผิดพลาดในเซิร์ฟเวอร์", error });
+        res.status(500).json({ message: "เกิดข้อผิดพลาดในเซิร์ฟเวอร์", error: error.message || String(error) });
     }
 };
 
@@ -327,19 +350,47 @@ export const login = async (req, res) => {
 export const deleteUser = async (req, res) => {
     try {
         const { id } = req.params;
-
-        // const user = await User.findByIdAndDelete(id);
         const user = await Userr.findByPk(id);
-
-        if (user) {
-            await user.destroy();
-        }
 
         if (!user) return res.status(404).json({ message: "User not found" });
 
+        // soft delete: ตั้ง status เป็น Deleted แล้ว destroy (paranoid จะ set deletedAt)
+        await user.update({ status: "Deleted" });
+        await user.destroy();
+
         res.status(200).json({ message: "User deleted successfully" });
     } catch (error) {
-        res.status(500).json({ message: "Server error", error });
+        res.status(500).json({ message: "Server error", error: error.message || String(error) });
+    }
+};
+
+export const updateUserStatus = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { status } = req.body;
+
+        const validStatuses = ["NEW", "Pending", "Active", "Suspended", "Expired", "Cancelled", "Rejected", "Deleted"];
+        if (!validStatuses.includes(status)) {
+            return res.status(400).json({ message: "สถานะไม่ถูกต้อง" });
+        }
+
+        const user = await Userr.findByPk(id);
+        if (!user) return res.status(404).json({ message: "ไม่พบผู้ใช้" });
+
+        if (status === "Deleted") {
+            // ใช้ class method เพื่อข้าม model-level validators
+            await Userr.update({ status: "Deleted" }, { where: { id }, validate: false });
+            await user.destroy();
+            return res.status(200).json({ message: "ลบบัญชีผู้ใช้เรียบร้อยแล้ว" });
+        }
+
+        // ใช้ class method เพื่อข้าม model-level validators (studentFieldsRequired ฯลฯ)
+        await Userr.update({ status }, { where: { id }, validate: false });
+
+        const updatedUser = await Userr.findByPk(id);
+        res.status(200).json({ message: "อัปเดตสถานะสำเร็จ", user: updatedUser });
+    } catch (error) {
+        res.status(500).json({ message: "Server error", error: error.message || String(error) });
     }
 };
 
@@ -377,13 +428,14 @@ export const updateUser = async (req, res) => {
 };
 
 
-// ✅ Fetch all users
 export const getAllUsers = async (req, res) => {
     try {
-        // const users = await User.find(); // Fetch all users from the database
-        const users = await Userr.findAll();
+        const { includeDeleted } = req.query;
+        const users = await Userr.findAll({
+            paranoid: includeDeleted !== "true", // ถ้าส่ง ?includeDeleted=true จะรวม soft-deleted
+        });
         res.status(200).json(users);
     } catch (error) {
-        res.status(500).json({ message: "Server error", error });
+        res.status(500).json({ message: "Server error", error: error.message || String(error) });
     }
 };

@@ -9,12 +9,11 @@ const Userr = sequelize.define("User", {
     email: {
         type: DataTypes.STRING,
         allowNull: false,
-        unique: true,
+        // unique constraint อยู่ที่ DB แล้ว ไม่ใส่ที่นี่เพื่อป้องกัน Sequelize สร้าง index ซ้ำ
     },
     phoneNumber: {
         type: DataTypes.STRING,
         allowNull: false,
-        unique: true,
     },
     userType: {
         type: DataTypes.ENUM("student", "staff"),
@@ -38,6 +37,15 @@ const Userr = sequelize.define("User", {
         type: DataTypes.STRING,
         allowNull: true,
     },
+    status: {
+        type: DataTypes.ENUM("NEW", "Pending", "Active", "Inactive", "Suspended", "Expired", "Cancelled", "Rejected", "Deleted"),
+        allowNull: false,
+        defaultValue: "NEW",
+    },
+    lastLoginAt: {
+        type: DataTypes.DATE,
+        defaultValue: null,
+    },
     blockUntil: {
         type: DataTypes.DATE,
         defaultValue: null,
@@ -51,16 +59,15 @@ const Userr = sequelize.define("User", {
         defaultValue: null,
     },
 }, {
-    timestamps: true, // createdAt, updatedAt อัตโนมัติ
+    timestamps: true,
+    paranoid: true, // soft delete — ใช้ deletedAt แทนการลบจริง
     validate: {
-        // ✅ Validate student fields
         studentFieldsRequired() {
             if (this.userType === "student") {
                 if (!this.fieldOfStudy) throw new Error("fieldOfStudy is required for student");
                 if (!this.year) throw new Error("year is required for student");
             }
         },
-        // ✅ Validate staff fields
         staffFieldsRequired() {
             if (this.userType === "staff") {
                 if (!this.department) throw new Error("department is required for staff");

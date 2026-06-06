@@ -14,7 +14,6 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [clientId, setClientId] = useState("")
 
-  // ✅ รับ email เป็น parameter แทน event
   const handleLogin = async (email: string, name: string, sub: string) => {
     setLoading(true);
     try {
@@ -25,11 +24,21 @@ export default function LoginPage() {
         return;
       }
       login?.(res.user);
-      toast.success(res?.message || "เข้าสู่ระบบสำเร็จ");
+      if (res.wasInactive) {
+        toast.info(res.message || "ยินดีต้อนรับกลับ! บัญชีของคุณถูกเปิดใช้งานอีกครั้งแล้ว");
+      } else {
+        toast.success(res?.message || "เข้าสู่ระบบสำเร็จ");
+      }
       router.push("/home");
     } catch (err: any) {
-      const msg = err?.message || "เข้าสู่ระบบไม่สำเร็จ";
-      toast.error(msg);
+      const status = err?.status as string | undefined;
+      const pendingStatuses = ["NEW", "Pending"];
+      if (status && pendingStatuses.includes(status)) {
+        toast.info(err?.message || "บัญชีของคุณรอการอนุมัติ");
+        router.push(`/user/pending-approval?status=${status}`);
+      } else {
+        toast.error(err?.message || "เข้าสู่ระบบไม่สำเร็จ");
+      }
     } finally {
       setLoading(false);
     }

@@ -1,4 +1,5 @@
 // server.js
+import "dotenv/config"; // โหลด .env ก่อน import อื่นทุกตัว
 import express from "express";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -32,8 +33,30 @@ import buildingRoutes from "./routes/buildingRoutes.js";
 import ExecutiveRoutes from "./routes/executiveRoutes.js"
 import StadiumImage from "./models/StadiumImage.js";
 import EquipmentAdjustmentTransaction from "./models/EquipmentAdjustmentTransaction.js";
+import { startInactivityJob } from "./jobs/inactivityJob.js";
 
-dotenv.config();
+// dotenv โหลดแล้วจาก import "dotenv/config" ด้านบน
+
+// เพิ่ม column ใหม่โดยไม่ให้ error ถ้ามีอยู่แล้ว
+const runMigrations = async () => {
+  const migrations = [
+    `ALTER TABLE Users ADD COLUMN status ENUM('NEW','Pending','Active','Inactive','Suspended','Expired','Cancelled','Rejected','Deleted') NOT NULL DEFAULT 'NEW'`,
+    `ALTER TABLE Users ADD COLUMN lastLoginAt DATETIME DEFAULT NULL`,
+    `ALTER TABLE Users ADD COLUMN deletedAt DATETIME DEFAULT NULL`,
+  ];
+  for (const sql of migrations) {
+    try {
+      await sequelize.query(sql);
+      const col = sql.match(/ADD COLUMN (\w+)/)?.[1];
+      console.log(`[Migration] เพิ่ม column: ${col}`);
+    } catch (e) {
+      // ER_DUP_FIELDNAME = column มีอยู่แล้ว ข้ามได้เลย
+      if (e.original?.code !== "ER_DUP_FIELDNAME") {
+        console.error("[Migration] Error:", e.message);
+      }
+    }
+  }
+};
 
 // ✅ ต้องสร้าง __dirname สำหรับ ESM
 const __filename = fileURLToPath(import.meta.url);
@@ -73,8 +96,12 @@ app.use("/api/executives",ExecutiveRoutes );
 // ✅ Start server
 const PORT = process.env.PORT || 5008;
 app.listen(PORT, async () => {
-  await sequelize.authenticate({ alter: true }); // ทดสอบการเชื่อมต่อ DB
-  await sequelize.sync({ alter: true }); // สร้าง table อัตโนมัติ
+  await sequelize.authenticate();
+  // sync แบบ force:false — ไม่แตะ table ที่มีอยู่แล้ว ป้องกัน duplicate index
+  await sequelize.sync({ force: false });
+  // เพิ่ม column ใหม่แบบ safe (ถ้ามีอยู่แล้วก็ข้าม)
+  await runMigrations();
+  startInactivityJob();
   console.log("Database connected!")
   console.log(`🚀 Server running on http://localhost:${PORT}`);
   console.log(`📂 Static files served at /uploads`);

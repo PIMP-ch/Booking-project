@@ -1,9 +1,10 @@
 import express from "express";
-import { 
+import {
     register,
     login,
     deleteUser,
     updateUser,
+    updateUserStatus,
     getAllUsers,
     blockUser,
     unblockUser,
@@ -14,25 +15,20 @@ const router = express.Router();
 
 router.post("/register", register);
 router.post("/login", login);
-router.get("/AllUser", getAllUsers); // Fetch all registered users
-// ✅ Route สำหรับลบผู้ใช้
-router.delete("/:id", deleteUser);
-
-// ✅ Route สำหรับแก้ไขผู้ใช้
-router.put("/:id", updateUser);
-
-// ✅ บล็อกผู้ใช้
-router.put("/block-user/:id", blockUser);
-
-// ✅ ปลดบล็อกผู้ใช้
-router.put("/unblock-user/:id", unblockUser);
-
+router.get("/AllUser", getAllUsers);
 
 // ✅ ขอ Reset Password
 router.post("/reset-password/request", requestPasswordReset);
-
-// ✅ ตั้งค่ารหัสผ่านใหม่
 router.post("/reset-password", resetPassword);
+
+// ✅ specific routes ต้องมาก่อน /:id
+router.put("/block-user/:id", blockUser);
+router.put("/unblock-user/:id", unblockUser);
+router.put("/update-status/:id", updateUserStatus);
+
+// ✅ generic /:id
+router.put("/:id", updateUser);
+router.delete("/:id", deleteUser);
 
 
 
