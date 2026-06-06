@@ -59,6 +59,13 @@ const RAW_SIDEBAR: MenuItem[] = [
         url: "/dashboard/equipment",
         roles: ["admin"],
       },
+      {
+        name: "จัดการ อาคารกีฬา",
+        icon: "solar:buildings-bold-duotone",
+        id: uniqueId(),
+        url: "/dashboard/building",
+        roles: ["admin"],
+      },
     ],
   },
 

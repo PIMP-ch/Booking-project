@@ -332,6 +332,27 @@ export const getBuildings = async () => {
   } catch (error) { handleError(error, "Failed to fetch buildings"); }
 };
 
+export const createBuilding = async (data) => {
+  try {
+    const response = await axios.post(`${API_URL}/buildings`, data);
+    return response.data;
+  } catch (error) { handleError(error, "Failed to create building"); }
+};
+
+export const updateBuilding = async (id, data) => {
+  try {
+    const response = await axios.put(`${API_URL}/buildings/${id}`, data);
+    return response.data;
+  } catch (error) { handleError(error, "Failed to update building"); }
+};
+
+export const deleteBuilding = async (id) => {
+  try {
+    const response = await axios.delete(`${API_URL}/buildings/${id}`);
+    return response.data;
+  } catch (error) { handleError(error, "Failed to delete building"); }
+};
+
 export const getTotalUsers = async () => {
   try {
     const response = await axios.get(`${API_URL}/stats/users`);

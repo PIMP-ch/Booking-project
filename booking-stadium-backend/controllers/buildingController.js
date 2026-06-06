@@ -18,6 +18,50 @@ export const getBuildings = async (_req, res) => {
     }
 };
 
+export const createBuilding = async (req, res) => {
+    try {
+        const { name, active } = req.body;
+        if (!name || !name.trim()) {
+            return res.status(400).json({ message: "กรุณาระบุชื่ออาคาร" });
+        }
+        const building = await Building.create({ name: name.trim(), active: active ?? true });
+        res.status(201).json({ message: "สร้างอาคารสำเร็จ", building });
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+};
+
+export const updateBuilding = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { name, active } = req.body;
+        const building = await Building.findByPk(id);
+        if (!building) return res.status(404).json({ message: "ไม่พบอาคาร" });
+        if (name !== undefined && !name.trim()) {
+            return res.status(400).json({ message: "ชื่ออาคารต้องไม่ว่างเปล่า" });
+        }
+        await building.update({
+            ...(name !== undefined && { name: name.trim() }),
+            ...(active !== undefined && { active }),
+        });
+        res.json({ message: "อัปเดตอาคารสำเร็จ", building });
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+};
+
+export const deleteBuilding = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const building = await Building.findByPk(id);
+        if (!building) return res.status(404).json({ message: "ไม่พบอาคาร" });
+        await building.destroy();
+        res.json({ message: "ลบอาคารสำเร็จ" });
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+};
+
 export const checkBuildingAvaliable = async (req, res) => {
     try {
         let { stadiumId, buildingId, startDate, endDate, startTime, endTime } = req.body;

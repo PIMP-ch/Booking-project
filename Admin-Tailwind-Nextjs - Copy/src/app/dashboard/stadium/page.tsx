@@ -40,7 +40,7 @@ const INITIAL_FORM = {
 
 const StadiumPage = () => {
     const [stadiumList, setStadiumList] = useState<Stadium[]>([]);
-    const [buildings, setBuildings] = useState<{ id: string; name: string }[]>([]);
+    const [buildings, setBuildings] = useState<{ id: string; name: string; active: boolean }[]>([]);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [currentStadium, setCurrentStadium] = useState<Stadium | null>(null);
@@ -286,7 +286,7 @@ const StadiumPage = () => {
                         <div className="space-y-2">
                             <Label className="text-xs text-gray-500">อาคารที่เกี่ยวข้อง</Label>
                             <div className="max-h-32 overflow-y-auto border rounded-xl p-3 bg-gray-50 space-y-2">
-                                {buildings.map((b) => (
+                                {buildings.filter((b) => b.active).map((b) => (
                                     <label key={b.id} className="flex items-center gap-2 cursor-pointer">
                                         <input
                                             type="checkbox"

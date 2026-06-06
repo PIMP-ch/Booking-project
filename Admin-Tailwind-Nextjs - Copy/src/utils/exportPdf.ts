@@ -1,47 +1,69 @@
-import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
+// PDF generation using pdfmake 0.3.x — virtualfs + setFonts API
 
-// cache font ไว้ใน memory — โหลดครั้งแรกครั้งเดียว
-let fontCache: { regular: string; bold: string } | null = null;
+let fontCache: { regular: ArrayBuffer; bold: ArrayBuffer } | null = null;
+let fontsSetup = false;
 
-const toBase64 = async (url: string): Promise<string> => {
+const fetchFont = async (url: string): Promise<ArrayBuffer> => {
   const res = await fetch(url);
-  const buffer = await res.arrayBuffer();
-  const bytes = new Uint8Array(buffer);
-  let binary = "";
-  const chunk = 8192;
-  for (let i = 0; i < bytes.length; i += chunk) {
-    binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
+  if (!res.ok) throw new Error(`Failed to fetch font: ${url}`);
+  return res.arrayBuffer();
+};
+
+const setupPdfMake = async () => {
+  const pdfMake = (await import("pdfmake/build/pdfmake")).default;
+
+  if (!fontCache) {
+    const [regular, bold] = await Promise.all([
+      fetchFont("/fonts/Sarabun-Regular.ttf"),
+      fetchFont("/fonts/Sarabun-Bold.ttf"),
+    ]);
+    fontCache = { regular, bold };
   }
-  return btoa(binary);
+
+  if (!fontsSetup) {
+    (pdfMake as any).virtualfs.writeFileSync("Sarabun-Regular.ttf", fontCache.regular);
+    (pdfMake as any).virtualfs.writeFileSync("Sarabun-Bold.ttf", fontCache.bold);
+    (pdfMake as any).setFonts({
+      Sarabun: {
+        normal:      "Sarabun-Regular.ttf",
+        bold:        "Sarabun-Bold.ttf",
+        italics:     "Sarabun-Regular.ttf",
+        bolditalics: "Sarabun-Bold.ttf",
+      },
+    });
+    fontsSetup = true;
+  }
+
+  return pdfMake;
 };
 
-const loadFonts = async () => {
-  if (fontCache) return fontCache;
-  const base = "https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/sarabun";
-  const [regular, bold] = await Promise.all([
-    toBase64(`${base}/Sarabun-Regular.ttf`),
-    toBase64(`${base}/Sarabun-Bold.ttf`),
-  ]);
-  fontCache = { regular, bold };
-  return fontCache;
+const MM_TO_PT = 2.835;
+
+const pdfStyles = {
+  title:          { fontSize: 16, bold: true,  margin: [0, 0, 0, 3] as [number,number,number,number] },
+  subtitle:       { fontSize: 10,              margin: [0, 0, 0, 2] as [number,number,number,number] },
+  date:           { fontSize: 9,  color: "#828282" },
+  sectionHeading: { fontSize: 12, bold: true,  margin: [0, 10, 0, 2] as [number,number,number,number] },
+  note:           { fontSize: 9,  color: "#646464", margin: [0, 0, 0, 4] as [number,number,number,number] },
+  tableHeader:    { bold: true,   fontSize: 9,  color: "white" },
+  tableCell:      { fontSize: 9 },
+  tableFooter:    { bold: true,   fontSize: 9 },
 };
 
-/** สร้าง jsPDF doc ที่ embed Sarabun font แล้ว ใช้ได้ทั้งภาษาไทยและอังกฤษ */
-export const createThaiPdf = async (
-  orientation: "portrait" | "landscape" = "portrait"
-): Promise<jsPDF> => {
-  const doc = new jsPDF({ orientation, unit: "mm", format: "a4" });
-  const fonts = await loadFonts();
+const makeTableLayout = (totalDataRows: number, footerCount = 0) => ({
+  fillColor: (rowIndex: number) => {
+    if (rowIndex === 0) return "#1e1e1e";
+    if (footerCount > 0 && rowIndex >= 1 + totalDataRows) return "#f0f0f0";
+    return rowIndex % 2 === 0 ? "#f8f8f8" : null;
+  },
+  hLineWidth: () => 0.3,
+  vLineWidth: () => 0,
+  hLineColor: () => "#e0e0e0",
+});
 
-  doc.addFileToVFS("Sarabun-Regular.ttf", fonts.regular);
-  doc.addFont("Sarabun-Regular.ttf", "Sarabun", "normal");
-  doc.addFileToVFS("Sarabun-Bold.ttf", fonts.bold);
-  doc.addFont("Sarabun-Bold.ttf", "Sarabun", "bold");
-  doc.setFont("Sarabun", "normal");
-
-  return doc;
-};
+// ─────────────────────────────────────────────────────────
+// Single-table PDF
+// ─────────────────────────────────────────────────────────
 
 interface TablePdfOptions {
   title: string;
@@ -51,95 +73,51 @@ interface TablePdfOptions {
   rows: (string | number)[][];
   footerRows?: (string | number)[][];
   orientation?: "portrait" | "landscape";
-  /** กำหนดความกว้าง column เฉพาะ เช่น { 0: 70, 1: 30 } (หน่วย mm) */
-  columnWidths?: Record<number, number>;
+  columnWidths?: Record<number, number>; // in mm
 }
 
-/** สร้างและดาวน์โหลด PDF พร้อม header + table + footer */
 export const exportTableToPdf = async (opts: TablePdfOptions) => {
-  const doc = await createThaiPdf(opts.orientation);
-  const pageW = doc.internal.pageSize.getWidth();
-  const now = new Date().toLocaleDateString("th-TH", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
+  const pdfMake = await setupPdfMake();
+  const now = new Date().toLocaleDateString("th-TH", { year: "numeric", month: "long", day: "numeric" });
 
-  // ─── Title ───────────────────────────────────────────────
-  doc.setFont("Sarabun", "bold");
-  doc.setFontSize(16);
-  doc.text(opts.title, pageW / 2, 18, { align: "center" });
+  const widths: (string | number)[] = opts.headers.map((_, i) =>
+    opts.columnWidths?.[i] != null ? opts.columnWidths![i] * MM_TO_PT : "*"
+  );
 
-  if (opts.subtitle) {
-    doc.setFont("Sarabun", "normal");
-    doc.setFontSize(10);
-    doc.text(opts.subtitle, pageW / 2, 25, { align: "center" });
-  }
+  const toHeaderCell = (text: string) => ({ text, style: "tableHeader", alignment: "center" });
+  const toCell       = (v: string | number) => ({ text: String(v), style: "tableCell" });
+  const toFooterCell = (v: string | number) => ({ text: String(v), style: "tableFooter" });
 
-  doc.setFont("Sarabun", "normal");
-  doc.setFontSize(9);
-  doc.setTextColor(130, 130, 130);
-  doc.text(`ออกรายงาน: ${now}`, pageW - 14, 18, { align: "right" });
-  doc.setTextColor(0, 0, 0);
+  const body = [
+    opts.headers.map(toHeaderCell),
+    ...opts.rows.map(row => row.map(toCell)),
+    ...(opts.footerRows ?? []).map(row => row.map(toFooterCell)),
+  ];
 
-  // ─── Table ───────────────────────────────────────────────
-  const startY = opts.subtitle ? 30 : 25;
-
-  const allRows = opts.footerRows
-    ? [
-        ...opts.rows,
-        // เส้นคั่น + summary rows
-        ...opts.footerRows,
-      ]
-    : opts.rows;
-
-  // สร้าง columnStyles จาก columnWidths
-  const columnStyles: Record<number, any> = {};
-  if (opts.columnWidths) {
-    Object.entries(opts.columnWidths).forEach(([col, w]) => {
-      columnStyles[Number(col)] = { cellWidth: w };
-    });
-  }
-
-  autoTable(doc, {
-    startY,
-    head: [opts.headers],
-    body: allRows,
-    styles: {
-      font: "Sarabun",
-      fontStyle: "normal",
-      fontSize: 9,
-      cellPadding: 3,
-      overflow: "linebreak",   // wrap ข้อความแทนการตัด
+  const content: any[] = [
+    { text: `ออกรายงาน: ${now}`, style: "date", alignment: "right" },
+    { text: opts.title, style: "title", alignment: "center" },
+    ...(opts.subtitle ? [{ text: opts.subtitle, style: "subtitle", alignment: "center" }] : []),
+    { text: "", margin: [0, 4, 0, 0] },
+    {
+      table: { headerRows: 1, widths, body },
+      layout: makeTableLayout(opts.rows.length, opts.footerRows?.length ?? 0),
     },
-    headStyles: {
-      font: "Sarabun",
-      fontStyle: "bold",
-      fontSize: 9,
-      fillColor: [30, 30, 30],
-      textColor: [255, 255, 255],
-      halign: "center",
-    },
-    alternateRowStyles: {
-      fillColor: [248, 248, 248],
-    },
-    columnStyles: Object.keys(columnStyles).length > 0 ? columnStyles : undefined,
-    didParseCell: (data) => {
-      if (
-        opts.footerRows &&
-        data.section === "body" &&
-        data.row.index >= opts.rows.length
-      ) {
-        data.cell.styles.fontStyle = "bold";
-        data.cell.styles.fillColor = [240, 240, 240];
-        data.cell.styles.textColor = [30, 30, 30];
-      }
-    },
-    margin: { left: 14, right: 14 },
-  });
+  ];
 
-  doc.save(opts.filename);
+  pdfMake.createPdf({
+    content,
+    defaultStyle: { font: "Sarabun", fontSize: 9 },
+    styles: pdfStyles,
+    pageOrientation: opts.orientation ?? "portrait",
+    pageSize: "A4",
+    pageMargins: [14, 20, 14, 20],
+  } as any).download(opts.filename);
 };
+
+// ─────────────────────────────────────────────────────────
+// Multi-section PDF
+// ─────────────────────────────────────────────────────────
 
 export interface ReportSection {
   heading: string;
@@ -149,7 +127,6 @@ export interface ReportSection {
   note?: string;
 }
 
-/** PDF หลายส่วน — ใช้สำหรับรายงานที่มีหลายตาราง */
 export const exportMultiSectionPdf = async (opts: {
   title: string;
   subtitle?: string;
@@ -157,69 +134,46 @@ export const exportMultiSectionPdf = async (opts: {
   sections: ReportSection[];
   orientation?: "portrait" | "landscape";
 }) => {
-  const doc = await createThaiPdf(opts.orientation);
-  const pageW = doc.internal.pageSize.getWidth();
-  const now = new Date().toLocaleDateString("th-TH", {
-    year: "numeric", month: "long", day: "numeric",
-  });
+  const pdfMake = await setupPdfMake();
+  const now = new Date().toLocaleDateString("th-TH", { year: "numeric", month: "long", day: "numeric" });
 
-  // Title
-  doc.setFont("Sarabun", "bold");
-  doc.setFontSize(16);
-  doc.text(opts.title, pageW / 2, 18, { align: "center" });
+  const toHeaderCell = (text: string) => ({ text, style: "tableHeader", alignment: "center" });
+  const toCell       = (v: string | number) => ({ text: String(v), style: "tableCell" });
+  const toFooterCell = (v: string | number) => ({ text: String(v), style: "tableFooter" });
 
-  if (opts.subtitle) {
-    doc.setFont("Sarabun", "normal");
-    doc.setFontSize(10);
-    doc.text(opts.subtitle, pageW / 2, 25, { align: "center" });
-  }
-  doc.setFont("Sarabun", "normal");
-  doc.setFontSize(9);
-  doc.setTextColor(130, 130, 130);
-  doc.text(`ออกรายงาน: ${now}`, pageW - 14, 18, { align: "right" });
-  doc.setTextColor(0, 0, 0);
-
-  let cursorY = opts.subtitle ? 32 : 27;
+  const content: any[] = [
+    { text: `ออกรายงาน: ${now}`, style: "date", alignment: "right" },
+    { text: opts.title, style: "title", alignment: "center" },
+    ...(opts.subtitle ? [{ text: opts.subtitle, style: "subtitle", alignment: "center" }] : []),
+  ];
 
   for (const section of opts.sections) {
-    // Section heading
-    doc.setFont("Sarabun", "bold");
-    doc.setFontSize(12);
-    doc.text(section.heading, 14, cursorY);
-    cursorY += 2;
+    content.push({ text: section.heading, style: "sectionHeading" });
+    if (section.note) content.push({ text: section.note, style: "note" });
 
-    if (section.note) {
-      doc.setFont("Sarabun", "normal");
-      doc.setFontSize(9);
-      doc.setTextColor(100, 100, 100);
-      doc.text(section.note, 14, cursorY + 4);
-      doc.setTextColor(0, 0, 0);
-      cursorY += 4;
-    }
+    const body = [
+      section.headers.map(toHeaderCell),
+      ...section.rows.map(row => row.map(toCell)),
+      ...(section.footerRows ?? []).map(row => row.map(toFooterCell)),
+    ];
 
-    const allRows = section.footerRows
-      ? [...section.rows, ...section.footerRows]
-      : section.rows;
-
-    autoTable(doc, {
-      startY: cursorY + 2,
-      head: [section.headers],
-      body: allRows,
-      styles: { font: "Sarabun", fontStyle: "normal", fontSize: 9, cellPadding: 2.5 },
-      headStyles: { font: "Sarabun", fontStyle: "bold", fontSize: 9, fillColor: [30, 30, 30], textColor: [255, 255, 255], halign: "center" },
-      alternateRowStyles: { fillColor: [248, 248, 248] },
-      didParseCell: (data) => {
-        if (section.footerRows && data.section === "body" && data.row.index >= section.rows.length) {
-          data.cell.styles.fontStyle = "bold";
-          data.cell.styles.fillColor = [235, 235, 235];
-        }
+    content.push({
+      table: {
+        headerRows: 1,
+        widths: section.headers.map(() => "*"),
+        body,
       },
-      margin: { left: 14, right: 14 },
-      didDrawPage: () => { cursorY = 20; },
+      layout: makeTableLayout(section.rows.length, section.footerRows?.length ?? 0),
+      margin: [0, 0, 0, 0],
     });
-
-    cursorY = (doc as any).lastAutoTable.finalY + 10;
   }
 
-  doc.save(opts.filename);
+  pdfMake.createPdf({
+    content,
+    defaultStyle: { font: "Sarabun", fontSize: 9 },
+    styles: pdfStyles,
+    pageOrientation: opts.orientation ?? "portrait",
+    pageSize: "A4",
+    pageMargins: [14, 20, 14, 20],
+  } as any).download(opts.filename);
 };
