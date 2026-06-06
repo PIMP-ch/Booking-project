@@ -10,6 +10,7 @@ import {
   updateEquipment,
   adjustEquipmentStock,
   getTransactionsByEquipment,
+  getAdjustmentTransactions,
 } from "../controllers/equipmentController.js";
 
 const router = express.Router();
@@ -45,7 +46,8 @@ router.post("/", createEquipment);
 router.get("/", getEquipments);
 router.delete("/:id", deleteEquipment);
 router.put("/:id", updateEquipment);
-router.post("/adjust-stock", adjustEquipmentStock)
+router.post("/adjust-stock", adjustEquipmentStock);
+router.get("/all-transactions", getAdjustmentTransactions);
 router.get("/:equipmentId/transactions", getTransactionsByEquipment);
 
 /** ---------- Upload Equipment Image ---------- */

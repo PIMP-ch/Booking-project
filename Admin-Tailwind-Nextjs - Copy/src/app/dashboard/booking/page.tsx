@@ -6,6 +6,7 @@ import { getAllBookings, confirmBooking, cancelBooking, resetBookingStatus } fro
 import { Icon } from "@iconify/react";
 import { toast, ToastContainer } from "react-toastify";
 import MonthlyBookingModal from "./MonthlyBookingModal";
+import { exportTableToPdf } from "@/utils/exportPdf";
 import "react-toastify/dist/ReactToastify.css";
 
 interface Booking {
@@ -151,9 +152,54 @@ const BookingPage = () => {
         setCurrentPage(1);
     };
 
+    const TAB_LABEL: Record<string, string> = {
+        pending:   "รอการยืนยัน",
+        confirmed: "ยืนยันแล้ว",
+        canceled:  "ยกเลิกแล้ว",
+    };
+
+    const handleExportPdf = async () => {
+        if (filteredBookings.length === 0) {
+            toast.warning("ไม่มีข้อมูลสำหรับ export");
+            return;
+        }
+        try {
+            await exportTableToPdf({
+                title: `รายงานการจอง — ${TAB_LABEL[activeTab] ?? activeTab}`,
+                subtitle: `ทั้งหมด ${filteredBookings.length} รายการ`,
+                filename: `การจอง_${TAB_LABEL[activeTab]}_${new Date().toLocaleDateString("th-TH").replace(/\//g, "-")}.pdf`,
+                headers: ["#", "ผู้จอง", "อีเมล", "สนามกีฬา", "กิจกรรม", "วันที่จอง", "เวลา", "อุปกรณ์", "สถานะ"],
+                rows: filteredBookings.map((b, i) => [
+                    i + 1,
+                    b.User?.fullname || "-",
+                    b.User?.email || "-",
+                    [b.Stadium?.nameStadium, b.Buildings?.map(bd => bd.name).join(", ")].filter(Boolean).join(" / ") || "-",
+                    b.activityName || "-",
+                    `${new Date(b.startDate).toLocaleDateString("th-TH")} – ${new Date(b.endDate).toLocaleDateString("th-TH")}`,
+                    `${b.startTime} – ${b.endTime}`,
+                    b.Equipment?.length > 0
+                        ? b.Equipment.map(eq => `${eq.name} (${eq.BookingEquipment?.quantity ?? 0})`).join(", ")
+                        : "-",
+                    TAB_LABEL[b.status?.toLowerCase()] ?? b.status,
+                ]),
+                orientation: "landscape",
+            });
+        } catch {
+            toast.error("Export PDF ไม่สำเร็จ");
+        }
+    };
+
     return (
         <div className="p-6 bg-white rounded-lg shadow-md font-kanit">
             <ToastContainer position="top-right" autoClose={2500} />
+            {/* Header */}
+            <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-bold text-gray-800">จัดการการจอง</h2>
+                <Button size="sm" color="success" onClick={handleExportPdf}>
+                    <Icon icon="solar:file-download-bold" height={16} className="mr-1" />
+                    Export PDF
+                </Button>
+            </div>
             {/* Tabs */}
             <div className="flex space-x-4 mb-6">
                 {["pending", "confirmed", "canceled"].map((tab) => {
@@ -310,15 +356,15 @@ const BookingPage = () => {
 
 
             <Modal show={returnModal.isOpen} onClose={closeReturnModal} className="font-kanit">
-                <Modal.Header>ยืนยันการส่งคืนสนาม</Modal.Header>
-                <Modal.Body>คุณต้องการส่งคืนสนามและรีเซ็ตสถานะการจองนี้ใช่หรือไม่?</Modal.Body>
+                <Modal.Header>ยืนยันการส่งเสร็จสิ้น</Modal.Header>
+                <Modal.Body>คุณต้องการส่งเสร็จสิ้นและรีเซ็ตสถานะการจองนี้ใช่หรือไม่?</Modal.Body>
                 <Modal.Footer>
                     <Button
                         color="success"
                         type="button"
                         onClick={() => returnModal.id && handleResetBooking(returnModal.id)}
                     >
-                        ยืนยันการคืนสนาม
+                        ยืนยันการเสร็จสิ้น
                     </Button>
 
                     <Button color="gray" type="button" onClick={closeReturnModal}>
@@ -485,7 +531,7 @@ const BookingTableConfirmed: React.FC<{ bookings: Booking[]; onReset: (id: strin
                                     <Icon icon="solar:eye-bold" /> ดูรายละเอียด
                                 </Dropdown.Item>
                                 <Dropdown.Item onClick={() => onReset(booking.id)} className="text-indigo-600 gap-2">
-                                    <Icon icon="solar:refresh-outline" /> ส่งคืนสนาม
+                                    <Icon icon="solar:refresh-outline" /> ส่งเสร็จสิ้น
                                 </Dropdown.Item>
                             </Dropdown>
                         </Table.Cell>
@@ -536,7 +582,7 @@ const STATUS_LABEL: Record<string, { label: string; cls: string }> = {
     pending:          { label: "รอการยืนยัน",    cls: "bg-yellow-100 text-yellow-700" },
     confirmed:        { label: "ยืนยันแล้ว",       cls: "bg-green-100 text-green-700" },
     canceled:         { label: "ยกเลิกแล้ว",       cls: "bg-red-100 text-red-600" },
-    "Return Success": { label: "คืนสนามเรียบร้อย", cls: "bg-blue-100 text-blue-700" },
+    "Return Success": { label: "เสร็จสิ้นเรียบร้อย", cls: "bg-blue-100 text-blue-700" },
 };
 
 const BookingDetailModal: React.FC<{
@@ -669,7 +715,7 @@ const BookingDetailModal: React.FC<{
                                 onClick={() => onReset(booking.id)}
                                 className="px-4 py-2 bg-indigo-100 hover:bg-indigo-200 text-indigo-700 text-sm font-medium rounded-lg transition"
                             >
-                                ↩ ส่งคืนสนาม
+                                ↩ ส่งเสร็จสิ้น
                             </button>
                         )}
                     </div>

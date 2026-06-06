@@ -4,7 +4,7 @@ import React, { useState, useMemo, useEffect, useCallback } from "react";
 import { Badge, Button, Dropdown, Modal, TextInput, Table, Spinner } from "flowbite-react";
 import { HiOutlineDotsVertical } from "react-icons/hi";
 import { Icon } from "@iconify/react";
-import * as XLSX from "xlsx";
+import { exportTableToPdf } from "@/utils/exportPdf";
 import axios, { AxiosError } from "axios";
 import UploadAvatar from "@/app/components/dashboard/UploadAvatar";
 
@@ -129,20 +129,22 @@ const ExecutivePage = () => {
   }, [executives]);
 
   // ─── Export ────────────────────────────────────────────
-  const handleExportExcel = () => {
-    const data = filtered.map((exec) => ({
-      ชื่อ: exec.staff?.fullname || "-",
-      อีเมล: exec.staff?.email || "-",
-      ตำแหน่ง: exec.position,
-      เบอร์โทรศัพท์: exec.phone || "-",
-      สถานะ: exec.status === "active" ? "ดำรงตำแหน่ง" : "พ้นจากตำแหน่ง",
-      วันที่เริ่มต้น: exec.startDate,
-      วันที่สิ้นสุด: exec.endDate || "-",
-    }));
-    const ws = XLSX.utils.json_to_sheet(data);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "ผู้บริหาร");
-    XLSX.writeFile(wb, "executives.xlsx");
+  const handleExportPdf = async () => {
+    await exportTableToPdf({
+      title: "รายงานผู้บริหาร",
+      filename: "executives.pdf",
+      headers: ["ชื่อ", "อีเมล", "ตำแหน่ง", "เบอร์โทรศัพท์", "สถานะ", "วันที่เริ่มต้น", "วันที่สิ้นสุด"],
+      rows: filtered.map((exec) => [
+        exec.staff?.fullname || "-",
+        exec.staff?.email || "-",
+        exec.position,
+        exec.phone || "-",
+        exec.status === "active" ? "ดำรงตำแหน่ง" : "พ้นจากตำแหน่ง",
+        exec.startDate,
+        exec.endDate || "-",
+      ]),
+      orientation: "landscape",
+    });
   };
 
   // ─── Modal ─────────────────────────────────────────────
@@ -272,9 +274,9 @@ const ExecutivePage = () => {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-5">
         <h5 className="text-xl font-bold">จัดการผู้บริหาร</h5>
         <div className="flex gap-2 flex-wrap">
-          <Button onClick={handleExportExcel} color="success" size="sm">
+          <Button onClick={handleExportPdf} color="success" size="sm">
             <Icon icon="solar:file-download-bold" height={16} className="mr-1" />
-            Export Excel
+            Export PDF
           </Button>
           <Button onClick={() => openModal()} className="bg-blue-600 hover:bg-blue-700 text-white" size="sm">
             <Icon icon="solar:user-plus-bold" height={16} className="mr-1" />

@@ -12,6 +12,7 @@ import { fn, col, literal, Op } from "sequelize";
 import Userr from "../models/Userr.js";
 import Building from "../models/Buildingg.js";
 import BookingEquipment from "../models/BookingEquipment.js";
+import EquipmentAdjustmentTransaction from "../models/EquipmentAdjustmentTransaction.js";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
@@ -137,8 +138,18 @@ export const bookStadium = async (req, res) => {
 
       await booking.addBuildings(normalizedBuildingIds);
 
-      for (const item of normalizedEquipment)
+      for (const item of normalizedEquipment) {
         await BookingEquipment.create({ bookingId: booking.id, equipmentId: item.equipmentId, quantity: item.quantity });
+        // บันทึกประวัติ — ยืมอุปกรณ์สำหรับการจองนี้
+        await EquipmentAdjustmentTransaction.create({
+          equipmentId: item.equipmentId,
+          type: "out",
+          quantity: item.quantity,
+          reason: "booking_borrow",
+          bookingId: booking.id,
+          note: `ยืมสำหรับการจอง #${booking.id}${activityName ? ` (${activityName.trim()})` : ""}`,
+        });
+      }
 
       const activeCount = await Booking.count({
         where: { stadiumId, status: { [Op.in]: ["pending", "confirmed"] } },
@@ -434,7 +445,7 @@ export const getAllBookings = async (req, res) => {
         { model: Stadium, attributes: ["nameStadium", "descriptionStadium"] },
         { model: Building, attributes: ["name"], through: { attributes: [] } },
         { model: Equipment, attributes: ["name", "quantity"], through: { attributes: ["quantity"] } },
-        { model: Userr, attributes: ["fullname", "phoneNumber", "email", "fieldOfStudy", "year"] },
+        { model: Userr, attributes: ["fullname", "phoneNumber", "email", "fieldOfStudy", "year", "department", "userType"] },
       ],
     });
     if (!bookings.length) return res.status(404).json({ message: "No bookings found" });
@@ -483,6 +494,15 @@ export const cancelBooking = async (req, res) => {
         if (qty <= 0) continue;
         await Equipment.increment({ quantity: qty }, { where: { id: eqId } });
         await Equipment.update({ status: "available" }, { where: { id: eqId } });
+        // บันทึกประวัติ — คืนอุปกรณ์จากการยกเลิกการจอง
+        await EquipmentAdjustmentTransaction.create({
+          equipmentId: eqId,
+          type: "in",
+          quantity: qty,
+          reason: "booking_return",
+          bookingId: Number(id),
+          note: `คืนจากการยกเลิกการจอง #${id}${booking.activityName ? ` (${booking.activityName})` : ""}`,
+        });
       }
     }
 
@@ -525,6 +545,58 @@ export const getReturnedBookings = async (req, res) => {
   }
 };
 
+// สถิติการจองแยกตามอาคาร
+export const getStatsByBuilding = async (req, res) => {
+  try {
+    const { view = "monthly", month, year = new Date().getFullYear() } = req.query;
+    const y = parseInt(year, 10);
+    const m = month ? parseInt(month, 10) : null;
+
+    // กำหนดช่วงวันที่
+    const startDate = view === "daily" && m
+      ? new Date(y, m - 1, 1)
+      : new Date(y, 0, 1);
+    const endDate = view === "daily" && m
+      ? new Date(y, m, 0, 23, 59, 59)
+      : new Date(y, 11, 31, 23, 59, 59);
+
+    const bookings = await Booking.findAll({
+      where: { startDate: { [Op.between]: [startDate, endDate] } },
+      include: [
+        { model: Building, attributes: ["name"], through: { attributes: [] } },
+        { model: Stadium, attributes: ["nameStadium"] },
+      ],
+      attributes: ["id", "startDate"],
+    });
+
+    const result = {};
+    bookings.forEach((b) => {
+      const d = new Date(b.startDate);
+      const period = view === "daily" ? d.getDate() : d.getMonth() + 1;
+
+      if (!b.Buildings || b.Buildings.length === 0) {
+        // ถ้าไม่มีอาคาร ใช้ชื่อสนามแทน (ถ้ามี)
+        const label = b.Stadium?.nameStadium ? `สนาม: ${b.Stadium.nameStadium}` : null;
+        if (!label) return; // ข้ามรายการที่ไม่มีทั้งอาคารและสนาม
+        const key = `${period}__${label}`;
+        if (!result[key]) result[key] = { period, building: label, count: 0 };
+        result[key].count++;
+        return;
+      }
+
+      b.Buildings.forEach((bld) => {
+        const key = `${period}__${bld.name}`;
+        if (!result[key]) result[key] = { period, building: bld.name, count: 0 };
+        result[key].count++;
+      });
+    });
+
+    return res.status(200).json(Object.values(result));
+  } catch (error) {
+    return res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
 export const getMonthlyBookingStats = async (req, res) => {
   try {
     const stats = await Booking.findAll({
@@ -557,7 +629,18 @@ export const resetBookingStatus = async (req, res) => {
     for (const item of booking.Equipment ?? []) {
       const qty = item.BookingEquipment?.quantity ?? 0;
       const eq = await Equipment.findByPk(item.id);
-      if (eq) await eq.update({ status: "available", quantity: eq.quantity + qty });
+      if (eq) {
+        await eq.update({ status: "available", quantity: eq.quantity + qty });
+        // บันทึกประวัติ — คืนอุปกรณ์หลังเสร็จสิ้นการจอง
+        await EquipmentAdjustmentTransaction.create({
+          equipmentId: item.id,
+          type: "in",
+          quantity: qty,
+          reason: "booking_return",
+          bookingId: booking.id,
+          note: `คืนหลังเสร็จสิ้นการจอง #${booking.id}${booking.activityName ? ` (${booking.activityName})` : ""}`,
+        });
+      }
     }
 
     booking.status = "Return Success";

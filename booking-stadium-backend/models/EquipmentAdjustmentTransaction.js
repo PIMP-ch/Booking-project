@@ -33,6 +33,16 @@ const EquipmentAdjustmentTransaction = sequelize.define(
             allowNull: true,
             defaultValue: null,
         },
+        reason: {
+            type: DataTypes.ENUM("normal_in", "normal_out", "damaged", "lost", "booking_borrow", "booking_return"),
+            allowNull: true,
+            defaultValue: null,
+        },
+        bookingId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            defaultValue: null,
+        },
     },
     {
         timestamps: true,

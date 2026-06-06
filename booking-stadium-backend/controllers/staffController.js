@@ -66,7 +66,7 @@ export const deleteStaff = async (req, res) => {
 export const updateStaff = async (req, res) => {
   try {
     const { id } = req.params;
-    const { fullname, email, role, startDate, endDate } = req.body;
+    const { fullname, email, role, password, startDate, endDate } = req.body;
 
     const staff = await Staff.findByPk(id);
     if (!staff) return res.status(404).json({ message: "Staff not found" });
@@ -76,8 +76,12 @@ export const updateStaff = async (req, res) => {
       return res.status(400).json({ message: "กรุณาระบุวันที่เริ่มดำรงตำแหน่ง" });
     }
 
-    // อัปเดตข้อมูล staff
-    await staff.update({ fullname, email, role });
+    // อัปเดตข้อมูล staff (อัปเดต password ด้วยถ้ามีการส่งมา)
+    const updatePayload = { fullname, email, role };
+    if (password && password.trim() !== "") {
+      updatePayload.password = password.trim();
+    }
+    await staff.update(updatePayload);
 
     if (role === "superadmin") {
       // ค้นหาประวัติล่าสุดของ staff คนนี้

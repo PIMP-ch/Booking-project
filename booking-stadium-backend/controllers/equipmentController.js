@@ -83,7 +83,7 @@ export const deleteEquipment = async (req, res) => {
 // ✅ รับเข้า / จำหน่ายออก อุปกรณ์
 export const adjustEquipmentStock = async (req, res) => {
     try {
-        const { equipmentId, type, quantity, note } = req.body;
+        const { equipmentId, type, quantity, note, reason } = req.body;
 
         // Validate required fields
         if (!equipmentId || !type || !quantity) {
@@ -121,11 +121,15 @@ export const adjustEquipmentStock = async (req, res) => {
         await equipment.update({ quantity: newQuantity });
 
         // Create transaction record
+        // reason อัตโนมัติถ้าไม่ส่งมา
+        const autoReason = reason || (type === "in" ? "normal_in" : "normal_out");
+
         const transaction = await EquipmentAdjustmentTransaction.create({
             equipmentId,
             type,
             quantity,
             note: note || null,
+            reason: autoReason,
         });
 
         res.status(201).json({
@@ -141,18 +145,24 @@ export const adjustEquipmentStock = async (req, res) => {
 // ✅ ดึงประวัติการรับเข้า/จำหน่ายออกทั้งหมด
 export const getAdjustmentTransactions = async (req, res) => {
     try {
-        const transactions = await EquipmentAdjustmentTransaction.findAll({
-            include: [
-                {
-                    model: Equipment,
-                    as: "equipment",
-                    attributes: ["id", "name", "quantity"],
-                },
-            ],
-            order: [["createdAt", "DESC"]],
+        // แยก query แล้ว merge ใน backend เพื่อความ reliable
+        // (ไม่ใช้ JOIN เพราะ LEFT JOIN ใน Sequelize บางครั้ง return null ทั้งที่ข้อมูลมีอยู่)
+        const [transactions, equipments] = await Promise.all([
+            EquipmentAdjustmentTransaction.findAll({ order: [["createdAt", "DESC"]] }),
+            Equipment.findAll({ attributes: ["id", "name"] }),
+        ]);
+
+        const equipMap = {};
+        equipments.forEach(eq => {
+            if (eq.name) equipMap[eq.id] = eq.name;
         });
 
-        res.status(200).json(transactions);
+        const result = transactions.map(tx => ({
+            ...tx.toJSON(),
+            equipmentName: equipMap[tx.equipmentId] || null,
+        }));
+
+        res.status(200).json(result);
     } catch (error) {
         res.status(500).json({ message: "Server error", error });
     }

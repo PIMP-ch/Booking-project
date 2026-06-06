@@ -224,8 +224,8 @@ const BookingPage = () => {
 
             {/* Return Modal */}
             <Modal className="font-kanit" show={returnModal.isOpen} onClose={closeReturnModal}>
-                <Modal.Header>ยืนยันการส่งคืนสนาม</Modal.Header>
-                <Modal.Body>คุณต้องการส่งคืนสนามและรีเซ็ตสถานะการจองนี้หรือไม่?</Modal.Body>
+                <Modal.Header>ยืนยันการส่งเสร็จสิ้น</Modal.Header>
+                <Modal.Body>คุณต้องการส่งเสร็จสิ้นและรีเซ็ตสถานะการจองนี้หรือไม่?</Modal.Body>
                 <Modal.Footer>
                     <Button
                         color="success"
@@ -408,7 +408,7 @@ const BookingTableConfirmed: React.FC<BookingTableConfirmedProps> = ({ bookings,
                                 onClick={() => onReset(booking.id)}
                                 className="bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 rounded-lg"
                             >
-                                ส่งคืนสนาม
+                                ส่งเสร็จสิ้น
                             </Button>
                         </Table.Cell>
                     </Table.Row>

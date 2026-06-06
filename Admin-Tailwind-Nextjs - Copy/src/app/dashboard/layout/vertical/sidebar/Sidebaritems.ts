@@ -72,6 +72,13 @@ const RAW_SIDEBAR: MenuItem[] = [
         url: "/dashboard/history-booking",
         roles: ["admin", "staff"],
       },
+      {
+        name: "รายงาน PDF",
+        icon: "solar:file-text-bold-duotone",
+        id: uniqueId(),
+        url: "/dashboard/reports",
+        roles: ["superadmin", "admin"],
+      },
     ],
   },
 

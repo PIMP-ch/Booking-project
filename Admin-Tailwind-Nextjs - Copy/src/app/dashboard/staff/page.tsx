@@ -28,6 +28,7 @@ const StaffPage = () => {
   const [staffList, setStaffList] = useState<Staff[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentStaff, setCurrentStaff] = useState<Staff | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
 
   const [form, setForm] = useState({
     fullname: "",
@@ -83,12 +84,13 @@ const StaffPage = () => {
 
   const openModal = (staff: Staff | null = null) => {
     setCurrentStaff(staff);
+    setShowPassword(false);
     if (staff) {
       setForm({
         fullname: staff.fullname,
         email: staff.email,
         role: staff.role,
-        password: "",
+        password: staff.password || "",
       });
     } else {
       setForm({
@@ -188,20 +190,35 @@ const StaffPage = () => {
         <Modal.Header>{currentStaff ? "แก้ไขพนักงาน" : "สร้างพนักงานใหม่"}</Modal.Header>
         <Modal.Body>
           <div className="flex flex-col gap-4">
-            <TextInput
-              placeholder="ชื่อเต็ม"
-              value={form.fullname}
-              onChange={(e) => setForm({ ...form, fullname: e.target.value })}
-            />
-            <TextInput
-              placeholder="อีเมล"
-              value={form.email}
-              onChange={(e) => setForm({ ...form, email: e.target.value })}
-            />
-
+            {/* ชื่อเต็ม */}
             <div>
-              <label className="block mb-2 text-sm font-medium text-gray-900 dark:text-white">
-                บทบาท
+              <label className="block mb-1.5 text-sm font-medium text-gray-700 dark:text-white">
+                ชื่อเต็ม <span className="text-red-500">*</span>
+              </label>
+              <TextInput
+                placeholder="กรอกชื่อ-นามสกุล"
+                value={form.fullname}
+                onChange={(e) => setForm({ ...form, fullname: e.target.value })}
+              />
+            </div>
+
+            {/* อีเมล */}
+            <div>
+              <label className="block mb-1.5 text-sm font-medium text-gray-700 dark:text-white">
+                อีเมล <span className="text-red-500">*</span>
+              </label>
+              <TextInput
+                placeholder="example@email.com"
+                type="email"
+                value={form.email}
+                onChange={(e) => setForm({ ...form, email: e.target.value })}
+              />
+            </div>
+
+            {/* บทบาท */}
+            <div>
+              <label className="block mb-1.5 text-sm font-medium text-gray-700 dark:text-white">
+                บทบาท <span className="text-red-500">*</span>
               </label>
               <select
                 value={form.role}
@@ -213,14 +230,37 @@ const StaffPage = () => {
               </select>
             </div>
 
-            {!currentStaff && (
-              <TextInput
-                placeholder="รหัสผ่าน"
-                type="password"
-                value={form.password}
-                onChange={(e) => setForm({ ...form, password: e.target.value })}
-              />
-            )}
+            {/* รหัสผ่าน */}
+            <div>
+              <label className="block mb-1.5 text-sm font-medium text-gray-700 dark:text-white">
+                รหัสผ่าน{" "}
+                {currentStaff ? (
+                  <span className="text-xs font-normal text-gray-400">(เว้นว่างไว้ถ้าไม่ต้องการเปลี่ยน)</span>
+                ) : (
+                  <span className="text-red-500">*</span>
+                )}
+              </label>
+              <div className="relative">
+                <TextInput
+                  placeholder={currentStaff ? "รหัสผ่านใหม่ (ถ้าต้องการเปลี่ยน)" : "กรอกรหัสผ่าน"}
+                  type={showPassword ? "text" : "password"}
+                  value={form.password}
+                  onChange={(e) => setForm({ ...form, password: e.target.value })}
+                  className="pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((v) => !v)}
+                  className="absolute inset-y-0 right-0 flex items-center px-3 text-gray-400 hover:text-gray-600"
+                  tabIndex={-1}
+                >
+                  <Icon
+                    icon={showPassword ? "solar:eye-closed-bold" : "solar:eye-bold"}
+                    className="text-lg"
+                  />
+                </button>
+              </div>
+            </div>
           </div>
         </Modal.Body>
 

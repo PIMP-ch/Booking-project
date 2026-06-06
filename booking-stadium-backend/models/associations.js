@@ -7,32 +7,19 @@ import BookingEquipment from "./BookingEquipment.js";
 import BookingBuilding from "./BookingBuilding.js";
 import BuildingRelation from "./BuildingRelation.js";
 
-
 Booking.belongsTo(Userr, { foreignKey: "userId" });
 Userr.hasMany(Booking, { foreignKey: "userId" });
 
 Booking.belongsTo(Stadium, { foreignKey: "stadiumId" });
 Stadium.hasMany(Booking, { foreignKey: "stadiumId" });
 
-// Stadium.hasMany(Building, { foreignKey: "stadiumId" });
-// Building.belongsTo(Stadium, { foreignKey: "stadiumId" });
-// Stadium.js
-Stadium.hasMany(BuildingRelation, {
-    foreignKey: 'stadiumId',
-    as: 'buildingRelations'
-});
+Stadium.hasMany(BuildingRelation, { foreignKey: "stadiumId", as: "buildingRelations" });
+BuildingRelation.belongsTo(Stadium, { foreignKey: "stadiumId" });
+BuildingRelation.belongsTo(Building, { foreignKey: "buildingId", as: "building" });
 
-// BuildingRelation.js
-BuildingRelation.belongsTo(Stadium, {
-    foreignKey: 'stadiumId'
-});
-
-BuildingRelation.belongsTo(Building, { foreignKey: 'buildingId', as: 'building' });
-
-// Booking ↔ Equipment (many-to-many พร้อม quantity)
 Booking.belongsToMany(Equipment, { through: BookingEquipment, foreignKey: "bookingId" });
 Equipment.belongsToMany(Booking, { through: BookingEquipment, foreignKey: "equipmentId" });
 
-// Booking ↔ Building (many-to-many)
 Booking.belongsToMany(Building, { through: BookingBuilding, foreignKey: "bookingId" });
 Building.belongsToMany(Booking, { through: BookingBuilding, foreignKey: "buildingId" });
+// หมายเหตุ: EquipmentAdjustmentTransaction associations ถูก define ใน models/EquipmentAdjustmentTransaction.js แล้ว

@@ -16,6 +16,7 @@ import "./models/Buildingg.js";
 import "./models/Bookingg.js";
 import "./models/BookingEquipment.js";
 import "./models/BookingBuilding.js";
+import "./models/EquipmentAdjustmentTransaction.js"; // โหลดก่อน associations เพื่อให้ association ใน model file ทำงานได้
 import "./models/associations.js";
 import "./models/sportCategory.js";
 import "./models/ExecutiveHistory.js"
@@ -43,6 +44,8 @@ const runMigrations = async () => {
     `ALTER TABLE Users ADD COLUMN status ENUM('NEW','Pending','Active','Inactive','Suspended','Expired','Cancelled','Rejected','Deleted') NOT NULL DEFAULT 'NEW'`,
     `ALTER TABLE Users ADD COLUMN lastLoginAt DATETIME DEFAULT NULL`,
     `ALTER TABLE Users ADD COLUMN deletedAt DATETIME DEFAULT NULL`,
+    `ALTER TABLE equipment_adjustment_transactions ADD COLUMN reason ENUM('normal_in','normal_out','damaged','lost','booking_borrow','booking_return') DEFAULT NULL`,
+    `ALTER TABLE equipment_adjustment_transactions ADD COLUMN bookingId INT DEFAULT NULL`,
   ];
   for (const sql of migrations) {
     try {

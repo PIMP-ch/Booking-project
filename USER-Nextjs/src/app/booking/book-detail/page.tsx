@@ -401,7 +401,7 @@ const BookingDetail = () => {
 
             <section className="bg-white/95 p-4 rounded-xl shadow border border-orange-200">
               <div className="flex items-center gap-2 mb-3">
-                <h2 className="text-lg font-bold">อัปโหลดไฟล์เพิ่มเติม</h2>
+                <h2 className="text-lg font-bold">อัปโหลดหนังสืออนุมัติโครงการ</h2>
               </div>
 
               <input

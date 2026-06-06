@@ -5,6 +5,7 @@ import {
   confirmBooking,
   resetBookingStatus,
   getMonthlyBookingStats,
+  getStatsByBuilding,
   getAvailableDates,
   getBookingByUser,
   getAllBookings,
@@ -35,6 +36,7 @@ router.put("/:id/reset", resetBookingStatus);
 
 router.get("/stats/monthly", getMonthlyBookingStats);
 router.get("/stats/daily", getDailyBookingStats);
+router.get("/stats/by-building", getStatsByBuilding);
 router.get("/by-date", getBookingsByDate);
 
 router.get("/history/returned", getReturnedBookings);

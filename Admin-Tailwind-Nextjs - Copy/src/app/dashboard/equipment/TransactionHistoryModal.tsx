@@ -5,7 +5,7 @@ import { Modal, Button } from "flowbite-react";
 import { Icon } from "@iconify/react";
 import { toast } from "react-toastify";
 import { adjustEquipmentTransactions } from "@/utils/api";
-import * as XLSX from "xlsx";
+import { exportTableToPdf } from "@/utils/exportPdf";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:5008";
 
@@ -16,14 +16,27 @@ interface Equipment {
     imageUrl?: string;
 }
 
+type TransactionReason = "normal_in" | "normal_out" | "damaged" | "lost" | "booking_borrow" | "booking_return" | null;
+
 interface Transaction {
     id: number;
     equipmentId: string;
     type: "in" | "out";
     quantity: number;
     note: string | null;
+    reason: TransactionReason;
+    bookingId: number | null;
     createdAt: string;
 }
+
+const REASON_BADGE: Record<string, { label: string; cls: string; icon: string }> = {
+    normal_in:       { label: "รับเข้าปกติ",    cls: "bg-emerald-100 text-emerald-700", icon: "solar:download-bold" },
+    normal_out:      { label: "จำหน่ายออกปกติ",  cls: "bg-red-100 text-red-600",         icon: "solar:upload-bold" },
+    damaged:         { label: "ชำรุดเสียหาย",    cls: "bg-orange-100 text-orange-700",   icon: "solar:danger-triangle-bold" },
+    lost:            { label: "สูญหาย",          cls: "bg-gray-200 text-gray-600",       icon: "solar:question-circle-bold" },
+    booking_borrow:  { label: "ยืมสำหรับจอง",   cls: "bg-purple-100 text-purple-700",   icon: "solar:calendar-bold" },
+    booking_return:  { label: "คืนจากการจอง",   cls: "bg-teal-100 text-teal-700",       icon: "solar:calendar-mark-bold" },
+};
 
 interface TransactionHistoryModalProps {
     isOpen: boolean;
@@ -91,35 +104,32 @@ const TransactionHistoryModal: React.FC<TransactionHistoryModalProps> = ({
         });
     };
 
-    const handleExportExcel = () => {
+    const handleExportPdf = async () => {
         if (!equipment || filtered.length === 0) {
             toast.warning("ไม่มีข้อมูลสำหรับ export");
             return;
         }
-
-        const rows: Record<string, string | number>[] = filtered.map((tx) => ({
-            "ประเภท": tx.type === "in" ? "รับเข้า" : "จำหน่ายออก",
-            "จำนวน (ชิ้น)": tx.quantity,
-            "หมายเหตุ": tx.note ?? "-",
-            "วันที่": formatDate(tx.createdAt),
-        }));
-
-        // Blank + summary rows
-        rows.push(
-            { "ประเภท": "", "จำนวน (ชิ้น)": "", "หมายเหตุ": "", "วันที่": "" },
-            { "ประเภท": "รวมรับเข้า", "จำนวน (ชิ้น)": totalIn, "หมายเหตุ": "", "วันที่": "" },
-            { "ประเภท": "รวมจำหน่ายออก", "จำนวน (ชิ้น)": totalOut, "หมายเหตุ": "", "วันที่": "" },
-        );
-
-        const ws = XLSX.utils.json_to_sheet(rows);
-        ws["!cols"] = [{ wch: 16 }, { wch: 14 }, { wch: 30 }, { wch: 22 }];
-
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, "ประวัติ");
-
-        const filename = `ประวัติ_${equipment.name}_${filterMonth || "ทั้งหมด"}.xlsx`;
-        XLSX.writeFile(wb, filename);
-        toast.success("Export สำเร็จ!");
+        try {
+            await exportTableToPdf({
+                title: `ประวัติรับเข้า / จำหน่ายออก`,
+                subtitle: `${equipment.name}  |  เดือน: ${filterMonth || "ทั้งหมด"}  |  คงเหลือปัจจุบัน: ${equipment.quantity} ชิ้น`,
+                filename: `ประวัติ_${equipment.name}_${filterMonth || "ทั้งหมด"}.pdf`,
+                headers: ["ประเภท", "จำนวน (ชิ้น)", "หมายเหตุ", "วันที่"],
+                rows: filtered.map((tx) => [
+                    tx.type === "in" ? "รับเข้า" : "จำหน่ายออก",
+                    tx.quantity,
+                    tx.note ?? "-",
+                    formatDate(tx.createdAt),
+                ]),
+                footerRows: [
+                    ["รวมรับเข้า", totalIn, "", ""],
+                    ["รวมจำหน่ายออก", totalOut, "", ""],
+                ],
+            });
+            toast.success("Export PDF สำเร็จ!");
+        } catch {
+            toast.error("Export ไม่สำเร็จ กรุณาลองใหม่");
+        }
     };
 
     return (
@@ -210,38 +220,63 @@ const TransactionHistoryModal: React.FC<TransactionHistoryModalProps> = ({
                             <p className="text-sm">ไม่พบประวัติในช่วงเวลานี้</p>
                         </div>
                     ) : (
-                        filtered.map((tx) => (
-                            <div key={tx.id} className="flex items-center gap-4 px-4 py-3 hover:bg-gray-50 transition-colors">
-                                <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${tx.type === "in" ? "bg-emerald-50" : "bg-red-50"}`}>
-                                    <Icon
-                                        icon={tx.type === "in" ? "solar:download-bold" : "solar:upload-bold"}
-                                        className={`text-base ${tx.type === "in" ? "text-emerald-500" : "text-red-400"}`}
-                                    />
+                        filtered.map((tx) => {
+                            const badge = tx.reason ? REASON_BADGE[tx.reason] : null;
+                            const iconKey = badge?.icon ?? (tx.type === "in" ? "solar:download-bold" : "solar:upload-bold");
+                            const isBooking = tx.reason === "booking_borrow" || tx.reason === "booking_return";
+                            return (
+                                <div key={tx.id} className="flex items-start gap-3 px-4 py-3 hover:bg-gray-50 transition-colors">
+                                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5 ${
+                                        tx.reason === "damaged" ? "bg-orange-50"
+                                        : tx.reason === "lost" ? "bg-gray-100"
+                                        : isBooking ? "bg-purple-50"
+                                        : tx.type === "in" ? "bg-emerald-50" : "bg-red-50"
+                                    }`}>
+                                        <Icon icon={iconKey} className={`text-base ${
+                                            tx.reason === "damaged" ? "text-orange-500"
+                                            : tx.reason === "lost" ? "text-gray-500"
+                                            : tx.reason === "booking_borrow" ? "text-purple-500"
+                                            : tx.reason === "booking_return" ? "text-teal-500"
+                                            : tx.type === "in" ? "text-emerald-500" : "text-red-400"
+                                        }`} />
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-2 flex-wrap">
+                                            <span className="text-sm font-semibold text-gray-800">
+                                                {tx.type === "in" ? "รับเข้า" : "จำหน่ายออก"}{" "}
+                                                <span className={`font-bold ${tx.type === "in" ? "text-emerald-600" : "text-red-500"}`}>
+                                                    {tx.quantity} ชิ้น
+                                                </span>
+                                            </span>
+                                            {badge && (
+                                                <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${badge.cls}`}>
+                                                    {badge.label}
+                                                </span>
+                                            )}
+                                            {tx.bookingId && (
+                                                <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-blue-50 text-blue-600">
+                                                    การจอง #{tx.bookingId}
+                                                </span>
+                                            )}
+                                        </div>
+                                        {tx.note && <p className="text-xs text-gray-400 truncate mt-0.5">{tx.note}</p>}
+                                    </div>
+                                    <p className="text-xs text-gray-400 flex-shrink-0 mt-0.5">{formatDate(tx.createdAt)}</p>
                                 </div>
-                                <div className="flex-1 min-w-0">
-                                    <p className="text-sm font-semibold text-gray-800">
-                                        {tx.type === "in" ? "รับเข้า" : "จำหน่ายออก"}{" "}
-                                        <span className={`font-bold ${tx.type === "in" ? "text-emerald-600" : "text-red-500"}`}>
-                                            {tx.quantity} ชิ้น
-                                        </span>
-                                    </p>
-                                    {tx.note && <p className="text-xs text-gray-400 truncate">{tx.note}</p>}
-                                </div>
-                                <p className="text-xs text-gray-400 flex-shrink-0">{formatDate(tx.createdAt)}</p>
-                            </div>
-                        ))
+                            );
+                        })
                     )}
                 </div>
             </Modal.Body>
 
             <Modal.Footer className="border-t border-gray-100 px-8 pb-6 pt-4 flex gap-3">
                 <Button
-                    onClick={handleExportExcel}
+                    onClick={handleExportPdf}
                     disabled={filtered.length === 0}
                     className="flex-1 rounded-2xl h-11 bg-emerald-500 hover:bg-emerald-600 border-none text-white disabled:opacity-50"
                 >
                     <Icon icon="solar:file-download-bold" className="mr-2 text-lg" />
-                    Export Excel
+                    Export PDF
                 </Button>
                 <Button
                     color="gray"

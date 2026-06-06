@@ -101,6 +101,13 @@ export const adjustEquipmentTransactions = async (id) => {
   } catch (error) { handleError(error, "Failed to adjust equipment stock"); }
 };
 
+export const getAllEquipmentTransactions = async () => {
+  try {
+    const response = await axios.get(`${API_URL}/equipments/all-transactions`);
+    return response.data;
+  } catch (error) { handleError(error, "Failed to fetch all equipment transactions"); }
+};
+
 // --- แก้ไข: ตรวจสอบการส่ง ID ไปยัง Backend เพื่อลบรูปอุปกรณ์ ---
 export const deleteEquipmentImage = async (id) => {
   try {
@@ -284,6 +291,15 @@ export const lockBooking = async (data) => {
 // ==========================================
 // 6. STATISTICS & BUILDINGS
 // ==========================================
+export const getBookingStatsByBuilding = async ({ view = "monthly", month, year } = {}) => {
+  try {
+    const response = await axios.get(`${API_URL}/bookings/stats/by-building`, {
+      params: { view, month, year },
+    });
+    return response.data;
+  } catch (error) { handleError(error, "Failed to fetch stats by building"); }
+};
+
 export const getMonthlyBookingStats = async () => {
   try {
     const response = await axios.get(`${API_URL}/bookings/stats/monthly`);
