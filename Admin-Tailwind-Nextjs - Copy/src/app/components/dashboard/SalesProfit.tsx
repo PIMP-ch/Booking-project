@@ -12,7 +12,6 @@ import {
 
 const Chart = dynamic(() => import("react-apexcharts"), { ssr: false });
 
-// ─── ชื่อเดือนภาษาไทย ───────────────────────────────────────────
 const THAI_MONTHS = [
   "มกราคม","กุมภาพันธ์","มีนาคม","เมษายน","พฤษภาคม","มิถุนายน",
   "กรกฎาคม","สิงหาคม","กันยายน","ตุลาคม","พฤศจิกายน","ธันวาคม",
@@ -20,21 +19,11 @@ const THAI_MONTHS = [
 const monthNameToIndex = (name: string) => THAI_MONTHS.indexOf(name);
 const getCurrentThaiMonth = () => THAI_MONTHS[new Date().getMonth()];
 
-// ─── สีสำหรับแต่ละอาคาร ─────────────────────────────────────────
 const BUILDING_COLORS = [
-  "#3B82F6", // blue
-  "#10B981", // green
-  "#F59E0B", // amber
-  "#EF4444", // red
-  "#8B5CF6", // purple
-  "#EC4899", // pink
-  "#14B8A6", // teal
-  "#F97316", // orange
-  "#6366F1", // indigo
-  "#84CC16", // lime
+  "#3B82F6","#10B981","#F59E0B","#EF4444","#8B5CF6",
+  "#EC4899","#14B8A6","#F97316","#6366F1","#84CC16",
 ];
 
-// ─── Types ───────────────────────────────────────────────────────
 interface StatPoint {
   period: number;
   building: string;
@@ -65,7 +54,6 @@ const STATUS_COLOR: Record<string, string> = {
   "Return Success": "bg-blue-100 text-blue-700",
 };
 
-// ─── Component ───────────────────────────────────────────────────
 const SalesProfit = () => {
   const [selectedMonth, setSelectedMonth] = useState("เดือนนี้");
   const [viewMode, setViewMode] = useState<"total" | "by-building">("total");
@@ -73,7 +61,6 @@ const SalesProfit = () => {
   const [totalStats, setTotalStats] = useState<{ period: number; count: number }[]>([]);
   const [loading, setLoading] = useState(false);
 
-  // Modal state
   const [modalOpen, setModalOpen] = useState(false);
   const [modalLabel, setModalLabel] = useState("");
   const [modalBookings, setModalBookings] = useState<DayBooking[]>([]);
@@ -82,7 +69,6 @@ const SalesProfit = () => {
   const isYearView = selectedMonth === "ทั้งปี";
   const year = new Date().getFullYear();
 
-  // ─── Fetch stats ──────────────────────────────────────────────
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
@@ -98,7 +84,6 @@ const SalesProfit = () => {
           });
           setStats(Array.isArray(data) ? data : []);
         } else {
-          // รวม — ใช้ endpoint เดิม
           if (isYearView) {
             const data: { month: number; count: number }[] = await getMonthlyBookingStats();
             setTotalStats((data || []).map((d) => ({ period: d.month, count: Math.round(d.count ?? 0) })));
@@ -117,7 +102,6 @@ const SalesProfit = () => {
     fetchData();
   }, [selectedMonth, viewMode]);
 
-  // ─── แปลงข้อมูลเป็น ApexCharts series ────────────────────────
   const { series, categories, buildings } = useMemo(() => {
     const monthLabel = selectedMonth === "เดือนนี้" ? getCurrentThaiMonth() : selectedMonth;
     const mIdx = isYearView ? null : monthNameToIndex(monthLabel);
@@ -132,7 +116,6 @@ const SalesProfit = () => {
     }
 
     if (viewMode === "total") {
-      // โหมดรวม — series เดียว
       const data = categories.map((_, i) => {
         const period = i + 1;
         const found = totalStats.find((s) => s.period === period);
@@ -141,7 +124,6 @@ const SalesProfit = () => {
       return { series: [{ name: "การจองทั้งหมด", data }], categories, buildings: [] };
     }
 
-    // โหมดแยกอาคาร
     const buildingSet = new Set(stats.map((s) => s.building));
     const buildings = [...buildingSet].sort();
     const series = buildings.map((bld) => ({
@@ -155,13 +137,11 @@ const SalesProfit = () => {
     return { series, categories, buildings };
   }, [stats, totalStats, selectedMonth, isYearView, viewMode]);
 
-  // ─── refs ────────────────────────────────────────────────────
   const seriesRef = useRef(series);
   const selectedMonthRef = useRef(selectedMonth);
   useEffect(() => { seriesRef.current = series; }, [series]);
   useEffect(() => { selectedMonthRef.current = selectedMonth; }, [selectedMonth]);
 
-  // ─── Click bar → modal ──────────────────────────────────────
   const handleBarClick = useCallback(async (
     _seriesIndex: number,
     dataPointIndex: number
@@ -200,10 +180,8 @@ const SalesProfit = () => {
     }
   }, []);
 
-  // ─── Chart options ──────────────────────────────────────────
   const yMax = useMemo(() => {
     if (!series.length) return 5;
-    // stacked → max คือ sum ของทุก series ในแต่ละ period
     const cats = series[0]?.data.length ?? 0;
     let max = 0;
     for (let i = 0; i < cats; i++) {
@@ -219,7 +197,7 @@ const SalesProfit = () => {
       stacked: viewMode === "by-building",
       background: "transparent",
       fontFamily: "Kanit",
-      foreColor: "#adb0bb",
+      foreColor: "#6b7280",
       animations: { speed: 400 },
       toolbar: { show: false },
       events: {
@@ -249,12 +227,7 @@ const SalesProfit = () => {
       labels: {
         rotate: isYearView ? -30 : 0,
         hideOverlappingLabels: true,
-        style: { fontFamily: "Kanit", fontSize: "11px", colors: "#adb0bb" },
-      },
-      title: {
-        text: isYearView ? "เดือน" : "วันที่",
-        style: { fontFamily: "Kanit", fontSize: "11px", color: "#adb0bb", fontWeight: 400 },
-        offsetY: 4,
+        style: { fontFamily: "Kanit", fontSize: "11px", colors: "#6b7280" },
       },
     },
     yaxis: {
@@ -262,11 +235,7 @@ const SalesProfit = () => {
       max: yMax,
       labels: {
         formatter: (v: number) => String(Math.round(v)),
-        style: { fontFamily: "Kanit", fontSize: "11px", colors: ["#adb0bb"] },
-      },
-      title: {
-        text: "จำนวนการจอง",
-        style: { fontFamily: "Kanit", fontSize: "11px", color: "#adb0bb", fontWeight: 400 },
+        style: { fontFamily: "Kanit", fontSize: "11px", colors: ["#6b7280"] },
       },
     },
     legend: {
@@ -287,7 +256,7 @@ const SalesProfit = () => {
     states: {
       active: { filter: { type: "darken", value: 0.75 } },
     },
-  }), [categories, buildings, yMax, isYearView, handleBarClick]);
+  }), [categories, buildings, yMax, isYearView, handleBarClick, viewMode]);
 
   const titleText = isYearView
     ? `สถิติการใช้สนามรายเดือน${viewMode === "by-building" ? " (แยกอาคาร)" : ""}`
@@ -305,7 +274,6 @@ const SalesProfit = () => {
             </p>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
-            {/* Toggle รวม/แยกอาคาร */}
             <div className="flex rounded-lg border border-gray-200 overflow-hidden text-xs font-kanit">
               <button
                 onClick={() => setViewMode("total")}
@@ -335,7 +303,6 @@ const SalesProfit = () => {
           </div>
         </div>
 
-        {/* กล่องแสดงสถานะ loading หรือ ไม่มีข้อมูล */}
         {loading && (
           <div className="flex items-center justify-center h-[315px] text-gray-400 font-kanit text-sm gap-2">
             <svg className="animate-spin w-5 h-5" viewBox="0 0 24 24" fill="none">
@@ -353,19 +320,36 @@ const SalesProfit = () => {
         )}
 
         {!loading && series.length > 0 && (
-          <div className="-ms-4 -me-3 mt-2" style={{ cursor: "pointer" }}>
-            <Chart
-              options={chartOptions}
-              series={series}
-              type="bar"
-              height="315px"
-              width="100%"
-            />
+          <div className="mt-2">
+            <div className="flex items-stretch">
+              {/* Y-axis label */}
+              <div className="flex items-center justify-center pr-1 shrink-0">
+                <span
+                  className="text-[11px] text-gray-500 font-kanit select-none"
+                  style={{ writingMode: "vertical-rl", transform: "rotate(180deg)", whiteSpace: "nowrap" }}
+                >
+                  จำนวนการจอง
+                </span>
+              </div>
+              <div className="flex-1 min-w-0" style={{ cursor: "pointer" }}>
+                <Chart
+                  options={chartOptions}
+                  series={series}
+                  type="bar"
+                  height="315px"
+                  width="100%"
+                />
+              </div>
+            </div>
+            {/* X-axis label */}
+            <p className="text-center text-[11px] text-gray-500 font-kanit mt-1">
+              {isYearView ? "เดือน" : "วันที่"}
+            </p>
           </div>
         )}
       </div>
 
-      {/* ── Modal รายละเอียดการจอง ── */}
+      {/* Modal */}
       {modalOpen && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 font-kanit"
