@@ -4,12 +4,14 @@ import { Button, Label, TextInput, Spinner } from "flowbite-react";
 import { useRouter } from "next/navigation";
 import React, { useState } from "react";
 import { loginUser } from "@/utils/api";
+import { IconEye, IconEyeOff } from "@tabler/icons-react";
 
 const AuthLogin = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const router = useRouter();
 
@@ -72,15 +74,25 @@ const AuthLogin = () => {
         <div className="mb-2 block">
           <Label htmlFor="password" value="Password" />
         </div>
-        <TextInput
-          id="password"
-          type="password"
-          sizing="md"
-          placeholder="กรอกรหัสผ่าน"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-        />
+        <div className="relative">
+          <input
+            id="password"
+            type={showPassword ? "text" : "password"}
+            placeholder="กรอกรหัสผ่าน"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            className="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 pr-10 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400 dark:focus:border-blue-500 dark:focus:ring-blue-500"
+          />
+          <button
+            type="button"
+            onClick={() => setShowPassword((prev) => !prev)}
+            className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+            tabIndex={-1}
+          >
+            {showPassword ? <IconEyeOff size={18} /> : <IconEye size={18} />}
+          </button>
+        </div>
       </div>
 
       {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
