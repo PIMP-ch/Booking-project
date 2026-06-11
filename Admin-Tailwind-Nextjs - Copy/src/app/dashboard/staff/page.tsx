@@ -35,7 +35,10 @@ const StaffPage = () => {
     email: "",
     role: "staff",
     password: "",
+    confirmPassword: "",
   });
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [passwordError, setPasswordError] = useState("");
 
   const [confirmModal, setConfirmModal] = useState<{ isOpen: boolean; id: string | null }>({
     isOpen: false,
@@ -69,11 +72,17 @@ const StaffPage = () => {
   };
 
   const handleSave = async () => {
+    if (form.password && form.password !== form.confirmPassword) {
+      setPasswordError("รหัสผ่านไม่ตรงกัน");
+      return;
+    }
+    setPasswordError("");
     try {
+      const { confirmPassword, ...payload } = form;
       if (currentStaff?.id) {
-        await updateStaff(currentStaff.id, form);
+        await updateStaff(currentStaff.id, payload);
       } else {
-        await createStaff(form);
+        await createStaff(payload);
       }
       fetchStaff();
       closeModal();
@@ -85,12 +94,15 @@ const StaffPage = () => {
   const openModal = (staff: Staff | null = null) => {
     setCurrentStaff(staff);
     setShowPassword(false);
+    setShowConfirmPassword(false);
+    setPasswordError("");
     if (staff) {
       setForm({
         fullname: staff.fullname,
         email: staff.email,
         role: staff.role,
         password: staff.password || "",
+        confirmPassword: "",
       });
     } else {
       setForm({
@@ -98,6 +110,7 @@ const StaffPage = () => {
         email: "",
         role: "staff",
         password: "",
+        confirmPassword: "",
       });
     }
     setIsModalOpen(true);
@@ -215,21 +228,6 @@ const StaffPage = () => {
               />
             </div>
 
-            {/* บทบาท */}
-            <div>
-              <label className="block mb-1.5 text-sm font-medium text-gray-700 dark:text-white">
-                บทบาท <span className="text-red-500">*</span>
-              </label>
-              <select
-                value={form.role}
-                onChange={(e) => setForm({ ...form, role: e.target.value })}
-                className="w-full p-2.5 text-sm text-gray-900 border border-gray-300 rounded-lg bg-gray-50 dark:bg-gray-700 dark:text-white dark:border-gray-600"
-              >
-                <option value="admin">Admin</option>
-                <option value="staff">Staff</option>
-              </select>
-            </div>
-
             {/* รหัสผ่าน */}
             <div>
               <label className="block mb-1.5 text-sm font-medium text-gray-700 dark:text-white">
@@ -245,7 +243,7 @@ const StaffPage = () => {
                   placeholder={currentStaff ? "รหัสผ่านใหม่ (ถ้าต้องการเปลี่ยน)" : "กรอกรหัสผ่าน"}
                   type={showPassword ? "text" : "password"}
                   value={form.password}
-                  onChange={(e) => setForm({ ...form, password: e.target.value })}
+                  onChange={(e) => { setForm({ ...form, password: e.target.value }); setPasswordError(""); }}
                   className="pr-10"
                 />
                 <button
@@ -260,6 +258,57 @@ const StaffPage = () => {
                   />
                 </button>
               </div>
+            </div>
+
+            {/* ยืนยันรหัสผ่าน */}
+            <div>
+              <label className="block mb-1.5 text-sm font-medium text-gray-700 dark:text-white">
+                ยืนยันรหัสผ่าน{" "}
+                {currentStaff ? (
+                  <span className="text-xs font-normal text-gray-400">(เว้นว่างไว้ถ้าไม่ต้องการเปลี่ยน)</span>
+                ) : (
+                  <span className="text-red-500">*</span>
+                )}
+              </label>
+              <div className="relative">
+                <TextInput
+                  placeholder="กรอกรหัสผ่านอีกครั้ง"
+                  type={showConfirmPassword ? "text" : "password"}
+                  value={form.confirmPassword}
+                  onChange={(e) => { setForm({ ...form, confirmPassword: e.target.value }); setPasswordError(""); }}
+                  className="pr-10"
+                  color={passwordError ? "failure" : undefined}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword((v) => !v)}
+                  className="absolute inset-y-0 right-0 flex items-center px-3 text-gray-400 hover:text-gray-600"
+                  tabIndex={-1}
+                >
+                  <Icon
+                    icon={showConfirmPassword ? "solar:eye-closed-bold" : "solar:eye-bold"}
+                    className="text-lg"
+                  />
+                </button>
+              </div>
+              {passwordError && (
+                <p className="mt-1 text-xs text-red-500">{passwordError}</p>
+              )}
+            </div>
+
+            {/* บทบาท */}
+            <div>
+              <label className="block mb-1.5 text-sm font-medium text-gray-700 dark:text-white">
+                บทบาท <span className="text-red-500">*</span>
+              </label>
+              <select
+                value={form.role}
+                onChange={(e) => setForm({ ...form, role: e.target.value })}
+                className="w-full p-2.5 text-sm text-gray-900 border border-gray-300 rounded-lg bg-gray-50 dark:bg-gray-700 dark:text-white dark:border-gray-600"
+              >
+                <option value="admin">Admin</option>
+                <option value="staff">Staff</option>
+              </select>
             </div>
           </div>
         </Modal.Body>

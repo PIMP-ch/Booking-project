@@ -24,6 +24,8 @@ function LayoutInner({ children }: { children: React.ReactNode }) {
       data-sidebar-type={open ? "mini-sidebar" : undefined}
     >
       <Sidebar />
+      {/* spacer หาย-ปรากฏตาม sidebar */}
+      <div className={`hidden xl:block shrink-0 transition-all duration-200 ${open ? "w-0" : "w-72"}`} />
       <div className="w-full">
         <Header />
         {/* Body Content */}

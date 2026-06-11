@@ -5,11 +5,14 @@ import { getSidebarContent } from "./Sidebaritems";
 import type { MenuItem } from "./Sidebaritems";
 import NavItems from "./NavItems";
 import NavCollapse from "./NavCollapse";
-import SimpleBar from "simplebar-react";
 import Logo from "@/app/dashboard/layout/shared/logo/Logo";
 import { Icon } from "@iconify/react";
 
 type Props = { onClose?: () => void };
+
+const fbTheme = {
+  root: { base: "w-full", inner: "w-full bg-transparent p-0" },
+};
 
 const MobileSidebar: React.FC<Props> = ({ onClose }) => {
   const [menu, setMenu] = useState<MenuItem[]>([]);
@@ -19,47 +22,39 @@ const MobileSidebar: React.FC<Props> = ({ onClose }) => {
   }, []);
 
   return (
-    <div className="font-kanit w-72">
-      <Sidebar
-        className="menu-sidebar pt-6 bg-white dark:bg-darkgray w-72"
-        aria-label="Sidebar mobile"
-      >
-        {/* Logo + ปุ่มปิด */}
-        <div className="mb-4 px-4 flex items-center justify-between">
-          <Logo />
-          <button
-            onClick={onClose}
-            aria-label="Close sidebar"
-            className="inline-flex h-9 w-9 items-center justify-center rounded-full hover:bg-gray-100"
-          >
-            <Icon icon="solar:close-circle-bold" height={22} />
-          </button>
-        </div>
+    <div
+      className="font-kanit flex flex-col bg-white dark:bg-darkgray"
+      style={{ width: "18rem", height: "100dvh" }}
+    >
+      {/* โลโก้ + ปุ่มปิด */}
+      <div className="px-4 py-4 flex items-center justify-between shrink-0 border-b">
+        <Logo />
+        <button
+          onClick={onClose}
+          aria-label="Close sidebar"
+          className="h-9 w-9 flex items-center justify-center rounded-full hover:bg-gray-100"
+        >
+          <Icon icon="solar:close-circle-bold" height={22} />
+        </button>
+      </div>
 
-        <SimpleBar className="h-[calc(100vh_-_100px)]">
-          <Sidebar.Items className="px-4">
+      {/* เมนู scroll ได้ */}
+      <div style={{ flex: 1, minHeight: 0, overflowY: "auto" }}>
+        <Sidebar aria-label="Sidebar mobile" theme={fbTheme} className="w-full">
+          <Sidebar.Items className="px-4 py-3">
             <div className="sidebar-nav">
               {menu.map((item, index) => (
                 <React.Fragment key={index}>
-                  <h5 className="text-link font-semibold text-sm caption px-2 mt-4">
+                  <h5 className="text-link font-semibold text-sm caption px-2 mt-4 first:mt-2">
                     <span className="hide-menu">{item.heading}</span>
                   </h5>
-                  <Icon
-                    icon="solar:menu-dots-bold"
-                    className="text-ld block mx-auto mt-6 leading-6 dark:text-opacity-60 hide-icon"
-                    height={18}
-                  />
                   <Sidebar.ItemGroup>
                     {item.children?.map((child, idx) => (
                       <React.Fragment key={child.id ?? idx}>
                         {child.children ? (
-                          <div onClick={onClose}>
-                            <NavCollapse item={child} onItemClick={onClose} />
-                          </div>
+                          <NavCollapse item={child} onItemClick={onClose} />
                         ) : (
-                          <div onClick={onClose}>
-                            <NavItems item={child} onItemClick={onClose} />
-                          </div>
+                          <NavItems item={child} onItemClick={onClose} />
                         )}
                       </React.Fragment>
                     ))}
@@ -68,8 +63,8 @@ const MobileSidebar: React.FC<Props> = ({ onClose }) => {
               ))}
             </div>
           </Sidebar.Items>
-        </SimpleBar>
-      </Sidebar>
+        </Sidebar>
+      </div>
     </div>
   );
 };

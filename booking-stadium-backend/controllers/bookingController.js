@@ -445,7 +445,7 @@ export const getAllBookings = async (req, res) => {
         { model: Stadium, attributes: ["nameStadium", "descriptionStadium"] },
         { model: Building, attributes: ["name"], through: { attributes: [] } },
         { model: Equipment, attributes: ["name", "quantity"], through: { attributes: ["quantity"] } },
-        { model: Userr, attributes: ["fullname", "phoneNumber", "email", "fieldOfStudy", "year", "department", "userType"] },
+        { model: Userr, attributes: ["fullname", "phoneNumber", "email", "fieldOfStudy", "year", "department", "userType"], paranoid: false },
       ],
     });
     if (!bookings.length) return res.status(404).json({ message: "No bookings found" });

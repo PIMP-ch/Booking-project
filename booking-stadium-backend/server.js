@@ -46,6 +46,10 @@ const runMigrations = async () => {
     `ALTER TABLE Users ADD COLUMN deletedAt DATETIME DEFAULT NULL`,
     `ALTER TABLE equipment_adjustment_transactions ADD COLUMN reason ENUM('normal_in','normal_out','damaged','lost','booking_borrow','booking_return') DEFAULT NULL`,
     `ALTER TABLE equipment_adjustment_transactions ADD COLUMN bookingId INT DEFAULT NULL`,
+    `ALTER TABLE Bookings ADD COLUMN bookingType ENUM('normal','class_schedule') NOT NULL DEFAULT 'normal'`,
+    `ALTER TABLE Bookings ADD COLUMN academicYear INT DEFAULT NULL`,
+    `ALTER TABLE Bookings ADD COLUMN academicTerm INT DEFAULT NULL`,
+    `ALTER TABLE Bookings ADD COLUMN note TEXT DEFAULT NULL`,
   ];
   for (const sql of migrations) {
     try {
