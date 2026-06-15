@@ -1,4 +1,4 @@
-import fs from "fs";
+﻿import fs from "fs";
 import path from "path";
 import Equipment from "../models/Equipmentt.js";
 import EquipmentAdjustmentTransaction from "../models/EquipmentAdjustmentTransaction.js";
@@ -6,6 +6,10 @@ import EquipmentAdjustmentTransaction from "../models/EquipmentAdjustmentTransac
 // ✅ เพิ่มอุปกรณ์ใหม่
 export const createEquipment = async (req, res) => {
     try {
+        const existing = await Equipment.findOne({ where: { name: req.body.name } });
+        if (existing) {
+            return res.status(400).json({ message: "มีอุปกรณ์ชื่อนี้อยู่แล้ว" });
+        }
         const newEquipment = await Equipment.create(req.body);
         res.status(201).json({ message: "Equipment added successfully", newEquipment });
     } catch (error) {
@@ -17,26 +21,26 @@ export const createEquipment = async (req, res) => {
 export const updateEquipment = async (req, res) => {
     try {
         const { id } = req.params;
-        const { name, quantity, status, imageUrl, sportTypeId } = req.body;
+        const { name, brand, size, quantity, status, imageUrl, sportTypeId } = req.body;
 
-        const payload = { name, quantity, status, sportTypeId };
-        if (typeof imageUrl !== "undefined") {
-            payload.imageUrl = imageUrl;
+        if (name) {
+            const dup = await Equipment.findOne({ where: { name } });
+            if (dup && String(dup.id) !== String(id)) {
+                return res.status(400).json({ message: "มีอุปกรณ์ชื่อนี้อยู่แล้ว" });
+            }
         }
 
-        // const updatedEquipment = await Equipment.findByIdAndUpdate(
-        //     id,
-        //     payload,
-        //     { new: true, runValidators: true }
-        // );
         const updatedEquipment = await Equipment.findByPk(id);
-
         if (!updatedEquipment) {
             return res.status(404).json({ message: "Equipment not found" });
         }
 
-        await updatedEquipment.update(payload);
+        const payload = { name, brand, size, quantity, status, sportTypeId };
+        if (typeof imageUrl !== "undefined") {
+            payload.imageUrl = imageUrl;
+        }
 
+        await updatedEquipment.update(payload);
 
         res.status(200).json({ message: "Equipment updated successfully", updatedEquipment });
     } catch (error) {
@@ -47,7 +51,6 @@ export const updateEquipment = async (req, res) => {
 // ✅ ดึงข้อมูลอุปกรณ์ทั้งหมด
 export const getEquipments = async (req, res) => {
     try {
-        // const equipments = await Equipment.find();
         const equipments = await Equipment.findAll();
         res.status(200).json(equipments);
     } catch (error) {
@@ -58,7 +61,6 @@ export const getEquipments = async (req, res) => {
 // ✅ ลบอุปกรณ์
 export const deleteEquipment = async (req, res) => {
     try {
-        // const equipment = await Equipment.findById(req.params.id);
         const equipment = await Equipment.findByPk(req.params.id);
         if (!equipment) {
             return res.status(404).json({ message: "Equipment not found" });
@@ -72,7 +74,6 @@ export const deleteEquipment = async (req, res) => {
             }
         }
 
-        // await equipment.deleteOne();
         await equipment.destroy();
         res.status(200).json({ message: "Equipment deleted successfully" });
     } catch (error) {
@@ -85,7 +86,6 @@ export const adjustEquipmentStock = async (req, res) => {
     try {
         const { equipmentId, type, quantity, note, reason } = req.body;
 
-        // Validate required fields
         if (!equipmentId || !type || !quantity) {
             return res.status(400).json({ message: "กรุณากรอกข้อมูลให้ครบถ้วน" });
         }
@@ -98,30 +98,24 @@ export const adjustEquipmentStock = async (req, res) => {
             return res.status(400).json({ message: "จำนวนต้องมากกว่า 0" });
         }
 
-        // Find equipment
         const equipment = await Equipment.findByPk(equipmentId);
         if (!equipment) {
             return res.status(404).json({ message: "ไม่พบอุปกรณ์" });
         }
 
-        // Validate stock for "out"
         if (type === "out" && equipment.quantity < quantity) {
             return res.status(400).json({
                 message: `จำนวนจำหน่ายออกเกินจำนวนคงเหลือ (คงเหลือ: ${equipment.quantity})`,
             });
         }
 
-        // Calculate new quantity
         const newQuantity =
             type === "in"
                 ? equipment.quantity + quantity
                 : equipment.quantity - quantity;
 
-        // Update equipment quantity
         await equipment.update({ quantity: newQuantity });
 
-        // Create transaction record
-        // reason อัตโนมัติถ้าไม่ส่งมา
         const autoReason = reason || (type === "in" ? "normal_in" : "normal_out");
 
         const transaction = await EquipmentAdjustmentTransaction.create({
@@ -145,8 +139,6 @@ export const adjustEquipmentStock = async (req, res) => {
 // ✅ ดึงประวัติการรับเข้า/จำหน่ายออกทั้งหมด
 export const getAdjustmentTransactions = async (req, res) => {
     try {
-        // แยก query แล้ว merge ใน backend เพื่อความ reliable
-        // (ไม่ใช้ JOIN เพราะ LEFT JOIN ใน Sequelize บางครั้ง return null ทั้งที่ข้อมูลมีอยู่)
         const [transactions, equipments] = await Promise.all([
             EquipmentAdjustmentTransaction.findAll({ order: [["createdAt", "DESC"]] }),
             Equipment.findAll({ attributes: ["id", "name"] }),

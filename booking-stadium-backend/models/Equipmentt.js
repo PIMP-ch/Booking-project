@@ -1,10 +1,18 @@
-import { DataTypes } from "sequelize";
+﻿import { DataTypes } from "sequelize";
 import sequelize from "../config/database.js";
 
 const Equipment = sequelize.define("Equipment", {
     name: {
         type: DataTypes.STRING,
         allowNull: false,
+    },
+    brand: {
+        type: DataTypes.STRING,
+        defaultValue: "",
+    },
+    size: {
+        type: DataTypes.STRING,
+        defaultValue: "",
     },
     quantity: {
         type: DataTypes.INTEGER,
@@ -25,6 +33,7 @@ const Equipment = sequelize.define("Equipment", {
         allowNull: false,
     },
 }, {
+    tableName: "equipment",
     timestamps: true,
 });
 

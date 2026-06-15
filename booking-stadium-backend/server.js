@@ -1,4 +1,4 @@
-// server.js
+﻿// server.js
 import "dotenv/config"; // โหลด .env ก่อน import อื่นทุกตัว
 import express from "express";
 import path from "path";
@@ -50,6 +50,8 @@ const runMigrations = async () => {
     `ALTER TABLE Bookings ADD COLUMN academicYear INT DEFAULT NULL`,
     `ALTER TABLE Bookings ADD COLUMN academicTerm INT DEFAULT NULL`,
     `ALTER TABLE Bookings ADD COLUMN note TEXT DEFAULT NULL`,
+    `ALTER TABLE equipment ADD COLUMN brand VARCHAR(255) NOT NULL DEFAULT ''`,
+    `ALTER TABLE equipment ADD COLUMN size VARCHAR(255) NOT NULL DEFAULT ''`,
   ];
   for (const sql of migrations) {
     try {
@@ -113,3 +115,5 @@ app.listen(PORT, async () => {
   console.log(`🚀 Server running on http://localhost:${PORT}`);
   console.log(`📂 Static files served at /uploads`);
 });
+
+

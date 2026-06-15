@@ -1,6 +1,6 @@
-"use client";
+﻿"use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import { Table, Modal, Button, Dropdown, TextInput, Label } from "flowbite-react";
 import {
     getAllEquipment,
@@ -12,16 +12,19 @@ import {
     getSportTypes,
 } from "@/utils/api";
 import { Icon } from "@iconify/react";
-import { toast } from "react-toastify";
-import { get } from "lodash";
+import { exportTableToPdf } from "@/utils/exportPdf";
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 import StockModal from "./StockModal";
-import TransactionHistoryModal from "./TransactionHistoryModal"; // 👈 เพิ่ม
+import TransactionHistoryModal from "./TransactionHistoryModal";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:5008";
 
 interface Equipment {
     id: string;
     name: string;
+    brand: string;
+    size: string;
     quantity: number;
     status: string;
     imageUrl?: string;
@@ -36,14 +39,12 @@ const EquipmentPage = () => {
         id: null,
     });
     const [currentEquipment, setCurrentEquipment] = useState<Equipment | null>(null);
-    const [form, setForm] = useState({ name: "", quantity: 0, status: "available", sportTypeId: undefined });
+    const [form, setForm] = useState({ name: "", brand: "", size: "", quantity: 0, status: "available", sportTypeId: undefined as number | undefined });
     const [imagePreview, setImagePreview] = useState<string>("");
     const [imageFile, setImageFile] = useState<File | null>(null);
     const [isSaving, setIsSaving] = useState(false);
     const [sportTypes, setSportTypes] = useState<{ id: number; name: string }[]>([]);
     const [isStockModalOpen, setIsStockModalOpen] = useState(false);
-
-    // 👇 state สำหรับ history modal
     const [historyModal, setHistoryModal] = useState<{ isOpen: boolean; equipment: Equipment | null }>({
         isOpen: false,
         equipment: null,
@@ -61,7 +62,7 @@ const EquipmentPage = () => {
     const getSportTypeData = async () => {
         try {
             const data = await getSportTypes();
-            const filtered = data.filter((item) => item.name !== "ทุกประเภท");
+            const filtered = data.filter((item: any) => item.name !== "ทุกประเภท");
             setSportTypes(filtered);
         } catch (err) {
             toast.error("โหลดข้อมูลประเภทกีฬาไม่สำเร็จ");
@@ -77,8 +78,8 @@ const EquipmentPage = () => {
         setCurrentEquipment(equipment);
         setForm(
             equipment
-                ? { name: equipment.name, quantity: equipment.quantity, status: equipment.status, sportTypeId: equipment.sportTypeId }
-                : { name: "", quantity: 0, status: "available", sportTypeId: undefined }
+                ? { name: equipment.name, brand: equipment.brand || "", size: equipment.size || "", quantity: equipment.quantity, status: equipment.status, sportTypeId: equipment.sportTypeId }
+                : { name: "", brand: "", size: "", quantity: 0, status: "available", sportTypeId: undefined }
         );
         setImagePreview(equipment?.imageUrl ? `${API_BASE}${equipment.imageUrl}` : "");
         setImageFile(null);
@@ -104,14 +105,22 @@ const EquipmentPage = () => {
     };
 
     const handleSave = async () => {
+        if (!form.name || !form.quantity || !form.sportTypeId) {
+            toast.error("กรุณากรอกข้อมูลให้ครบถ้วน");
+            return;
+        }
+
+        const isDuplicate = equipmentList.some(
+            (eq) => eq.name.toLowerCase().trim() === form.name.toLowerCase().trim() && eq.id !== currentEquipment?.id
+        );
+        if (isDuplicate) {
+            toast.error("มีอุปกรณ์ชื่อนี้อยู่แล้ว ไม่สามารถเพิ่มซ้ำได้");
+            return;
+        }
+
         try {
             setIsSaving(true);
             let eqId = currentEquipment?.id;
-
-            if (!form.name || !form.quantity || !form.sportTypeId) {
-                toast.error("กรุณากรอกข้อมูลให้ครบถ้วน");
-                return;
-            }
 
             if (currentEquipment) {
                 await updateEquipment(currentEquipment.id, form);
@@ -127,10 +136,33 @@ const EquipmentPage = () => {
             toast.success("บันทึกข้อมูลเรียบร้อย");
             fetchData();
             closeModal();
-        } catch (err) {
-            toast.error("เกิดข้อผิดพลาด");
+        } catch (err: any) {
+            toast.error(err?.message || "เกิดข้อผิดพลาด");
         } finally {
             setIsSaving(false);
+        }
+    };
+
+    const handleExportPDF = async () => {
+        try {
+            const now = new Date().toLocaleDateString("th-TH").replace(/\//g, "-");
+            await exportTableToPdf({
+                title: "รายการอุปกรณ์ทั้งหมด",
+                subtitle: `จำนวนทั้งหมด: ${equipmentList.length} รายการ`,
+                filename: `equipment-report_${now}.pdf`,
+                headers: ["#", "ชื่ออุปกรณ์", "ยี่ห้อ", "ขนาด", "จำนวน", "สถานะ"],
+                rows: equipmentList.map((eq, i) => [
+                    i + 1,
+                    eq.name,
+                    eq.brand || "-",
+                    eq.size || "-",
+                    eq.quantity,
+                    eq.status === "available" ? "ใช้งานได้" : "กำลังใช้งาน",
+                ]),
+                columnWidths: { 0: 10, 4: 18, 5: 28 },
+            });
+        } catch {
+            toast.error("ส่งออก PDF ไม่สำเร็จ");
         }
     };
 
@@ -143,18 +175,21 @@ const EquipmentPage = () => {
                 onSuccess={fetchData}
             />
 
-            {/* 👇 History Modal */}
             <TransactionHistoryModal
                 isOpen={historyModal.isOpen}
                 onClose={() => setHistoryModal({ isOpen: false, equipment: null })}
                 equipment={historyModal.equipment}
             />
 
-            {/* Header Section */}
+            {/* Header */}
             <div className="flex justify-between items-center mb-6">
                 <h2 className="text-2xl font-bold text-gray-800">จัดการอุปกรณ์</h2>
-                <div className="flex gap-x-2">
-                    <Button onClick={() => setIsStockModalOpen(true)} className="bg-yellow-600 hover:bg-yellow-700">
+                <div className="flex gap-2">
+                    <Button onClick={handleExportPDF} color="light" className="border border-gray-300">
+                        <Icon icon="solar:file-download-bold" className="mr-2 h-5 w-5" />
+                        ส่งออก PDF
+                    </Button>
+                    <Button onClick={() => setIsStockModalOpen(true)} className="bg-yellow-500 hover:bg-yellow-600">
                         รับเข้า/จำหน่ายออก
                     </Button>
                     <Button onClick={() => openModal()} className="bg-blue-600 hover:bg-blue-700">
@@ -164,13 +199,15 @@ const EquipmentPage = () => {
                 </div>
             </div>
 
-            {/* Table Section */}
+            {/* Table */}
             <div className="bg-white rounded-2xl shadow-sm overflow-hidden border border-gray-100">
                 <Table hoverable>
                     <Table.Head className="bg-gray-50 text-gray-600">
                         <Table.HeadCell>รูป</Table.HeadCell>
                         <Table.HeadCell>ลำดับ</Table.HeadCell>
                         <Table.HeadCell>ชื่ออุปกรณ์</Table.HeadCell>
+                        <Table.HeadCell>ยี่ห้อ</Table.HeadCell>
+                        <Table.HeadCell>ขนาด</Table.HeadCell>
                         <Table.HeadCell>จำนวน</Table.HeadCell>
                         <Table.HeadCell>สถานะ</Table.HeadCell>
                         <Table.HeadCell></Table.HeadCell>
@@ -178,11 +215,11 @@ const EquipmentPage = () => {
                     <Table.Body className="divide-y">
                         {equipmentList.map((eq, index) => (
                             <Table.Row key={eq.id} className="bg-white">
-                                <Table.Cell className="w-[300px]">
+                                <Table.Cell className="w-[260px]">
                                     <div className="flex items-center gap-4">
                                         <div className="w-16 h-16 rounded-xl overflow-hidden bg-gray-100 border flex-shrink-0">
                                             <img
-                                                src={eq.imageUrl ? `${API_BASE}${eq.imageUrl}` : "/no-image.png"}
+                                                src={eq.imageUrl ? `${API_BASE}${eq.imageUrl}` : "/no-image.svg"}
                                                 className="w-full h-full object-cover"
                                                 alt="preview"
                                             />
@@ -212,6 +249,8 @@ const EquipmentPage = () => {
                                 </Table.Cell>
                                 <Table.Cell>{index + 1}</Table.Cell>
                                 <Table.Cell className="font-semibold text-gray-800">{eq.name}</Table.Cell>
+                                <Table.Cell className="text-gray-600">{eq.brand || "-"}</Table.Cell>
+                                <Table.Cell className="text-gray-600">{eq.size || "-"}</Table.Cell>
                                 <Table.Cell>{eq.quantity}</Table.Cell>
                                 <Table.Cell>
                                     <span className={`px-4 py-1 rounded-full text-[12px] text-white font-medium ${eq.status === "available" ? "bg-[#10b981]" : "bg-[#d97706]"}`}>
@@ -225,18 +264,10 @@ const EquipmentPage = () => {
                                         </div>
                                     )} inline>
                                         <Dropdown.Item onClick={() => openModal(eq)}>แก้ไข</Dropdown.Item>
-                                        {/* 👇 เชื่อมกับ history modal */}
-                                        <Dropdown.Item
-                                            onClick={() => setHistoryModal({ isOpen: true, equipment: eq })}
-                                        >
+                                        <Dropdown.Item onClick={() => setHistoryModal({ isOpen: true, equipment: eq })}>
                                             ประวัติการรับเข้า/ออก
                                         </Dropdown.Item>
-                                        <Dropdown.Item
-                                            onClick={() => setConfirmModal({ isOpen: true, id: eq.id })}
-                                            className="text-red-600"
-                                        >
-                                            ลบ
-                                        </Dropdown.Item>
+                                        <Dropdown.Item onClick={() => setConfirmModal({ isOpen: true, id: eq.id })} className="text-red-600">ลบ</Dropdown.Item>
                                     </Dropdown>
                                 </Table.Cell>
                             </Table.Row>
@@ -245,40 +276,65 @@ const EquipmentPage = () => {
                 </Table>
             </div>
 
-            {/* Modal Edit/Add */}
+            {/* Modal Add/Edit */}
             <Modal show={isModalOpen} onClose={closeModal} size="md" className="font-kanit">
                 <Modal.Header className="border-b-0 pb-0 pt-6 px-8 text-xl font-bold">
                     {currentEquipment ? "แก้ไขอุปกรณ์" : "เพิ่มอุปกรณ์"}
                 </Modal.Header>
                 <Modal.Body className="px-8 pb-8">
-                    <div className="space-y-5">
-                        <TextInput
-                            value={form.name}
-                            onChange={(e) => setForm({ ...form, name: e.target.value })}
-                            placeholder="ชื่ออุปกรณ์"
-                            className="rounded-full"
-                        />
-                        <TextInput
-                            type="number"
-                            value={form.quantity || ""}
-                            onChange={(e) => setForm({ ...form, quantity: Number(e.target.value) })}
-                            placeholder="จำนวน"
-                        />
-                        <select
-                            value={form.sportTypeId || ""}
-                            onChange={(e) => setForm({ ...form, sportTypeId: Number(e.target.value) })}
-                            className="w-full rounded-xl border-gray-200 text-sm h-11 focus:ring-blue-500"
-                        >
-                            <option value="">เลือกประเภทกีฬา</option>
-                            {sportTypes.map((type) => (
-                                <option key={type.id} value={type.id}>{type.name}</option>
-                            ))}
-                        </select>
+                    <div className="space-y-4">
+                        <div>
+                            <Label className="text-xs text-gray-500 mb-1 block">ชื่ออุปกรณ์ *</Label>
+                            <TextInput
+                                value={form.name}
+                                onChange={(e) => setForm({ ...form, name: e.target.value })}
+                                placeholder="เช่น ไม้แบดมินตัน"
+                            />
+                        </div>
+                        <div>
+                            <Label className="text-xs text-gray-500 mb-1 block">ยี่ห้อ</Label>
+                            <TextInput
+                                value={form.brand}
+                                onChange={(e) => setForm({ ...form, brand: e.target.value })}
+                                placeholder="เช่น Yonex, Victor, Li-Ning"
+                            />
+                        </div>
+                        <div>
+                            <Label className="text-xs text-gray-500 mb-1 block">ขนาด</Label>
+                            <TextInput
+                                value={form.size}
+                                onChange={(e) => setForm({ ...form, size: e.target.value })}
+                                placeholder="เช่น S, M, L หรือ 25 cm"
+                            />
+                        </div>
+                        <div>
+                            <Label className="text-xs text-gray-500 mb-1 block">จำนวน *</Label>
+                            <TextInput
+                                type="number"
+                                value={form.quantity || ""}
+                                onChange={(e) => setForm({ ...form, quantity: Number(e.target.value) })}
+                                placeholder="จำนวน"
+                            />
+                        </div>
+                        <div>
+                            <Label className="text-xs text-gray-500 mb-1 block">ประเภทกีฬา *</Label>
+                            <select
+                                value={form.sportTypeId || ""}
+                                onChange={(e) => setForm({ ...form, sportTypeId: Number(e.target.value) })}
+                                className="w-full rounded-xl border-gray-200 text-sm h-11 focus:ring-blue-500"
+                            >
+                                <option value="">เลือกประเภทกีฬา</option>
+                                {sportTypes.map((type) => (
+                                    <option key={type.id} value={type.id}>{type.name}</option>
+                                ))}
+                            </select>
+                        </div>
+
                         <div className="bg-gray-50 p-4 rounded-2xl border border-dashed border-gray-200">
                             <Label className="text-gray-500 mb-2 block text-xs">รูปอุปกรณ์</Label>
                             <div className="flex items-center gap-4">
                                 <div className="w-16 h-16 rounded-xl overflow-hidden border-2 border-white shadow-sm flex-shrink-0 bg-white">
-                                    <img src={imagePreview || "/no-image.png"} className="w-full h-full object-cover" />
+                                    <img src={imagePreview || "/no-image.svg"} className="w-full h-full object-cover" alt="preview" />
                                 </div>
                                 <div className="flex flex-col gap-1">
                                     <label className="bg-[#1e293b] text-white text-[11px] px-4 py-1.5 rounded-md cursor-pointer hover:bg-slate-700 font-medium">
@@ -297,27 +353,33 @@ const EquipmentPage = () => {
                                 </div>
                             </div>
                         </div>
+
                         {currentEquipment && (
-                            <select
-                                value={form.status}
-                                onChange={(e) => setForm({ ...form, status: e.target.value })}
-                                className="w-full rounded-xl border-gray-200 text-sm h-11 focus:ring-blue-500"
-                            >
-                                <option value="available">ใช้งานได้</option>
-                                <option value="unavailable">กำลังใช้งาน</option>
-                            </select>
+                            <div>
+                                <Label className="text-xs text-gray-500 mb-1 block">สถานะ</Label>
+                                <select
+                                    value={form.status}
+                                    onChange={(e) => setForm({ ...form, status: e.target.value })}
+                                    className="w-full rounded-xl border-gray-200 text-sm h-11 focus:ring-blue-500"
+                                >
+                                    <option value="available">ใช้งานได้</option>
+                                    <option value="unavailable">กำลังใช้งาน</option>
+                                </select>
+                            </div>
                         )}
                     </div>
                 </Modal.Body>
                 <Modal.Footer className="border-t-0 flex gap-3 px-8 pb-8 pt-0">
                     <Button onClick={handleSave} className="bg-[#2563eb] flex-1 rounded-2xl h-11" disabled={isSaving}>
-                        {isSaving ? "กำลังบันทึก..." : "บันทึกการแก้ไข"}
+                        {isSaving ? "กำลังบันทึก..." : "บันทึก"}
                     </Button>
                     <Button color="gray" onClick={closeModal} className="flex-1 rounded-2xl h-11 border-none bg-gray-100 hover:bg-gray-200">
                         ยกเลิก
                     </Button>
                 </Modal.Footer>
             </Modal>
+
+            <ToastContainer position="top-right" autoClose={3000} />
 
             {/* Confirm Delete Modal */}
             <Modal show={confirmModal.isOpen} onClose={() => setConfirmModal({ isOpen: false, id: null })} size="sm">
@@ -339,3 +401,5 @@ const EquipmentPage = () => {
 };
 
 export default EquipmentPage;
+
+
