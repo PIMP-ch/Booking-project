@@ -5,6 +5,10 @@ import Equipment from "../models/Equipment.js";
 // ✅ เพิ่มอุปกรณ์ใหม่
 export const createEquipment = async (req, res) => {
     try {
+        const existing = await Equipment.findOne({ name: req.body.name });
+        if (existing) {
+            return res.status(400).json({ message: "มีอุปกรณ์ชื่อนี้อยู่แล้ว" });
+        }
         const newEquipment = new Equipment(req.body);
         await newEquipment.save();
         res.status(201).json({ message: "Equipment added successfully", newEquipment });
@@ -17,9 +21,16 @@ export const createEquipment = async (req, res) => {
 export const updateEquipment = async (req, res) => {
     try {
         const { id } = req.params;
-        const { name, quantity, status, imageUrl } = req.body;
+        const { name, brand, size, quantity, status, imageUrl } = req.body;
 
-        const payload = { name, quantity, status };
+        if (name) {
+            const existing = await Equipment.findOne({ name, _id: { $ne: id } });
+            if (existing) {
+                return res.status(400).json({ message: "มีอุปกรณ์ชื่อนี้อยู่แล้ว" });
+            }
+        }
+
+        const payload = { name, brand, size, quantity, status };
         if (typeof imageUrl !== "undefined") {
             payload.imageUrl = imageUrl;
         }
