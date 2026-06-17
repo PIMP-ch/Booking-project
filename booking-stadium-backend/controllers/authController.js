@@ -4,6 +4,9 @@ import { message } from "hawk/lib/client.js";
 import { Op } from "sequelize";
 import Userr from "../models/Userr.js";
 
+const KMUTNB_DOMAIN = "@kmutnb.ac.th";
+const isKmutnbEmail = (email) =>
+    typeof email === "string" && email.trim().toLowerCase().endsWith(KMUTNB_DOMAIN);
 
 // ฟังก์ชันสร้างรหัส Reset (ตัวเลข + ตัวอักษรใหญ่ 6 ตัว)
 const generateResetToken = () => {
@@ -18,6 +21,11 @@ const generateResetToken = () => {
 export const requestPasswordReset = async (req, res) => {
     try {
         const { email } = req.body;
+
+        if (!isKmutnbEmail(email)) {
+            return res.status(400).json({ message: "email ต้องเป็นของมหาวิทยาลัยเท่านั้น" });
+        }
+
         // const user = await User.findOne({ email });
         const user = await Userr.findOne({
             where: {
@@ -219,6 +227,10 @@ export const register = async (req, res) => {
             return res.status(400).json({ message: "กรุณากรอกชื่อ อีเมล์ เบอร์โทร ให้ครบ" });
         }
 
+        if (!isKmutnbEmail(email)) {
+            return res.status(400).json({ message: "email ต้องเป็นของมหาวิทยาลัยเท่านั้น" });
+        }
+
         if (!["student", "staff"].includes(userType)) {
             return res.status(400).json({ message: "ประเภทผู้ใช้งานไม่ถูกต้อง (student/staff)" });
         }
@@ -276,6 +288,11 @@ export const register = async (req, res) => {
 export const login = async (req, res) => {
     try {
         const { email, name, sub } = req.body;
+
+        if (!isKmutnbEmail(email)) {
+            return res.status(403).json({ message: "email ต้องเป็นของมหาวิทยาลัยเท่านั้น" });
+        }
+
         const user = await Userr.findOne({ where: { email } });
 
         if (!user) {
@@ -398,6 +415,10 @@ export const updateUser = async (req, res) => {
     try {
         const { id } = req.params;
         const { fullname, email, phoneNumber, fieldOfStudy, year } = req.body;
+
+        if (email && !isKmutnbEmail(email)) {
+            return res.status(400).json({ message: "email ต้องเป็นของมหาวิทยาลัยเท่านั้น" });
+        }
 
         // ✅ เช็คว่า email หรือ phone ซ้ำกับคนอื่นไหม (ไม่นับตัวเอง)
         const existingUser = await Userr.findOne({

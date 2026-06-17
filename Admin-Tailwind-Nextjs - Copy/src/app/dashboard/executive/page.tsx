@@ -7,6 +7,7 @@ import { Icon } from "@iconify/react";
 import { exportTableToPdf } from "@/utils/exportPdf";
 import axios, { AxiosError } from "axios";
 import UploadAvatar from "@/app/components/dashboard/UploadAvatar";
+import { toast } from "react-toastify";
 
 // ─── Types ───────────────────────────────────────────────
 interface StaffInfo {
@@ -175,7 +176,7 @@ const ExecutivePage = () => {
     // ── CREATE ──
     if (!currentExec) {
       if (!createForm.fullname || !createForm.email || !createForm.password || !createForm.position || !createForm.startDate) {
-        alert("กรุณากรอกข้อมูลให้ครบ (ชื่อ, อีเมล, รหัสผ่าน, ตำแหน่ง, วันที่เริ่มต้น)");
+        toast.warning("กรุณากรอกข้อมูลให้ครบ (ชื่อ, อีเมล, รหัสผ่าน, ตำแหน่ง, วันที่เริ่มต้น)");
         return;
       }
       setSaving(true);
@@ -214,7 +215,7 @@ const ExecutivePage = () => {
         await fetchExecutives();
         closeModal();
       } catch (err) {
-        alert(getErrorMessage(err));
+        toast.error(getErrorMessage(err));
       } finally {
         setSaving(false);
       }
@@ -223,7 +224,7 @@ const ExecutivePage = () => {
 
     // ── EDIT ──
     if (!editForm.position || !editForm.startDate) {
-      alert("กรุณากรอกตำแหน่งและวันที่เริ่มต้น");
+      toast.warning("กรุณากรอกตำแหน่งและวันที่เริ่มต้น");
       return;
     }
     setSaving(true);
@@ -249,7 +250,7 @@ const ExecutivePage = () => {
       await fetchExecutives();
       closeModal();
     } catch (err) {
-      alert(getErrorMessage(err));
+      toast.error(getErrorMessage(err));
     } finally {
       setSaving(false);
     }
@@ -261,7 +262,7 @@ const ExecutivePage = () => {
       await api.delete(`/executives/${confirmModal.id}`);
       await fetchExecutives();
     } catch (err) {
-      alert(getErrorMessage(err));
+      toast.error(getErrorMessage(err));
     } finally {
       setConfirmModal({ isOpen: false, id: null });
     }

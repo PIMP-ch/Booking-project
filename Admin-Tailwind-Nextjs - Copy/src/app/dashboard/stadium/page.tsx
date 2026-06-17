@@ -13,8 +13,7 @@ import {
     getSportTypes,
 } from "@/utils/api";
 import { Icon } from "@iconify/react";
-import { toast, ToastContainer } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
+import { toast } from "react-toastify";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:5008";
 
@@ -159,7 +158,6 @@ const StadiumPage = () => {
 
     return (
         <div className="p-6 font-kanit bg-gray-50 min-h-screen">
-            <ToastContainer position="top-right" autoClose={3000} hideProgressBar={false} newestOnTop={false} closeOnClick pauseOnHover draggable />
 
             {/* Header */}
             <div className="flex justify-between items-center mb-6">

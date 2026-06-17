@@ -4,10 +4,9 @@ import React, { useState, useEffect } from "react";
 import { Table, Button, Modal, Dropdown } from "flowbite-react";
 import { getAllBookings, confirmBooking, cancelBooking, resetBookingStatus } from "@/utils/api";
 import { Icon } from "@iconify/react";
-import { toast, ToastContainer } from "react-toastify";
+import { toast } from "react-toastify";
 import MonthlyBookingModal from "./MonthlyBookingModal";
 import { exportTableToPdf } from "@/utils/exportPdf";
-import "react-toastify/dist/ReactToastify.css";
 
 interface Booking {
     id: string;
@@ -45,10 +44,21 @@ interface Booking {
 
 const PAGE_SIZE = 10;
 
+const THAI_MONTHS = [
+    "มกราคม","กุมภาพันธ์","มีนาคม","เมษายน","พฤษภาคม","มิถุนายน",
+    "กรกฎาคม","สิงหาคม","กันยายน","ตุลาคม","พฤศจิกายน","ธันวาคม",
+];
+
 const BookingPage = () => {
+    const currentYear = new Date().getFullYear();
+    const yearOptions = Array.from({ length: 8 }, (_, i) => currentYear - i);
+
     const [bookings, setBookings] = useState<Booking[]>([]);
     const [activeTab, setActiveTab] = useState("pending");
     const [currentPage, setCurrentPage] = useState(1);
+    const [exportModal, setExportModal] = useState(false);
+    const [exportYear, setExportYear] = useState<number | undefined>(currentYear);
+    const [exportMonth, setExportMonth] = useState<number | undefined>(undefined);
     const [confirmModal, setConfirmModal] = useState<{ isOpen: boolean; id: string | null }>({
         isOpen: false,
         id: null,
@@ -158,18 +168,39 @@ const BookingPage = () => {
         canceled:  "ยกเลิกแล้ว",
     };
 
-    const handleExportPdf = async () => {
-        if (filteredBookings.length === 0) {
-            toast.warning("ไม่มีข้อมูลสำหรับ export");
+    const handleExportWithFilter = async () => {
+        const periodFiltered = filteredBookings.filter((b) => {
+            const d = new Date(b.startDate);
+            if (exportYear !== undefined && d.getFullYear() !== exportYear) return false;
+            if (exportMonth !== undefined && d.getMonth() + 1 !== exportMonth) return false;
+            return true;
+        });
+
+        if (periodFiltered.length === 0) {
+            toast.warning(
+                `ไม่พบข้อมูลการจอง${exportYear ? ` ปี ${exportYear + 543}` : ""}${exportMonth ? ` เดือน${THAI_MONTHS[exportMonth - 1]}` : ""}`
+            );
             return;
         }
+
+        const periodLabel = [
+            exportYear ? `ปี ${exportYear + 543}` : "ทุกปี",
+            exportMonth ? THAI_MONTHS[exportMonth - 1] : "ทุกเดือน",
+        ].join("  |  ");
+
+        const filenameParts = [
+            `การจอง_${TAB_LABEL[activeTab]}`,
+            exportYear ? String(exportYear + 543) : "ทุกปี",
+            exportMonth ? THAI_MONTHS[exportMonth - 1] : "",
+        ].filter(Boolean).join("_");
+
         try {
             await exportTableToPdf({
                 title: `รายงานการจอง — ${TAB_LABEL[activeTab] ?? activeTab}`,
-                subtitle: `ทั้งหมด ${filteredBookings.length} รายการ`,
-                filename: `การจอง_${TAB_LABEL[activeTab]}_${new Date().toLocaleDateString("th-TH").replace(/\//g, "-")}.pdf`,
+                subtitle: `${periodLabel}  |  ทั้งหมด ${periodFiltered.length} รายการ`,
+                filename: `${filenameParts}.pdf`,
                 headers: ["#", "ผู้จอง", "อีเมล", "สนามกีฬา", "กิจกรรม", "วันที่จอง", "เวลา", "อุปกรณ์", "สถานะ"],
-                rows: filteredBookings.map((b, i) => [
+                rows: periodFiltered.map((b, i) => [
                     i + 1,
                     b.User?.fullname || "-",
                     b.User?.email || "-",
@@ -184,6 +215,8 @@ const BookingPage = () => {
                 ]),
                 orientation: "landscape",
             });
+            toast.success(`Export PDF สำเร็จ ${periodFiltered.length} รายการ`);
+            setExportModal(false);
         } catch {
             toast.error("Export PDF ไม่สำเร็จ");
         }
@@ -191,11 +224,10 @@ const BookingPage = () => {
 
     return (
         <div className="p-6 bg-white rounded-lg shadow-md font-kanit">
-            <ToastContainer position="top-right" autoClose={2500} />
             {/* Header */}
             <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl font-bold text-gray-800">จัดการการจอง</h2>
-                <Button size="sm" color="success" onClick={handleExportPdf}>
+                <Button size="sm" color="success" onClick={() => setExportModal(true)}>
                     <Icon icon="solar:file-download-bold" height={16} className="mr-1" />
                     Export PDF
                 </Button>
@@ -382,6 +414,101 @@ const BookingPage = () => {
                     onCancel={(id) => { openCancelModal(id); closeDetail(); }}
                     onReset={(id) => { openReturnModal(id); closeDetail(); }}
                 />
+            )}
+
+            {/* ── Export Filter Modal ── */}
+            {exportModal && (
+                <div
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 font-kanit"
+                    onClick={() => setExportModal(false)}
+                >
+                    <div
+                        className="bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-4"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        {/* Header */}
+                        <div className="flex items-center justify-between px-6 py-4 border-b">
+                            <div className="flex items-center gap-2">
+                                <Icon icon="solar:file-download-bold" className="text-green-600 text-xl" />
+                                <h2 className="text-base font-bold text-gray-800">เลือกช่วงเวลาออกรายงาน</h2>
+                            </div>
+                            <button onClick={() => setExportModal(false)} className="text-gray-400 hover:text-gray-600 text-2xl leading-none">×</button>
+                        </div>
+
+                        {/* Body */}
+                        <div className="px-6 py-5 space-y-4">
+                            <p className="text-xs text-gray-500">
+                                ประเภท: <span className="font-semibold text-gray-700">{TAB_LABEL[activeTab]}</span>
+                            </p>
+
+                            {/* Year */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1.5">ปี (พ.ศ.)</label>
+                                <select
+                                    value={exportYear ?? ""}
+                                    onChange={(e) => setExportYear(e.target.value ? Number(e.target.value) : undefined)}
+                                    className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none"
+                                >
+                                    <option value="">ทุกปี</option>
+                                    {yearOptions.map((y) => (
+                                        <option key={y} value={y}>ปี {y + 543}</option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            {/* Month */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1.5">เดือน</label>
+                                <select
+                                    value={exportMonth ?? ""}
+                                    onChange={(e) => setExportMonth(e.target.value ? Number(e.target.value) : undefined)}
+                                    className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none"
+                                >
+                                    <option value="">ทุกเดือน</option>
+                                    {THAI_MONTHS.map((m, i) => (
+                                        <option key={m} value={i + 1}>{m}</option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            {/* Preview count */}
+                            {(() => {
+                                const count = filteredBookings.filter((b) => {
+                                    const d = new Date(b.startDate);
+                                    if (exportYear !== undefined && d.getFullYear() !== exportYear) return false;
+                                    if (exportMonth !== undefined && d.getMonth() + 1 !== exportMonth) return false;
+                                    return true;
+                                }).length;
+                                return (
+                                    <div className={`flex items-center gap-2 px-4 py-3 rounded-xl text-sm font-medium ${count > 0 ? "bg-green-50 text-green-700" : "bg-yellow-50 text-yellow-700"}`}>
+                                        <Icon icon={count > 0 ? "solar:check-circle-bold" : "solar:danger-bold"} className="text-lg shrink-0" />
+                                        {count > 0
+                                            ? `พบข้อมูล ${count} รายการสำหรับออกรายงาน`
+                                            : "ไม่พบข้อมูลในช่วงเวลาที่เลือก"
+                                        }
+                                    </div>
+                                );
+                            })()}
+                        </div>
+
+                        {/* Footer */}
+                        <div className="px-6 py-4 border-t flex justify-end gap-3">
+                            <button
+                                onClick={() => setExportModal(false)}
+                                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition"
+                            >
+                                ยกเลิก
+                            </button>
+                            <button
+                                onClick={handleExportWithFilter}
+                                className="flex items-center gap-2 px-5 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-lg transition"
+                            >
+                                <Icon icon="solar:file-download-bold" className="text-base" />
+                                Export PDF
+                            </button>
+                        </div>
+                    </div>
+                </div>
             )}
         </div>
     );

@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import axios from "axios";
+import { toast } from "react-toastify";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:5008";
 
@@ -57,7 +58,7 @@ const UploadStadiumImage: React.FC<UploadStadiumImageProps> = ({
       onUploaded?.(images);
     } catch (err) {
       console.error("อัปโหลดรูปไม่สำเร็จ", err);
-      alert("อัปโหลดรูปไม่สำเร็จ");
+      toast.error("อัปโหลดรูปไม่สำเร็จ");
     } finally {
       setLoading(false);
     }
@@ -83,7 +84,7 @@ const UploadStadiumImage: React.FC<UploadStadiumImageProps> = ({
       setExternalUrl("");
     } catch (err) {
       console.error("เพิ่มรูปจาก URL ไม่สำเร็จ", err);
-      alert("เพิ่มรูปจาก URL ไม่สำเร็จ");
+      toast.error("เพิ่มรูปจาก URL ไม่สำเร็จ");
     } finally {
       setLoading(false);
     }
@@ -104,7 +105,7 @@ const UploadStadiumImage: React.FC<UploadStadiumImageProps> = ({
       onUploaded?.(images);
     } catch (err) {
       console.error("ลบรูปไม่สำเร็จ", err);
-      alert("ลบรูปไม่สำเร็จ");
+      toast.error("ลบรูปไม่สำเร็จ");
     } finally {
       setLoading(false);
     }

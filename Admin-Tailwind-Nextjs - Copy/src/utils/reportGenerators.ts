@@ -1,6 +1,10 @@
 import { getAllBookings, getAllEquipment, getAllEquipmentTransactions } from "./api";
 import { exportTableToPdf, exportMultiSectionPdf } from "./exportPdf";
 
+export class NoDataError extends Error {
+  readonly noData = true;
+}
+
 export interface ReportParams {
   year?: number;
   month?: number; // 1-12
@@ -55,7 +59,7 @@ export const reportProjectBooking = async (params: ReportParams = {}) => {
   const bookings = filterByPeriod(classBookings, "startDate", year, month);
 
   if (bookings.length === 0) {
-    alert(`ไม่พบข้อมูลการจองแบบโครงการ${year ? ` ปี ${year + 543}` : ""}`);
+    throw new NoDataError(`ไม่พบข้อมูลการจองแบบโครงการ${year ? ` ปี ${year + 543}` : ""}`);
     return;
   }
 
@@ -210,7 +214,7 @@ export const reportStadiumSchedule = async (params: ReportParams = {}) => {
 
   if (bookings.length === 0) {
     const pLabel = [year ? `ปี ${year + 543}` : "", month ? THAI_MONTHS[month - 1] : ""].filter(Boolean).join(" ");
-    alert(`ไม่พบข้อมูลการจองสนาม${pLabel ? ` (${pLabel})` : ""}`);
+    throw new NoDataError(`ไม่พบข้อมูลการจองสนาม${pLabel ? ` (${pLabel})` : ""}`);
     return;
   }
 
@@ -311,7 +315,7 @@ export const reportEquipmentDamaged = async (params: ReportParams = {}) => {
 
   if (damaged.length === 0) {
     const pLabel = [year ? `ปี ${year + 543}` : "", month ? THAI_MONTHS[month - 1] : ""].filter(Boolean).join(" ");
-    alert(`ไม่พบรายการอุปกรณ์ชำรุด/สูญหาย${pLabel ? ` (${pLabel})` : ""}`);
+    throw new NoDataError(`ไม่พบรายการอุปกรณ์ชำรุด/สูญหาย${pLabel ? ` (${pLabel})` : ""}`);
     return;
   }
 

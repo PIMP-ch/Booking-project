@@ -192,17 +192,17 @@ const BookingDetail = () => {
 
   const handleBooking = async () => {
     if (!user) {
-      alert("⛔ กรุณาเข้าสู่ระบบก่อนทำการจอง");
+      toast.error("⛔ กรุณาเข้าสู่ระบบก่อนทำการจอง");
       return;
     }
 
     if (!buildingId) {
-      alert("⛔ กรุณาเลือกอาคารก่อนทำการจอง");
+      toast.error("⛔ กรุณาเลือกอาคารก่อนทำการจอง");
       return;
     }
 
     if (!stadiumId) {
-      alert("⛔ ไม่พบข้อมูลสนาม กรุณาเลือกสนามใหม่");
+      toast.error("⛔ ไม่พบข้อมูลสนาม กรุณาเลือกสนามใหม่");
       return;
     }
 
@@ -242,11 +242,11 @@ const BookingDetail = () => {
         toast.success("✅ จองสำเร็จ");
         router.push("/booking/history");
       } else {
-        alert(response?.message || "❌ เกิดข้อผิดพลาด");
+        toast.error(response?.message || "❌ เกิดข้อผิดพลาด");
       }
     } catch (error) {
       console.error("❌ Booking Error:", error);
-      alert("❌ จองไม่สำเร็จ กรุณาลองใหม่");
+      toast.error("❌ จองไม่สำเร็จ กรุณาลองใหม่");
     }
   };
 

@@ -3,8 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { Table, TextInput, Button, Modal, Badge } from "flowbite-react";
 import { getAllUsers, updateUserStatus, deleteUser } from "@/utils/api";
-import { toast, ToastContainer } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
+import { toast } from "react-toastify";
 
 type UserStatus = "NEW" | "Pending" | "Active" | "Inactive" | "Suspended" | "Expired" | "Cancelled" | "Rejected" | "Deleted";
 
@@ -327,7 +326,6 @@ const UserPage = () => {
                 </Modal.Footer>
             </Modal>
 
-            <ToastContainer position="top-right" autoClose={3000} />
         </div>
     );
 };

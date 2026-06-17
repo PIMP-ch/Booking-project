@@ -72,13 +72,13 @@ const RAW_SIDEBAR: MenuItem[] = [
   {
     heading: "รายงาน",
     children: [
-      {
-        name: "รายงาน ประวัติการจอง",
-        icon: "solar:user-id-bold",
-        id: uniqueId(),
-        url: "/dashboard/history-booking",
-        roles: ["admin", "staff"],
-      },
+      // {
+      //   name: "รายงาน ประวัติการจอง",
+      //   icon: "solar:user-id-bold",
+      //   id: uniqueId(),
+      //   url: "/dashboard/history-booking",
+      //   roles: ["admin", "staff"],
+      // },
       {
         name: "รายงาน PDF",
         icon: "solar:file-text-bold-duotone",

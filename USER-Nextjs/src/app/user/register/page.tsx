@@ -44,7 +44,9 @@ const BoxedRegister = () => {
   const [error, setError] = useState("");
   const [showStep1Error, setShowStep1Error] = useState(false);
 
-  const validateEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
+  const validateEmailFormat = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
+  const validateEmailDomain = (email: string) => email.trim().toLowerCase().endsWith("@kmutnb.ac.th");
+  const validateEmail = (email: string) => validateEmailFormat(email) && validateEmailDomain(email);
   const validatePhoneNumber = (phoneNumber: string) => /^[0-9]{10}$/.test(phoneNumber.trim());
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -76,6 +78,14 @@ const BoxedRegister = () => {
     e.preventDefault();
     setLoading(true);
     setError("");
+
+    if (!validateEmailDomain(formData.email)) {
+      const msg = "email ต้องเป็นของมหาวิทยาลัยเท่านั้น";
+      setError(msg);
+      toast.error(`❌ ${msg}`);
+      setLoading(false);
+      return;
+    }
 
     // ตรวจสอบข้อมูล Step 2 ก่อนส่ง
     if (formData.userType === "student") {

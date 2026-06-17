@@ -2,8 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { Icon } from "@iconify/react";
-import { toast, ToastContainer } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
+import { toast } from "react-toastify";
 import {
   reportProjectBooking,
   reportUserBehavior,
@@ -12,6 +11,7 @@ import {
   reportEquipmentInOut,
   reportEquipmentDamaged,
   ReportParams,
+  NoDataError,
 } from "@/utils/reportGenerators";
 
 const THAI_MONTHS_PAGE = [
@@ -49,7 +49,7 @@ const COLOR_MAP: Record<string, { bg: string; icon: string; btn: string; bar: st
   red:    { bg: "bg-red-50",    icon: "text-red-500",    btn: "bg-red-600 hover:bg-red-700",     bar: "bg-red-600" },
 };
 
-const CardItem = ({ card, year, month }: { card: ReportCard; year: number; month: number | undefined }) => {
+const CardItem = ({ card, year, month }: { card: ReportCard; year: number | undefined; month: number | undefined }) => {
   const [loading, setLoading] = useState(false);
   const c = COLOR_MAP[card.color];
 
@@ -58,8 +58,12 @@ const CardItem = ({ card, year, month }: { card: ReportCard; year: number; month
     try {
       await card.fn({ year, month: card.needsMonth ? month : undefined });
       toast.success(`สร้างรายงาน "${card.title}" สำเร็จ`);
-    } catch {
-      toast.error("สร้างรายงานไม่สำเร็จ กรุณาลองใหม่");
+    } catch (err) {
+      if (err instanceof NoDataError) {
+        toast.warning(err.message);
+      } else {
+        toast.error("สร้างรายงานไม่สำเร็จ กรุณาลองใหม่");
+      }
     } finally {
       setLoading(false);
     }
@@ -90,9 +94,9 @@ const CardItem = ({ card, year, month }: { card: ReportCard; year: number; month
 export default function ReportsPage() {
   const [role, setRole] = useState<string>("");
   const currentYear = new Date().getFullYear();
-  const [year, setYear] = useState<number>(currentYear);
+  const [year, setYear] = useState<number | undefined>(currentYear);
   const [month, setMonth] = useState<number | undefined>(undefined);
-  const yearOptions = [currentYear, currentYear - 1, currentYear - 2];
+  const yearOptions = Array.from({ length: 8 }, (_, i) => currentYear - i);
 
   useEffect(() => {
     try {
@@ -110,7 +114,6 @@ export default function ReportsPage() {
 
   return (
     <div className="p-6 bg-white rounded-lg shadow-md font-kanit min-h-screen">
-      <ToastContainer position="top-right" autoClose={3000} />
 
       <div className="flex flex-wrap items-end justify-between gap-4 mb-6">
         <div>
@@ -118,7 +121,8 @@ export default function ReportsPage() {
           <p className="text-sm text-gray-500 mt-1">เลือกช่วงเวลาก่อนสร้างรายงาน</p>
         </div>
         <div className="flex items-center gap-3">
-          <select value={year} onChange={(e) => setYear(Number(e.target.value))} className="text-sm border border-gray-300 rounded-lg px-3 py-2 focus:ring-1 focus:ring-blue-500 outline-none">
+          <select value={year ?? ""} onChange={(e) => setYear(e.target.value ? Number(e.target.value) : undefined)} className="text-sm border border-gray-300 rounded-lg px-3 py-2 focus:ring-1 focus:ring-blue-500 outline-none">
+            <option value="">ทุกปี</option>
             {yearOptions.map((y) => <option key={y} value={y}>ปี {y + 543}</option>)}
           </select>
           <select value={month ?? ""} onChange={(e) => setMonth(e.target.value ? Number(e.target.value) : undefined)} className="text-sm border border-gray-300 rounded-lg px-3 py-2 focus:ring-1 focus:ring-blue-500 outline-none">
@@ -126,7 +130,7 @@ export default function ReportsPage() {
             {THAI_MONTHS_PAGE.map((m, i) => <option key={m} value={i + 1}>{m}</option>)}
           </select>
           <span className="text-sm text-gray-500 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2">
-            {[`ปี ${year + 543}`, month ? THAI_MONTHS_PAGE[month - 1] : "ทุกเดือน"].join(" · ")}
+            {[year ? `ปี ${year + 543}` : "ทุกปี", month ? THAI_MONTHS_PAGE[month - 1] : "ทุกเดือน"].join(" · ")}
           </span>
         </div>
       </div>

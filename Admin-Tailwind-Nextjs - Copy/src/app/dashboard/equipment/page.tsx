@@ -13,8 +13,7 @@ import {
 } from "@/utils/api";
 import { Icon } from "@iconify/react";
 import { exportTableToPdf } from "@/utils/exportPdf";
-import { toast, ToastContainer } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
+import { toast } from "react-toastify";
 import StockModal from "./StockModal";
 import TransactionHistoryModal from "./TransactionHistoryModal";
 
@@ -378,8 +377,6 @@ const EquipmentPage = () => {
                     </Button>
                 </Modal.Footer>
             </Modal>
-
-            <ToastContainer position="top-right" autoClose={3000} />
 
             {/* Confirm Delete Modal */}
             <Modal show={confirmModal.isOpen} onClose={() => setConfirmModal({ isOpen: false, id: null })} size="sm">

@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { Modal, Button } from "flowbite-react";
 import { Icon } from "@iconify/react";
 import { getAllStadiums, getBuildings, lockBooking } from "@/utils/api";
+import { toast } from "react-toastify";
 
 // ─── Types ─────────────────────────────────────────────
 interface Stadium {
@@ -135,13 +136,13 @@ const MonthlyBookingModal: React.FC<MonthlyBookingModalProps> = ({ onSubmit }) =
 
             const res = await lockBooking(payload);
 
-            alert(`จองสำเร็จ ${res.totalCreated} รายการ`);
+            toast.success(`จองสำเร็จ ${res.totalCreated} รายการ`);
 
             setIsOpen(false);
 
         } catch (err: any) {
             console.error(err);
-            alert(err?.response?.data?.message || "เกิดข้อผิดพลาด");
+            toast.error(err?.response?.data?.message || "เกิดข้อผิดพลาด");
         } finally {
             setSubmitting(false);
         }

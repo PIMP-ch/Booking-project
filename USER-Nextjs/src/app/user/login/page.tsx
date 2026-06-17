@@ -15,6 +15,10 @@ export default function LoginPage() {
   const [clientId, setClientId] = useState("")
 
   const handleLogin = async (email: string, name: string, sub: string) => {
+    if (!email.toLowerCase().endsWith("@kmutnb.ac.th")) {
+      toast.error("email ต้องเป็นของมหาวิทยาลัยเท่านั้น");
+      return;
+    }
     setLoading(true);
     try {
       const res = await loginUser(email, name, sub);
